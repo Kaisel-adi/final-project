@@ -7,9 +7,10 @@ from app.db import get_db
 
 class User(UserMixin):
     """User representation integrating with Flask-Login and MongoDB."""
-    def __init__(self, doc: dict):
+    def __init__(self, doc: dict | None = None):
+        doc = doc or {}
         self.doc = doc
-        self.id = str(doc.get("_id"))
+        self.id = str(doc.get("_id", ""))
         self.name = doc.get("name", "")
         self.email = doc.get("email", "")
         self.password_hash = doc.get("password_hash", "")
@@ -37,6 +38,8 @@ class User(UserMixin):
         if db is None:
             db = get_db()
         try:
+            if not user_id:
+                return None
             doc = db.users.find_one({"_id": ObjectId(user_id)})
             return User(doc) if doc else None
         except Exception:

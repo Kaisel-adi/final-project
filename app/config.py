@@ -11,6 +11,14 @@ class Config:
     """Base configuration."""
     SECRET_KEY = os.environ.get("SECRET_KEY", "default-dev-secret-key-change-me")
     
+    # Session & Cookie persistence settings (Prevents logout on refresh)
+    PERMANENT_SESSION_LIFETIME = 86400 * 30  # 30 days in seconds
+    REMEMBER_COOKIE_DURATION = 86400 * 30   # 30 days in seconds
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    
     # MongoDB settings
     MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/gcir_db")
     DATABASE_NAME = os.environ.get("DATABASE_NAME", "gcir_db")

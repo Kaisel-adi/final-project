@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 from bson import ObjectId
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app.auth.models import User
+from app.reports.services import CATEGORIES
 from app.db import get_db
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -45,7 +46,8 @@ def register():
                 digest_opt_in=digest_opt_in,
                 digest_radius_km=digest_radius_km
             )
-            login_user(user)
+            session.permanent = True
+            login_user(user, remember=True)
             flash("Account created successfully! Welcome to GCIR.", "success")
             return redirect(url_for("feed.feed_view"))
         except ValueError as e:
@@ -68,7 +70,8 @@ def login():
 
         user = User.get_by_email(email)
         if user and user.check_password(password):
-            login_user(user)
+            session.permanent = True
+            login_user(user, remember=True)
             
             # Update last_login_at and optionally last_login_location
             db = get_db()
@@ -106,6 +109,8 @@ def logout():
 @login_required
 def profile():
     db = get_db()
+    user_id = ObjectId(current_user.id)
+
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         home_lat = request.form.get("home_lat")
@@ -113,7 +118,7 @@ def profile():
         digest_opt_in = request.form.get("digest_opt_in") == "on"
         digest_radius_km = float(request.form.get("digest_radius_km", 5.0))
 
-        update_fields = {
+        update_fields: dict[str, object] = {
             "name": name,
             "digest_opt_in": digest_opt_in,
             "digest_radius_km": digest_radius_km
@@ -130,13 +135,35 @@ def profile():
             except ValueError:
                 pass
 
-        db.users.update_one({"_id": ObjectId(current_user.id)}, {"$set": update_fields})
+        db.users.update_one({"_id": user_id}, {"$set": update_fields})
         flash("Profile updated successfully.", "success")
         return redirect(url_for("auth.profile"))
 
-    # Fetch latest user document
-    user_doc = db.users.find_one({"_id": ObjectId(current_user.id)})
-    return render_template("auth/profile.html", user_doc=user_doc)
+    # Fetch latest user document with resilient fallback
+    user_doc = db.users.find_one({"_id": user_id}) or getattr(current_user, "doc", {}) or {}
+
+    # Fetch all reports submitted by this user
+    try:
+        user_reports = list(db.reports.find({"author_id": user_id}).sort("created_at", -1))
+    except Exception:
+        user_reports = []
+
+    cat_dict = dict(CATEGORIES)
+    for r in user_reports:
+        r["cat_label"] = cat_dict.get(r.get("category"), r.get("category", "General"))
+
+    coords = [77.2090, 28.6139]
+    if user_doc and isinstance(user_doc.get("home_location"), dict) and user_doc["home_location"].get("coordinates"):
+        coords = user_doc["home_location"]["coordinates"]
+    elif current_user.home_location and isinstance(current_user.home_location, dict) and current_user.home_location.get("coordinates"):
+        coords = current_user.home_location["coordinates"]
+
+    return render_template(
+        "auth/profile.html",
+        user_doc=user_doc,
+        user_reports=user_reports,
+        coords=coords
+    )
 
 
 @auth_bp.route("/profile/delete", methods=["POST"])
@@ -144,13 +171,22 @@ def profile():
 def delete_account():
     db = get_db()
     user_id = ObjectId(current_user.id)
-    # Remove upvotes by this user
+
+    # 1. Adjust upvotes on reports this user upvoted
+    user_upvotes = list(db.upvotes.find({"user_id": user_id}))
+    for up in user_upvotes:
+        db.reports.update_one({"_id": up["report_id"]}, {"$inc": {"upvote_count": -1}})
     db.upvotes.delete_many({"user_id": user_id})
-    # Remove digest logs for this user
+
+    # 2. Delete digest logs for this user
     db.digest_log.delete_many({"user_id": user_id})
-    # Delete user record
+
+    # 3. Delete reports submitted by this user
+    db.reports.delete_many({"author_id": user_id})
+
+    # 4. Delete user record
     db.users.delete_one({"_id": user_id})
     
     logout_user()
-    flash("Your account and associated personal data have been completely deleted.", "info")
+    flash("Your account, reported issues, and associated personal data have been completely deleted.", "info")
     return redirect(url_for("auth.login"))

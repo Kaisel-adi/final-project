@@ -18,7 +18,15 @@ def create_app(config_class=Config):
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to access this page."
     login_manager.login_message_category = "warning"
+    login_manager.session_protection = "basic"
     login_manager.init_app(app)
+
+    # Reverse proxy support (Render, Heroku, Nginx)
+    try:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    except ImportError:
+        pass
 
     from app.auth.models import User
 

@@ -1,47 +1,180 @@
 {% extends "base.html" %}
 
-{% block title %}Profile & Location Settings — GCIR{% endblock %}
+{% block title %}Resident Profile — GCIR{% endblock %}
 
 {% block content %}
-<div style="max-width: 650px; margin: 2rem auto;">
-    <div class="card">
-        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary);">Resident Profile</h2>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-            Manage your account, neighborhood location pin, and alert preferences.
+<div style="max-width: 900px; margin: 2rem auto; display: flex; flex-direction: column; gap: 2rem;">
+    <!-- Profile Header Card -->
+    <div class="card" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; gap: 1.25rem; align-items: center;">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: #e8f0fe; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; flex-shrink: 0;">
+                    {{ (user_doc.get('name') or current_user.name or 'U')[0]|upper }}
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <h2 style="font-size: 1.5rem; color: var(--text-primary); margin: 0;">
+                            {{ user_doc.get('name') or current_user.name }}
+                        </h2>
+                        {% if current_user.is_admin %}
+                            <span class="badge" style="background: #e0e7ff; color: #3730a3;">ADMINISTRATOR</span>
+                        {% elif current_user.is_moderator %}
+                            <span class="badge" style="background: #dbeafe; color: #1e40af;">MODERATOR</span>
+                        {% else %}
+                            <span class="badge" style="background: #f1f5f9; color: #475569;">RESIDENT</span>
+                        {% endif %}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
+                        ✉️ {{ user_doc.get('email') or current_user.email }}
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem;">
+                <a href="{{ url_for('reports.create') }}" class="btn btn-primary btn-sm">
+                    + Report New Issue
+                </a>
+                {% if current_user.is_moderator %}
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-sm">
+                        Admin Panel
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Statistics -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">{{ user_reports|length }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Reports Submitted</div>
+            </div>
+            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">
+                    {{ user_doc.get('digest_radius_km', current_user.digest_radius_km)|round(0)|int }} km
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Alert Radius</div>
+            </div>
+            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                    {% if user_doc.get('digest_opt_in', current_user.digest_opt_in) %}Active{% else %}Off{% endif %}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Email Digest</div>
+            </div>
+            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-secondary); margin-top: 0.35rem;">
+                    {{ coords[1]|round(2) }}, {{ coords[0]|round(2) }}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Home Pin</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Done by User Section -->
+    <div class="card" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="font-size: 1.25rem; color: var(--text-primary); margin: 0;">My Reported Issues</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                    Civic issues you have reported across Delhi-NCR.
+                </p>
+            </div>
+            <span class="badge" style="background: #e8f0fe; color: var(--primary); font-size: 0.85rem;">
+                {{ user_reports|length }} Total
+            </span>
+        </div>
+
+        {% if user_reports %}
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for r in user_reports %}
+                    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; transition: box-shadow 0.15s;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 260px;">
+                            {% if r.photo_url %}
+                                <img src="{{ r.photo_url }}" alt="Issue Photo" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); flex-shrink: 0;">
+                            {% else %}
+                                <div style="width: 70px; height: 70px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-secondary); flex-shrink: 0;">
+                                    📍
+                                </div>
+                            {% endif %}
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+                                    <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
+                                        {{ r.cat_label }}
+                                    </span>
+                                    <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
+                                    {% if r.is_flagged %}
+                                        <span class="badge badge-Removed">Flagged</span>
+                                    {% endif %}
+                                </div>
+                                <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                    {{ r.description }}
+                                </p>
+                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.4rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                                    <span>📅 {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'Recent' }}</span>
+                                    <span>👍 {{ r.upvote_count }} / 10 Verifications</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="{{ url_for('reports.report_detail', report_id=r._id) }}" class="btn btn-secondary btn-sm">
+                                View Details &rarr;
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 2.5rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color);">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📋</div>
+                <h4 style="font-size: 1.05rem; color: var(--text-primary); margin-bottom: 0.35rem;">No Civic Issues Reported Yet</h4>
+                <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 420px; margin: 0 auto 1.25rem auto;">
+                    Have you spotted a pothole, overflowing garbage dump, or broken streetlight? Geo-tag it now to alert your neighbors and local authorities.
+                </p>
+                <a href="{{ url_for('reports.create') }}" class="btn btn-primary btn-sm">
+                    + Report Your First Issue
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Edit Profile & Neighborhood Location Form -->
+    <div class="card" style="margin-bottom: 0;">
+        <h3 style="font-size: 1.25rem; color: var(--text-primary); margin-bottom: 0.35rem;">Edit Profile & Neighborhood Pin</h3>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.5rem;">
+            Update your display name, primary neighborhood coordinates, and email alert preferences.
         </p>
 
         <form method="POST">
             <div class="form-group">
-                <label class="form-label" for="name">Full Name</label>
-                <input class="form-input" type="text" id="name" name="name" value="{{ user_doc.name }}" required>
+                <label class="form-label" for="name">Full Name / Display Name</label>
+                <input class="form-input" type="text" id="name" name="name" value="{{ user_doc.get('name') or current_user.name }}" required>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Email Address</label>
-                <input class="form-input" type="email" value="{{ user_doc.email }}" disabled style="background: #f1f5f9; cursor: not-allowed;">
-                <span style="font-size: 0.8rem; color: var(--text-secondary);">Email cannot be changed directly.</span>
+                <input class="form-input" type="email" value="{{ user_doc.get('email') or current_user.email }}" disabled style="background: #f1f5f9; cursor: not-allowed;">
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">Email is permanent and used for digest notifications.</span>
             </div>
 
             <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
 
-            <h3 style="font-size: 1.1rem; margin-bottom: 0.35rem;">Update Home Neighborhood Pin</h3>
+            <h4 style="font-size: 1.05rem; margin-bottom: 0.35rem;">Primary Neighborhood Map Pin</h4>
             <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-                Drag the marker to update your primary civic location.
+                Drag the marker or click the map to set where you live. This determines which local issues appear in your neighborhood email digest.
             </p>
 
             <div style="height: 280px; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; border: 1px solid var(--border-color);">
                 <div id="picker-map" style="width: 100%; height: 100%;"></div>
             </div>
 
-            {% set home_coords = user_doc.home_location.coordinates if user_doc.home_location else [77.2090, 28.6139] %}
             <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.75rem; align-items: end; margin-bottom: 1.25rem;">
                 <div>
                     <label class="form-label" style="font-size: 0.8rem;">Latitude</label>
-                    <input class="form-input" type="text" id="home_lat" name="home_lat" value="{{ home_coords[1] }}" readonly>
+                    <input class="form-input" type="text" id="home_lat" name="home_lat" value="{{ coords[1] }}" readonly>
                 </div>
                 <div>
                     <label class="form-label" style="font-size: 0.8rem;">Longitude</label>
-                    <input class="form-input" type="text" id="home_lon" name="home_lon" value="{{ home_coords[0] }}" readonly>
+                    <input class="form-input" type="text" id="home_lon" name="home_lon" value="{{ coords[0] }}" readonly>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-geolocate" style="height: 38px;">
                     📍 GPS
@@ -50,41 +183,43 @@
 
             <div class="form-group" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
                 <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; font-size: 0.9rem;">
-                    <input type="checkbox" name="digest_opt_in" {% if user_doc.digest_opt_in %}checked{% endif %} style="width: 18px; height: 18px;">
-                    Receive periodic email digest of unverified issues near me
+                    <input type="checkbox" name="digest_opt_in" {% if user_doc.get('digest_opt_in', current_user.digest_opt_in) %}checked{% endif %} style="width: 18px; height: 18px;">
+                    Receive periodic email digest of unverified civic issues near me
                 </label>
-                <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
                     <label for="digest_radius_km" style="font-size: 0.85rem; color: var(--text-secondary);">Digest Radius:</label>
+                    {% set cur_radius = user_doc.get('digest_radius_km', current_user.digest_radius_km)|float %}
                     <select name="digest_radius_km" id="digest_radius_km" class="form-select" style="width: auto; padding: 0.35rem 0.75rem;">
-                        <option value="2.0" {% if user_doc.digest_radius_km == 2.0 %}selected{% endif %}>2 km (Local Block)</option>
-                        <option value="5.0" {% if user_doc.digest_radius_km == 5.0 %}selected{% endif %}>5 km (Ward / Neighborhood)</option>
-                        <option value="10.0" {% if user_doc.digest_radius_km == 10.0 %}selected{% endif %}>10 km (Zone)</option>
+                        <option value="2.0" {% if cur_radius == 2.0 %}selected{% endif %}>2 km (Local Block)</option>
+                        <option value="5.0" {% if cur_radius == 5.0 %}selected{% endif %}>5 km (Ward / Neighborhood)</option>
+                        <option value="10.0" {% if cur_radius == 10.0 %}selected{% endif %}>10 km (Zone)</option>
                     </select>
                 </div>
             </div>
 
             <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
         </form>
+    </div>
 
-        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 2rem 0;">
-
-        <div style="background: #fff5f5; border: 1px solid #fed7d7; padding: 1.25rem; border-radius: 8px;">
-            <h4 style="color: #c53030; margin-bottom: 0.5rem; font-size: 1rem;">Privacy & Account Deletion (DPDP Act)</h4>
-            <p style="font-size: 0.85rem; color: #742a2a; margin-bottom: 1rem;">
-                Permanently purge your account, your upvotes, and personal location data from our database.
-            </p>
-            <form method="POST" action="{{ url_for('auth.delete_account') }}" onsubmit="return confirm('Are you sure you want to permanently delete your account? This action cannot be undone.');">
-                <button type="submit" class="btn btn-danger btn-sm">Permanently Delete My Account</button>
-            </form>
-        </div>
+    <!-- Privacy & Delete Account Section -->
+    <div class="card" style="background: #fff5f5; border: 1px solid #fed7d7; margin-bottom: 2rem;">
+        <h4 style="color: #c53030; margin-bottom: 0.5rem; font-size: 1.05rem;">Danger Zone: Delete Account (DPDP Act)</h4>
+        <p style="font-size: 0.85rem; color: #742a2a; margin-bottom: 1rem; line-height: 1.4;">
+            Under the Digital Personal Data Protection (DPDP) Act, you have the right to be forgotten. Permanently deleting your account will erase your user profile, all your submitted civic reports, upvotes, and home location data from our database.
+        </p>
+        <form method="POST" action="{{ url_for('auth.delete_account') }}" onsubmit="return confirm('⚠️ Are you sure you want to permanently delete your account?\n\nThis will permanently delete your profile, all reports submitted by you, and your upvote history. This action CANNOT be undone.');">
+            <button type="submit" class="btn btn-danger btn-sm">
+                Permanently Delete My Account & All Data
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const initLat = parseFloat("{{ home_coords[1] }}") || 28.6139;
-    const initLon = parseFloat("{{ home_coords[0] }}") || 77.2090;
+    const initLat = parseFloat("{{ coords[1] }}") || 28.6139;
+    const initLon = parseFloat("{{ coords[0] }}") || 77.2090;
 
     const map = L.map('picker-map').setView([initLat, initLon], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
