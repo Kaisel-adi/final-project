@@ -17,11 +17,11 @@
                             {{ user_doc.get('name') or current_user.name }}
                         </h2>
                         {% if current_user.is_admin %}
-                            <span class="badge" style="background: #e0e7ff; color: #3730a3;">ADMINISTRATOR</span>
+                            <span class="badge badge-admin">ADMINISTRATOR</span>
                         {% elif current_user.is_moderator %}
-                            <span class="badge" style="background: #dbeafe; color: #1e40af;">MODERATOR</span>
+                            <span class="badge badge-moderator">MODERATOR</span>
                         {% else %}
-                            <span class="badge" style="background: #f1f5f9; color: #475569;">RESIDENT</span>
+                            <span class="badge badge-resident">RESIDENT</span>
                         {% endif %}
                     </div>
                     <div style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
@@ -78,7 +78,7 @@
                     Civic issues you have reported across Delhi-NCR.
                 </p>
             </div>
-            <span class="badge" style="background: #e8f0fe; color: var(--primary); font-size: 0.85rem;">
+            <span class="badge badge-primary-light" style="font-size: 0.85rem;">
                 {{ user_reports|length }} Total
             </span>
         </div>

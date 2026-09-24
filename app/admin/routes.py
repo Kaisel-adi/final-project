@@ -31,6 +31,7 @@ def admin_only_required(view_func):
     return wrapper
 
 
+@admin_bp.route("/")
 @admin_bp.route("")
 @login_required
 @admin_or_moderator_required
@@ -38,6 +39,8 @@ def dashboard():
     """Moderation queue and interactive tabbed management."""
     db = get_db()
     active_tab = request.args.get("tab", "all_reports")
+    if active_tab == "users" and not current_user.is_admin:
+        active_tab = "all_reports"
     cat_dict = dict(CATEGORIES)
 
     # Basic statistics
@@ -45,7 +48,7 @@ def dashboard():
     total_reports_count = db.reports.count_documents({"status": {"$ne": "Removed"}})
     verified_count = db.reports.count_documents({"status": "Verified"})
     complained_count = db.reports.count_documents({"status": "Complained"})
-    total_users_count = db.users.count_documents({})
+    total_users_count = db.users.count_documents({}) if current_user.is_admin else None
 
     tab_data = {}
 
@@ -73,10 +76,16 @@ def dashboard():
             r["cat_label"] = cat_dict.get(r.get("category"), r.get("category", "General"))
         tab_data["complaints_reports"] = reports
 
-    elif active_tab == "users":
+    elif active_tab == "users" and current_user.is_admin:
         users_list = list(db.users.find({}).sort("created_at", -1))
+        report_counts = {
+            result["_id"]: result["count"]
+            for result in db.reports.aggregate([
+                {"$group": {"_id": "$author_id", "count": {"$sum": 1}}}
+            ])
+        }
         for u in users_list:
-            u["report_count"] = db.reports.count_documents({"author_id": u["_id"]})
+            u["report_count"] = report_counts.get(u["_id"], 0)
         tab_data["users_list"] = users_list
 
     return render_template(
@@ -101,6 +110,10 @@ def verify_report_instantly(report_id):
     report = db.reports.find_one({"_id": rep_oid})
     if not report:
         flash("Report not found.", "warning")
+        return redirect(request.referrer or url_for("admin.dashboard"))
+
+    if report.get("status") in {"Verified", "Complained", "Resolved", "Removed"}:
+        flash("This report can no longer be verified.", "warning")
         return redirect(request.referrer or url_for("admin.dashboard"))
 
     now = datetime.now(timezone.utc)
@@ -268,6 +281,11 @@ def delete_user(user_id):
         db.reports.update_one({"_id": up["report_id"]}, {"$inc": {"upvote_count": -1}})
     db.upvotes.delete_many({"user_id": user_oid})
     db.digest_log.delete_many({"user_id": user_oid})
+    authored_report_ids = [
+        report["_id"]
+        for report in db.reports.find({"author_id": user_oid}, {"_id": 1})
+    ]
+    db.upvotes.delete_many({"report_id": {"$in": authored_report_ids}})
     db.reports.delete_many({"author_id": user_oid})
     db.users.delete_one({"_id": user_oid})
 

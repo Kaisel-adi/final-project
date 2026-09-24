@@ -10,9 +10,9 @@
             <div style="display: flex; align-items: center; gap: 0.75rem;">
                 <h1 style="font-size: 1.6rem; color: var(--text-primary); margin: 0;">Civic Administration Dashboard</h1>
                 {% if current_user.is_admin %}
-                    <span class="badge" style="background: #e0e7ff; color: #3730a3;">SUPER ADMIN</span>
+                    <span class="badge badge-admin">SUPER ADMIN</span>
                 {% else %}
-                    <span class="badge" style="background: #dbeafe; color: #1e40af;">MODERATOR</span>
+                    <span class="badge badge-moderator">MODERATOR</span>
                 {% endif %}
             </div>
             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.35rem;">
@@ -36,7 +36,7 @@
         <!-- All Reports Tab -->
         <a href="{{ url_for('admin.dashboard', tab='all_reports') }}" 
            style="text-decoration: none; color: inherit; display: block;">
-            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'all_reports' %}var(--primary){% else %}transparent{% endif %}; background: {% if active_tab == 'all_reports' %}#f0f7ff{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+            <div class="card stat-tab-card {% if active_tab == 'all_reports' %}active-primary{% endif %}">
                 <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">{{ total_reports_count }}</div>
                 <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
                     📋 Total Reports
@@ -48,7 +48,7 @@
         <!-- Community Verified Tab -->
         <a href="{{ url_for('admin.dashboard', tab='verified') }}" 
            style="text-decoration: none; color: inherit; display: block;">
-            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'verified' %}var(--success){% else %}transparent{% endif %}; background: {% if active_tab == 'verified' %}#f0fdf4{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+            <div class="card stat-tab-card {% if active_tab == 'verified' %}active-success{% endif %}">
                 <div style="font-size: 2rem; font-weight: 700; color: var(--success);">{{ verified_count }}</div>
                 <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
                     ✅ Verified Reports
@@ -60,7 +60,7 @@
         <!-- Complaints Filed Tab -->
         <a href="{{ url_for('admin.dashboard', tab='complaints') }}" 
            style="text-decoration: none; color: inherit; display: block;">
-            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'complaints' %}#1e40af{% else %}transparent{% endif %}; background: {% if active_tab == 'complaints' %}#eff6ff{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+            <div class="card stat-tab-card {% if active_tab == 'complaints' %}active-blue{% endif %}">
                 <div style="font-size: 2rem; font-weight: 700; color: #1e40af;">{{ complained_count }}</div>
                 <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
                     🏛️ Complaints Filed
@@ -69,22 +69,24 @@
             </div>
         </a>
 
-        <!-- Registered Users Tab -->
-        <a href="{{ url_for('admin.dashboard', tab='users') }}" 
-           style="text-decoration: none; color: inherit; display: block;">
-            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'users' %}#475569{% else %}transparent{% endif %}; background: {% if active_tab == 'users' %}#f8fafc{% else %}#ffffff{% endif %}; transition: all 0.2s;">
-                <div style="font-size: 2rem; font-weight: 700; color: #475569;">{{ total_users_count }}</div>
-                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
-                    👥 Registered Users
+        {% if current_user.is_admin %}
+            <!-- Registered Users Tab -->
+            <a href="{{ url_for('admin.dashboard', tab='users') }}" 
+               style="text-decoration: none; color: inherit; display: block;">
+                <div class="card stat-tab-card {% if active_tab == 'users' %}active-slate{% endif %}">
+                    <div style="font-size: 2rem; font-weight: 700; color: #475569;">{{ total_users_count }}</div>
+                    <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
+                        👥 Registered Users
+                    </div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Manage roles & bans</span>
                 </div>
-                <span style="font-size: 0.75rem; color: var(--text-secondary);">Manage roles & bans</span>
-            </div>
-        </a>
+            </a>
+        {% endif %}
 
         <!-- Flagged Queue Tab -->
         <a href="{{ url_for('admin.dashboard', tab='flagged') }}" 
            style="text-decoration: none; color: inherit; display: block;">
-            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'flagged' %}var(--danger){% else %}transparent{% endif %}; background: {% if active_tab == 'flagged' %}#fff5f5{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+            <div class="card stat-tab-card {% if active_tab == 'flagged' %}active-danger{% endif %}">
                 <div style="font-size: 2rem; font-weight: 700; color: var(--danger);">{{ flagged_count }}</div>
                 <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
                     ⚠️ Flagged Queue
@@ -256,7 +258,7 @@
             {% endif %}
 
         <!-- Tab 4: Registered Users Management -->
-        {% elif active_tab == 'users' %}
+        {% elif active_tab == 'users' and current_user.is_admin %}
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
                 <div>
                     <h2 style="font-size: 1.25rem; margin: 0; color: var(--text-primary);">Registered User Management ({{ users_list|length }})</h2>
@@ -279,18 +281,18 @@
                         </thead>
                         <tbody>
                             {% for u in users_list %}
-                                <tr style="border-bottom: 1px solid var(--border-color); {% if u.is_banned %}background: #fff5f5;{% endif %}">
+                                <tr class="user-row {% if u.is_banned %}row-banned{% endif %}">
                                     <td style="padding: 0.85rem 1rem;">
                                         <div style="font-weight: 600; color: var(--text-primary);">{{ u.name }}</div>
                                         <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ u.email }}</div>
                                     </td>
                                     <td style="padding: 0.85rem 1rem;">
                                         {% if u.role == 'admin' %}
-                                            <span class="badge" style="background: #e0e7ff; color: #3730a3;">ADMIN</span>
+                                            <span class="badge badge-admin">ADMIN</span>
                                         {% elif u.role == 'moderator' %}
-                                            <span class="badge" style="background: #dbeafe; color: #1e40af;">MODERATOR</span>
+                                            <span class="badge badge-moderator">MODERATOR</span>
                                         {% else %}
-                                            <span class="badge" style="background: #f1f5f9; color: #475569;">RESIDENT</span>
+                                            <span class="badge badge-resident">RESIDENT</span>
                                         {% endif %}
                                     </td>
                                     <td style="padding: 0.85rem 1rem;">
@@ -315,14 +317,14 @@
                                                 {% if u.role == 'resident' %}
                                                     <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" style="display: inline;">
                                                         <input type="hidden" name="role" value="moderator">
-                                                        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Promote {{ u.name }} to Moderator?');">
+                                                        <button type="submit" class="btn btn-secondary btn-sm" data-confirm-message="Promote {{ u.name }} to Moderator?" onclick="return confirm(this.dataset.confirmMessage);">
                                                             + Mod
                                                         </button>
                                                     </form>
                                                 {% elif u.role == 'moderator' %}
                                                     <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" style="display: inline;">
                                                         <input type="hidden" name="role" value="resident">
-                                                        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Revoke moderator privileges from {{ u.name }}?');">
+                                                        <button type="submit" class="btn btn-secondary btn-sm" data-confirm-message="Revoke moderator privileges from {{ u.name }}?" onclick="return confirm(this.dataset.confirmMessage);">
                                                             - Demote
                                                         </button>
                                                     </form>
@@ -330,14 +332,14 @@
 
                                                 <!-- Ban / Unban Toggle -->
                                                 <form method="POST" action="{{ url_for('admin.toggle_user_ban', user_id=u._id) }}" style="display: inline;">
-                                                    <button type="submit" class="btn {% if u.is_banned %}btn-success{% else %}btn-secondary{% endif %} btn-sm" onclick="return confirm('{% if u.is_banned %}Unban and restore access for {{ u.name }}?{% else %}Suspend / Ban {{ u.name }} and invalidate their sessions?{% endif %}');">
+                                                    <button type="submit" class="btn {% if u.is_banned %}btn-success{% else %}btn-secondary{% endif %} btn-sm" data-confirm-message="{% if u.is_banned %}Unban and restore access for {{ u.name }}?{% else %}Suspend / Ban {{ u.name }} and invalidate their sessions?{% endif %}" onclick="return confirm(this.dataset.confirmMessage);">
                                                         {% if u.is_banned %}Unban{% else %}🚫 Ban{% endif %}
                                                     </button>
                                                 </form>
 
                                                 <!-- Delete User -->
                                                 <form method="POST" action="{{ url_for('admin.delete_user', user_id=u._id) }}" style="display: inline;">
-                                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('⚠️ Permanently delete {{ u.name }} and all their submitted reports/upvotes? This cannot be undone.');">
+                                                    <button type="submit" class="btn btn-danger btn-sm" data-confirm-message="⚠️ Permanently delete {{ u.name }} and all their submitted reports/upvotes? This cannot be undone." onclick="return confirm(this.dataset.confirmMessage);">
                                                         🗑️ Delete
                                                     </button>
                                                 </form>

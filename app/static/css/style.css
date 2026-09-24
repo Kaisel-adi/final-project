@@ -208,7 +208,7 @@ body {
 .btn-secondary { background: #f1f5f9; color: var(--text-primary); border: 1px solid var(--border-color); }
 .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
 
-/* Status Badges */
+/* Status & Role Badges */
 .badge {
     display: inline-block;
     padding: 0.25rem 0.65rem;
@@ -223,6 +223,11 @@ body {
 .badge-Complained { background: #dbeafe; color: #1e40af; }
 .badge-Resolved { background: #e0e7ff; color: #3730a3; }
 .badge-Removed { background: #fee2e2; color: #991b1b; }
+.badge-admin { background: #e0e7ff; color: #3730a3; }
+.badge-moderator { background: #dbeafe; color: #1e40af; }
+.badge-resident { background: #f1f5f9; color: #475569; }
+.badge-danger { background: #fee2e2; color: #991b1b; }
+.badge-primary-light { background: #e8f0fe; color: var(--primary); }
 
 /* Feed & Map Split View */
 .feed-layout {
@@ -314,3 +319,65 @@ body {
         order: -1;
     }
 }
+
+/* Admin Stat Tab Cards */
+.stat-tab-card {
+    margin-bottom: 0;
+    text-align: center;
+    border: 2px solid transparent;
+    background: #ffffff;
+    transition: all 0.2s ease-in-out;
+}
+.stat-tab-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+.stat-tab-card.active-primary {
+    border-color: var(--primary);
+    background: #f0f7ff;
+}
+.stat-tab-card.active-success {
+    border-color: var(--success);
+    background: #f0fdf4;
+}
+.stat-tab-card.active-blue {
+    border-color: #1e40af;
+    background: #eff6ff;
+}
+.stat-tab-card.active-slate {
+    border-color: #475569;
+    background: #f8fafc;
+}
+.stat-tab-card.active-danger {
+    border-color: var(--danger);
+    background: #fff5f5;
+}
+
+/* User Management Table */
+.user-row {
+    border-bottom: 1px solid var(--border-color);
+}
+.user-row.row-banned {
+    background: #fff5f5;
+}
+
+/* Upvote Verification Progress Bar */
+.progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+.progress-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+.progress-bar-fill.fill-primary {
+    background: var(--primary);
+}
+.progress-bar-fill.fill-success {
+    background: var(--success);
+}
+

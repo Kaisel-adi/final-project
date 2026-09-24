@@ -11,7 +11,7 @@
         <div style="display: flex; gap: 0.5rem; align-items: center;">
             <span class="badge badge-{{ report.status }}">{{ report.status }}</span>
             {% if report.is_flagged %}
-                <span class="badge" style="background: #fee2e2; color: #991b1b;">Flagged for Review</span>
+                <span class="badge badge-danger">Flagged for Review</span>
             {% endif %}
         </div>
     </div>
@@ -59,8 +59,8 @@
                         
                         <!-- Progress bar -->
                         {% set progress = (report.upvote_count / 10.0 * 100)|int if report.upvote_count < 10 else 100 %}
-                        <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
-                            <div style="width: {{ progress }}%; height: 100%; background: {% if report.upvote_count >= 10 %}var(--success){% else %}var(--primary){% endif %}; transition: width 0.3s;"></div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill {% if report.upvote_count >= 10 %}fill-success{% else %}fill-primary{% endif %}" style="width: {{ progress }}%;"></div>
                         </div>
 
                         {% if current_user.is_authenticated %}
