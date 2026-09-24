@@ -26,6 +26,7 @@ uploads/
 .pytest_cache/
 .coverage
 htmlcov/
+GCIR_PRD_v2.md
 
 # OS generated
 .DS_Store

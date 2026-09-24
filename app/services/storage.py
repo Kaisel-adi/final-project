@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 from pathlib import Path
+from typing import cast
 from werkzeug.utils import secure_filename
 from flask import current_app
 
@@ -46,7 +47,8 @@ def save_image(file_obj) -> str:
 
     # Local fallback
     unique_filename = f"{uuid.uuid4().hex[:12]}_{filename}"
-    upload_dir = Path(current_app.config.get("UPLOAD_FOLDER"))
+    upload_folder = cast(str, current_app.config.get("UPLOAD_FOLDER") or "static/uploads")
+    upload_dir = Path(upload_folder)
     upload_dir.mkdir(parents=True, exist_ok=True)
     destination = upload_dir / unique_filename
     file_obj.seek(0)
