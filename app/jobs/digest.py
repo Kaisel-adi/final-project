@@ -9,22 +9,15 @@ from app.db import get_db
 jobs_bp = Blueprint("jobs", __name__, url_prefix="/jobs")
 
 
-@jobs_bp.route("/digest", methods=["POST", "GET"])
-def run_digest_job():
+def dispatch_digest(db=None, lookback_hours: int = 24) -> dict:
     """
-    Scheduled job endpoint executed periodically (e.g. every 6 hours).
-    Secured by X-Job-Token header or authenticated Admin.
+    Core business logic to identify unverified reports within resident radii and dispatch digest emails.
     """
-    token = request.headers.get("X-Job-Token") or request.args.get("token")
-    secret_token = current_app.config.get("CRON_SECRET_TOKEN")
+    if db is None:
+        db = get_db()
 
-    is_authorized = (token and token == secret_token) or (current_user.is_authenticated and current_user.is_admin)
-    if not is_authorized:
-        return jsonify({"error": "Unauthorized. Invalid or missing job token."}), 401
-
-    db = get_db()
     now = datetime.now(timezone.utc)
-    lookback = now - timedelta(hours=24)
+    lookback = now - timedelta(hours=lookback_hours)
 
     # 1. Fetch unverified "Reported" issues created recently
     recent_reports = list(db.reports.find({
@@ -34,7 +27,14 @@ def run_digest_job():
     }))
 
     if not recent_reports:
-        return jsonify({"message": "No new reported issues found in lookback window.", "emails_sent": 0})
+        return {
+            "status": "success",
+            "message": f"No new reported issues found in {lookback_hours}h lookback window.",
+            "candidates_evaluated": 0,
+            "users_notified": 0,
+            "emails_dispatched": 0,
+            "executed_at": now.isoformat()
+        }
 
     # 2. Fetch all opted-in users with home or last login location
     users = list(db.users.find({"digest_opt_in": True}))
@@ -45,7 +45,7 @@ def run_digest_job():
         uid = str(d["user_id"])
         digest_history.setdefault(uid, set()).update(str(r) for r in d.get("report_ids", []))
 
-    user_matches = {}  # { user_id: [reports] }
+    user_matches = {}  # { user_id: (u, [reports]) }
     cat_dict = dict(CATEGORIES)
 
     for u in users:
@@ -136,10 +136,34 @@ def run_digest_job():
                 "sent_at": now
             })
 
-    return jsonify({
+    return {
         "status": "success",
         "candidates_evaluated": len(recent_reports),
         "users_notified": len(user_matches),
         "emails_dispatched": emails_sent,
         "executed_at": now.isoformat()
-    })
+    }
+
+
+@jobs_bp.route("/digest", methods=["POST", "GET"])
+def run_digest_job():
+    """
+    Scheduled job endpoint executed periodically (e.g. every 6 hours).
+    Secured by X-Job-Token header or authenticated Admin / Moderator.
+    """
+    token = request.headers.get("X-Job-Token") or request.args.get("token")
+    secret_token = current_app.config.get("CRON_SECRET_TOKEN")
+
+    is_authorized = (token and token == secret_token) or (
+        current_user.is_authenticated and (getattr(current_user, "is_admin", False) or getattr(current_user, "is_moderator", False))
+    )
+    if not is_authorized:
+        return jsonify({"error": "Unauthorized. Invalid or missing job token."}), 401
+
+    try:
+        hours = int(request.args.get("hours", 24))
+    except (ValueError, TypeError):
+        hours = 24
+
+    result = dispatch_digest(lookback_hours=hours)
+    return jsonify(result), 200

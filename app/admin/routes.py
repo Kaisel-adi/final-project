@@ -95,7 +95,13 @@ def hotspots():
 @admin_or_moderator_required
 def trigger_digest_now():
     """Manual on-demand digest execution from admin panel."""
-    from app.jobs.digest import run_digest_job
-    res = run_digest_job()
-    flash("Daily digest job triggered successfully.", "success")
+    from app.jobs.digest import dispatch_digest
+    result = dispatch_digest()
+    sent = result.get("emails_dispatched", 0)
+    users = result.get("users_notified", 0)
+    if sent > 0:
+        flash(f"Civic digest dispatched: {sent} email(s) successfully sent to {users} resident(s).", "success")
+    else:
+        msg = result.get("message", "No matching unverified issues within resident radii to dispatch.")
+        flash(f"Digest run completed: {msg}", "info")
     return redirect(url_for("admin.dashboard"))

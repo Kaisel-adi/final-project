@@ -66,5 +66,52 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str | Non
             logger.error(f"SendGrid email dispatch error: {e}")
             return False
 
+    elif backend == "smtp":
+        host = current_app.config.get("SMTP_HOST")
+        port = int(current_app.config.get("SMTP_PORT", 587))
+        user = current_app.config.get("SMTP_USER")
+        password = current_app.config.get("SMTP_PASSWORD", "")
+        use_tls = current_app.config.get("SMTP_USE_TLS", True)
+        use_ssl = current_app.config.get("SMTP_USE_SSL", False)
+
+        if not host:
+            logger.error("SMTP_HOST is not configured.")
+            return False
+
+        clean_password = password.strip().replace(" ", "") if password else ""
+
+        try:
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = from_email
+            msg["To"] = to_email
+
+            if text_body:
+                msg.attach(MIMEText(text_body, "plain", "utf-8"))
+            if html_body:
+                msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+            if use_ssl:
+                server = smtplib.SMTP_SSL(host, port, timeout=15)
+            else:
+                server = smtplib.SMTP(host, port, timeout=15)
+                if use_tls:
+                    server.starttls()
+
+            if user and clean_password:
+                server.login(user, clean_password)
+
+            server.send_message(msg)
+            server.quit()
+            logger.info(f"Successfully sent email via SMTP to {to_email}")
+            return True
+        except Exception as e:
+            logger.error(f"SMTP email dispatch error to {to_email}: {e}")
+            return False
+
     logger.warning(f"Unknown email backend '{backend}', skipping send.")
     return False
