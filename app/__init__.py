@@ -34,6 +34,16 @@ def create_app(config_class=Config):
     def load_user(user_id):
         return User.get_by_id(user_id)
 
+    @app.template_filter("is_video")
+    def is_video_filter(url):
+        if not url:
+            return False
+        url_lower = str(url).lower()
+        return (
+            any(url_lower.endswith(f".{ext}") for ext in ["mp4", "webm", "mov", "m4v", "ogg"])
+            or "/video/upload/" in url_lower
+        )
+
     # Register blueprints
     from app.auth.routes import auth_bp
     app.register_blueprint(auth_bp)

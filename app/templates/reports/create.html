@@ -22,10 +22,38 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="photo">Photo Evidence *</label>
-                <input class="form-input" type="file" id="photo" name="photo" accept="image/*" required>
-                <span style="font-size: 0.8rem; color: var(--text-secondary);">
-                    Supported formats: JPG, PNG, WEBP. Max size: 5MB.
+                <label class="form-label" for="photo">Photo / Video Evidence *</label>
+
+                <!-- Action Buttons: Upload File OR Open Camera -->
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-trigger-upload">
+                        📁 Choose from Device
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-open-camera">
+                        📷 Open Camera / Record
+                    </button>
+                    <span id="file-status-text" style="font-size: 0.85rem; color: var(--text-secondary);">No media selected</span>
+                </div>
+
+                <!-- Hidden native input populated via picker or camera capture -->
+                <input type="file" id="photo" name="photo" accept="image/*,video/*" style="display: none;" required>
+
+                <!-- Media Preview Card (populated on file selection / capture) -->
+                <div id="media-preview-box" class="media-preview-box" style="display: none;">
+                    <div id="media-preview-display"></div>
+                    <div style="flex: 1; min-width: 180px;">
+                        <div id="media-preview-name" style="font-weight: 600; font-size: 0.92rem; color: var(--text-primary); word-break: break-all;"></div>
+                        <div id="media-preview-size" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;"></div>
+                        <div style="margin-top: 0.5rem;">
+                            <button type="button" id="btn-clear-media" class="btn btn-secondary btn-sm" style="color: var(--danger);">
+                                ✕ Remove / Change
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <span style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-top: 0.4rem;">
+                    Supported formats: JPG, PNG, WEBP, MP4, WEBM, MOV. Max size: 15MB. Video limit: 10s.
                 </span>
             </div>
 
@@ -63,6 +91,77 @@
 
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">Submit Civic Report</button>
         </form>
+    </div>
+</div>
+
+<!-- Camera & Video Recorder Modal -->
+<div id="camera-modal" class="camera-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="camera-modal-title">
+    <div class="camera-modal-dialog">
+        <!-- Modal Header -->
+        <div class="camera-header">
+            <h3 id="camera-modal-title">📷 Live Camera & Video Recorder</h3>
+            <button type="button" class="camera-close-btn" id="btn-camera-close" aria-label="Close Camera">&times;</button>
+        </div>
+
+        <!-- Viewfinder Container -->
+        <div class="camera-viewfinder-container">
+            <!-- Live Viewfinder Video -->
+            <video id="camera-video" class="camera-video-elem" autoplay playsinline muted></video>
+
+            <!-- Review Photo Element -->
+            <img id="camera-photo-preview" class="camera-preview-elem" style="display: none;" alt="Captured Evidence Photo">
+
+            <!-- Review Video Element -->
+            <video id="camera-video-preview" class="camera-preview-elem" controls playsinline style="display: none;"></video>
+
+            <!-- Top Overlay Controls (Flip Camera & Mode Toggle) -->
+            <div class="camera-overlay-top" id="camera-overlay-top">
+                <div class="camera-mode-toggle">
+                    <button type="button" class="camera-mode-btn is-active" id="btn-mode-photo">📸 Photo</button>
+                    <button type="button" class="camera-mode-btn" id="btn-mode-video">🎥 Video (10s)</button>
+                </div>
+                <button type="button" class="camera-flip-btn" id="btn-flip-camera" title="Switch Front/Back Camera">
+                    🔄 Flip Camera
+                </button>
+            </div>
+
+            <!-- Video Recording Indicator Banner -->
+            <div class="camera-rec-banner" id="camera-rec-banner">
+                <span>🔴 RECORDING</span>
+                <span id="camera-rec-timer">00:00 / 00:10</span>
+            </div>
+
+            <!-- Video Recording Progress Bar Line -->
+            <div class="camera-video-progress" id="camera-rec-progress"></div>
+
+            <!-- Error Banner -->
+            <div id="camera-error-banner" style="display: none; position: absolute; padding: 1.25rem; background: rgba(15, 23, 42, 0.95); border: 1px solid #ef4444; color: #f87171; text-align: center; border-radius: 8px; max-width: 90%; font-size: 0.88rem; z-index: 20;">
+            </div>
+        </div>
+
+        <!-- Bottom Controls Bar -->
+        <div class="camera-bottom-bar">
+            <!-- Capture Controls (Stream active) -->
+            <div id="camera-live-controls" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;">
+                <!-- Snap Photo Button -->
+                <button type="button" class="camera-action-btn-snap" id="btn-snap-photo" title="Snap Photo"></button>
+                <!-- Record Video Button -->
+                <button type="button" class="camera-action-btn-record" id="btn-record-video" style="display: none;" title="Record Video">
+                    <div class="record-icon"></div>
+                </button>
+                <div id="camera-action-hint" style="font-size: 0.8rem; color: #94a3b8;">Tap to snap photo</div>
+            </div>
+
+            <!-- Review Actions (Post-capture) -->
+            <div id="camera-review-controls" class="camera-review-actions">
+                <button type="button" class="btn btn-secondary" id="btn-retake-media" style="flex: 1;">
+                    🔄 Retake
+                </button>
+                <button type="button" class="btn btn-success" id="btn-accept-media" style="flex: 1;">
+                    ✓ Use This Media
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -111,5 +210,398 @@
 
     document.getElementById('btn-geolocate').addEventListener('click', detectLocation);
     window.addEventListener('load', detectLocation);
+
+    // -------------------------------------------------------------
+    // Media & Camera Handling
+    // -------------------------------------------------------------
+    const photoInput = document.getElementById('photo');
+    const btnTriggerUpload = document.getElementById('btn-trigger-upload');
+    const btnOpenCamera = document.getElementById('btn-open-camera');
+    const mediaPreviewBox = document.getElementById('media-preview-box');
+    const mediaPreviewDisplay = document.getElementById('media-preview-display');
+    const mediaPreviewName = document.getElementById('media-preview-name');
+    const mediaPreviewSize = document.getElementById('media-preview-size');
+    const btnClearMedia = document.getElementById('btn-clear-media');
+    const fileStatusText = document.getElementById('file-status-text');
+
+    // Camera modal elements
+    const cameraModal = document.getElementById('camera-modal');
+    const btnCameraClose = document.getElementById('btn-camera-close');
+    const cameraVideo = document.getElementById('camera-video');
+    const cameraPhotoPreview = document.getElementById('camera-photo-preview');
+    const cameraVideoPreview = document.getElementById('camera-video-preview');
+    const cameraErrorBanner = document.getElementById('camera-error-banner');
+    const cameraOverlayTop = document.getElementById('camera-overlay-top');
+    const btnModePhoto = document.getElementById('btn-mode-photo');
+    const btnModeVideo = document.getElementById('btn-mode-video');
+    const btnFlipCamera = document.getElementById('btn-flip-camera');
+    const btnSnapPhoto = document.getElementById('btn-snap-photo');
+    const btnRecordVideo = document.getElementById('btn-record-video');
+    const cameraActionHint = document.getElementById('camera-action-hint');
+    const cameraLiveControls = document.getElementById('camera-live-controls');
+    const cameraReviewControls = document.getElementById('camera-review-controls');
+    const btnRetakeMedia = document.getElementById('btn-retake-media');
+    const btnAcceptMedia = document.getElementById('btn-accept-media');
+    const cameraRecBanner = document.getElementById('camera-rec-banner');
+    const cameraRecTimer = document.getElementById('camera-rec-timer');
+    const cameraRecProgress = document.getElementById('camera-rec-progress');
+
+    let activeStream = null;
+    let currentFacingMode = "environment"; // default to back camera
+    let currentMode = "photo"; // "photo" or "video"
+    let capturedBlob = null;
+    let capturedType = null;
+    let capturedFileName = null;
+    let previewObjectUrl = null;
+
+    // Video Recording variables
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordInterval = null;
+    let recordSeconds = 0;
+    const MAX_RECORD_SECONDS = 10;
+
+    // Helper: format file size
+    function formatBytes(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // Update main form preview box
+    function updateMediaPreview(file) {
+        if (!file) {
+            mediaPreviewBox.style.display = 'none';
+            fileStatusText.textContent = 'No media selected';
+            mediaPreviewDisplay.innerHTML = '';
+            return;
+        }
+
+        const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov)$/i.test(file.name);
+        const objUrl = URL.createObjectURL(file);
+
+        mediaPreviewDisplay.innerHTML = '';
+        if (isVideo) {
+            const vid = document.createElement('video');
+            vid.src = objUrl;
+            vid.controls = true;
+            vid.className = 'media-preview-thumb';
+            mediaPreviewDisplay.appendChild(vid);
+        } else {
+            const img = document.createElement('img');
+            img.src = objUrl;
+            img.className = 'media-preview-thumb';
+            img.alt = 'Selected evidence';
+            mediaPreviewDisplay.appendChild(img);
+        }
+
+        mediaPreviewName.textContent = file.name;
+        mediaPreviewSize.textContent = `${isVideo ? '🎥 Video' : '📸 Photo'} • ${formatBytes(file.size)}`;
+        mediaPreviewBox.style.display = 'flex';
+        fileStatusText.textContent = '✓ Evidence attached';
+    }
+
+    // Device upload button triggers native file input
+    btnTriggerUpload.addEventListener('click', () => {
+        photoInput.click();
+    });
+
+    photoInput.addEventListener('change', () => {
+        if (photoInput.files && photoInput.files[0]) {
+            updateMediaPreview(photoInput.files[0]);
+        }
+    });
+
+    // Clear media button
+    btnClearMedia.addEventListener('click', () => {
+        photoInput.value = '';
+        updateMediaPreview(null);
+    });
+
+    // Start live camera stream
+    async function startCameraStream() {
+        stopCameraStream();
+        hideCameraError();
+        resetToLiveState();
+
+        const constraints = {
+            video: {
+                facingMode: { ideal: currentFacingMode },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+
+        if (currentMode === 'video') {
+            constraints.audio = true;
+        }
+
+        try {
+            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraVideo.srcObject = activeStream;
+            await cameraVideo.play();
+        } catch (err) {
+            console.warn("Could not start camera with requested constraints:", err);
+            // If failed with audio on video mode, try video only
+            if (constraints.audio) {
+                try {
+                    delete constraints.audio;
+                    activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    cameraVideo.srcObject = activeStream;
+                    await cameraVideo.play();
+                    return;
+                } catch (fallbackErr) {
+                    console.error("Camera fallback failed:", fallbackErr);
+                }
+            }
+            showCameraError("Camera access denied or unavailable. Please ensure camera permissions are enabled in your browser or use 'Choose from Device'.");
+        }
+    }
+
+    function stopCameraStream() {
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+            activeStream = null;
+        }
+        if (recordInterval) {
+            clearInterval(recordInterval);
+            recordInterval = null;
+        }
+    }
+
+    function showCameraError(msg) {
+        cameraErrorBanner.textContent = msg;
+        cameraErrorBanner.style.display = 'block';
+    }
+
+    function hideCameraError() {
+        cameraErrorBanner.style.display = 'none';
+        cameraErrorBanner.textContent = '';
+    }
+
+    function resetToLiveState() {
+        cameraVideo.style.display = 'block';
+        cameraPhotoPreview.style.display = 'none';
+        cameraVideoPreview.style.display = 'none';
+        cameraLiveControls.style.display = 'flex';
+        cameraReviewControls.style.display = 'none';
+        cameraOverlayTop.style.display = 'flex';
+        cameraRecBanner.style.display = 'none';
+        cameraRecProgress.style.width = '0%';
+        btnRecordVideo.classList.remove('is-recording');
+        capturedBlob = null;
+        capturedType = null;
+        capturedFileName = null;
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = null;
+        }
+    }
+
+    function openCameraModal() {
+        cameraModal.classList.add('is-active');
+        startCameraStream();
+    }
+
+    function closeCameraModal() {
+        stopCameraStream();
+        resetToLiveState();
+        cameraModal.classList.remove('is-active');
+    }
+
+    btnOpenCamera.addEventListener('click', openCameraModal);
+    btnCameraClose.addEventListener('click', closeCameraModal);
+    cameraModal.addEventListener('click', (e) => {
+        if (e.target === cameraModal) {
+            closeCameraModal();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && cameraModal.classList.contains('is-active')) {
+            closeCameraModal();
+        }
+    });
+
+    // Flip camera (front vs back)
+    btnFlipCamera.addEventListener('click', () => {
+        currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+        startCameraStream();
+    });
+
+    // Mode Switcher: Photo vs Video
+    btnModePhoto.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') return;
+        currentMode = 'photo';
+        btnModePhoto.classList.add('is-active');
+        btnModeVideo.classList.remove('is-active');
+        btnSnapPhoto.style.display = 'flex';
+        btnRecordVideo.style.display = 'none';
+        cameraActionHint.textContent = 'Tap to snap photo';
+        startCameraStream();
+    });
+
+    btnModeVideo.addEventListener('click', () => {
+        currentMode = 'video';
+        btnModeVideo.classList.add('is-active');
+        btnModePhoto.classList.remove('is-active');
+        btnSnapPhoto.style.display = 'none';
+        btnRecordVideo.style.display = 'flex';
+        cameraActionHint.textContent = 'Tap red button to record (10s max)';
+        startCameraStream();
+    });
+
+    // Snap Photo Action
+    btnSnapPhoto.addEventListener('click', () => {
+        if (!activeStream) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = cameraVideo.videoWidth || 1280;
+        canvas.height = cameraVideo.videoHeight || 720;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+            if (!blob) return;
+            capturedBlob = blob;
+            capturedType = 'image/jpeg';
+            capturedFileName = `civic_photo_${Date.now()}.jpg`;
+
+            previewObjectUrl = URL.createObjectURL(blob);
+            cameraPhotoPreview.src = previewObjectUrl;
+            cameraPhotoPreview.style.display = 'block';
+            cameraVideo.style.display = 'none';
+            cameraVideoPreview.style.display = 'none';
+
+            cameraLiveControls.style.display = 'none';
+            cameraReviewControls.style.display = 'flex';
+            cameraOverlayTop.style.display = 'none';
+        }, 'image/jpeg', 0.92);
+    });
+
+    // Video Recording Action
+    function getSupportedMimeType() {
+        if (typeof MediaRecorder === 'undefined') return '';
+        const types = [
+            'video/mp4;codecs=avc1',
+            'video/mp4',
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm'
+        ];
+        for (const t of types) {
+            if (MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return '';
+    }
+
+    function startVideoRecording() {
+        if (!activeStream) return;
+        recordedChunks = [];
+        const mimeType = getSupportedMimeType();
+
+        try {
+            mediaRecorder = mimeType ? new MediaRecorder(activeStream, { mimeType }) : new MediaRecorder(activeStream);
+        } catch (err) {
+            showCameraError("Media recording is not supported in this browser: " + err.message);
+            return;
+        }
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+                recordedChunks.push(e.data);
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            const actualMime = mediaRecorder.mimeType || 'video/webm';
+            capturedBlob = new Blob(recordedChunks, { type: actualMime });
+            capturedType = actualMime;
+            const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+            capturedFileName = `civic_video_${Date.now()}.${ext}`;
+
+            previewObjectUrl = URL.createObjectURL(capturedBlob);
+            cameraVideoPreview.src = previewObjectUrl;
+            cameraVideoPreview.style.display = 'block';
+            cameraVideo.style.display = 'none';
+            cameraPhotoPreview.style.display = 'none';
+
+            cameraRecBanner.style.display = 'none';
+            cameraRecProgress.style.width = '0%';
+            cameraLiveControls.style.display = 'none';
+            cameraReviewControls.style.display = 'flex';
+            cameraOverlayTop.style.display = 'none';
+        };
+
+        mediaRecorder.start(200);
+        btnRecordVideo.classList.add('is-recording');
+        cameraRecBanner.style.display = 'flex';
+        cameraActionHint.textContent = 'Recording in progress... Tap to finish early';
+
+        recordSeconds = 0;
+        const startTime = Date.now();
+
+        recordInterval = setInterval(() => {
+            const elapsedMs = Date.now() - startTime;
+            const elapsedSec = elapsedMs / 1000.0;
+            const displaySec = Math.min(Math.floor(elapsedSec), MAX_RECORD_SECONDS);
+            const secStr = displaySec < 10 ? '0' + displaySec : displaySec;
+            cameraRecTimer.textContent = `00:${secStr} / 00:${MAX_RECORD_SECONDS}`;
+
+            const pct = Math.min((elapsedSec / MAX_RECORD_SECONDS) * 100, 100);
+            cameraRecProgress.style.width = pct + '%';
+
+            if (elapsedSec >= MAX_RECORD_SECONDS) {
+                stopVideoRecording();
+            }
+        }, 100);
+    }
+
+    function stopVideoRecording() {
+        if (recordInterval) {
+            clearInterval(recordInterval);
+            recordInterval = null;
+        }
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+        }
+        btnRecordVideo.classList.remove('is-recording');
+    }
+
+    btnRecordVideo.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            stopVideoRecording();
+        } else {
+            startVideoRecording();
+        }
+    });
+
+    // Review Actions: Retake or Accept
+    btnRetakeMedia.addEventListener('click', () => {
+        startCameraStream();
+    });
+
+    btnAcceptMedia.addEventListener('click', () => {
+        if (!capturedBlob || !capturedFileName) return;
+
+        const capturedFile = new File([capturedBlob], capturedFileName, {
+            type: capturedType,
+            lastModified: Date.now()
+        });
+
+        // Set to native input using DataTransfer
+        try {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(capturedFile);
+            photoInput.files = dataTransfer.files;
+        } catch (e) {
+            console.warn("DataTransfer not fully supported:", e);
+        }
+
+        updateMediaPreview(capturedFile);
+        closeCameraModal();
+    });
 </script>
 {% endblock %}

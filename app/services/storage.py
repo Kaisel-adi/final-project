@@ -20,10 +20,11 @@ def save_image(file_obj) -> str:
 
     filename = secure_filename(file_obj.filename)
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    allowed = current_app.config.get("ALLOWED_EXTENSIONS", {"jpg", "jpeg", "png", "webp"})
+    allowed = current_app.config.get("ALLOWED_EXTENSIONS", {"jpg", "jpeg", "png", "webp", "mp4", "webm", "mov"})
     if ext not in allowed:
         raise ValueError(f"File type .{ext} not allowed. Supported: {', '.join(allowed)}")
 
+    is_video = ext in {"mp4", "webm", "mov"}
     use_cloudinary = current_app.config.get("USE_CLOUDINARY", False)
     cloud_name = current_app.config.get("CLOUDINARY_CLOUD_NAME")
 
@@ -36,11 +37,15 @@ def save_image(file_obj) -> str:
             api_secret=current_app.config.get("CLOUDINARY_API_SECRET")
         )
         try:
-            upload_result = cloudinary.uploader.upload(
-                file_obj,
-                folder="gcir_reports",
-                transformation=[{"width": 1200, "height": 1200, "crop": "limit", "quality": "auto"}]
-            )
+            upload_kwargs = {
+                "folder": "gcir_reports",
+                "resource_type": "video" if is_video else "image"
+            }
+            if not is_video:
+                upload_kwargs["transformation"] = [
+                    {"width": 1200, "height": 1200, "crop": "limit", "quality": "auto"}
+                ]
+            upload_result = cloudinary.uploader.upload(file_obj, **upload_kwargs)
             return upload_result.get("secure_url", upload_result.get("url"))
         except Exception as e:
             logger.error(f"Cloudinary upload failed: {e}. Falling back to local storage.")
@@ -54,3 +59,7 @@ def save_image(file_obj) -> str:
     file_obj.seek(0)
     file_obj.save(destination)
     return f"/static/uploads/{unique_filename}"
+
+
+save_media = save_image
+

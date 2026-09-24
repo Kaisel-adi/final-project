@@ -35,8 +35,8 @@ class Config:
     
     # File upload settings
     UPLOAD_FOLDER = BASE_DIR / "app" / "static" / "uploads"
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB
-    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+    MAX_CONTENT_LENGTH = 15 * 1024 * 1024  # 15 MB (supports short video clips)
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "mp4", "webm", "mov"}
     
     # Cloudinary settings
     USE_CLOUDINARY = os.environ.get("USE_CLOUDINARY", "False").lower() in ("true", "1", "yes")

@@ -19,7 +19,7 @@ def create():
         photo_file = request.files.get("photo")
 
         if not photo_file or photo_file.filename == "":
-            flash("A photographic evidence of the issue is required.", "danger")
+            flash("A photo or video evidence of the issue is required.", "danger")
             return render_template("reports/create.html", categories=CATEGORIES,
                                    description=description, selected_cat=category)
 
