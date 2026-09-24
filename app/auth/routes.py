@@ -70,6 +70,10 @@ def login():
 
         user = User.get_by_email(email)
         if user and user.check_password(password):
+            if getattr(user, "is_banned", False):
+                flash("Your account has been suspended by an administrator.", "danger")
+                return render_template("auth/login.html")
+
             session.permanent = True
             login_user(user, remember=True)
             

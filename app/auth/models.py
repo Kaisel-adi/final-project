@@ -15,6 +15,7 @@ class User(UserMixin):
         self.email = doc.get("email", "")
         self.password_hash = doc.get("password_hash", "")
         self.role = doc.get("role", "resident")
+        self.is_banned = bool(doc.get("is_banned", False))
         self.home_location = doc.get("home_location")  # GeoJSON Point
         self.last_login_location = doc.get("last_login_location")  # GeoJSON Point
         self.last_login_at = doc.get("last_login_at")
@@ -41,7 +42,9 @@ class User(UserMixin):
             if not user_id:
                 return None
             doc = db.users.find_one({"_id": ObjectId(user_id)})
-            return User(doc) if doc else None
+            if not doc or doc.get("is_banned"):
+                return None
+            return User(doc)
         except Exception:
             return None
 

@@ -1,93 +1,414 @@
 {% extends "base.html" %}
 
-{% block title %}Admin & Moderation Dashboard — GCIR{% endblock %}
+{% block title %}Admin Management Dashboard — GCIR{% endblock %}
 
 {% block content %}
-<div style="max-width: 1100px; margin: 1.5rem auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+<div style="max-width: 1200px; margin: 1.5rem auto;">
+    <!-- Page Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
         <div>
-            <h1 style="font-size: 1.6rem; color: var(--text-primary);">Moderation & Analytics Dashboard</h1>
-            <p style="color: var(--text-secondary); font-size: 0.9rem;">Review flagged civic reports, view clusters, and trigger scheduled jobs.</p>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <h1 style="font-size: 1.6rem; color: var(--text-primary); margin: 0;">Civic Administration Dashboard</h1>
+                {% if current_user.is_admin %}
+                    <span class="badge" style="background: #e0e7ff; color: #3730a3;">SUPER ADMIN</span>
+                {% else %}
+                    <span class="badge" style="background: #dbeafe; color: #1e40af;">MODERATOR</span>
+                {% endif %}
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.35rem;">
+                Monitor civic reports, review flagged content, override verifications, and manage user roles.
+            </p>
         </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <a href="{{ url_for('admin.hotspots') }}" class="btn btn-secondary">
-                🔥 Hotspot Map
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <a href="{{ url_for('admin.hotspots') }}" class="btn btn-secondary btn-sm">
+                🔥 DBSCAN Hotspots
             </a>
             <form method="POST" action="{{ url_for('admin.trigger_digest_now') }}" style="display: inline;">
-                <button type="submit" class="btn btn-primary" onclick="return confirm('Dispatch email digest to opted-in users now?');">
+                <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Dispatch email digest to opted-in residents now?');">
                     📧 Run Digest Now
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Quick Stats -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;">
-        <div class="card" style="margin-bottom: 0; text-align: center;">
-            <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">{{ total_reports }}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Total Reports</div>
-        </div>
-        <div class="card" style="margin-bottom: 0; text-align: center;">
-            <div style="font-size: 2rem; font-weight: 700; color: var(--success);">{{ verified_reports }}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Community Verified</div>
-        </div>
-        <div class="card" style="margin-bottom: 0; text-align: center;">
-            <div style="font-size: 2rem; font-weight: 700; color: #1e40af;">{{ complained_reports }}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Complaints Filed</div>
-        </div>
-        <div class="card" style="margin-bottom: 0; text-align: center;">
-            <div style="font-size: 2rem; font-weight: 700; color: #475569;">{{ total_users }}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Registered Residents</div>
-        </div>
+    <!-- Clickable Quick Stats / Management Tabs -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <!-- All Reports Tab -->
+        <a href="{{ url_for('admin.dashboard', tab='all_reports') }}" 
+           style="text-decoration: none; color: inherit; display: block;">
+            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'all_reports' %}var(--primary){% else %}transparent{% endif %}; background: {% if active_tab == 'all_reports' %}#f0f7ff{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">{{ total_reports_count }}</div>
+                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
+                    📋 Total Reports
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Click to view all</span>
+            </div>
+        </a>
+
+        <!-- Community Verified Tab -->
+        <a href="{{ url_for('admin.dashboard', tab='verified') }}" 
+           style="text-decoration: none; color: inherit; display: block;">
+            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'verified' %}var(--success){% else %}transparent{% endif %}; background: {% if active_tab == 'verified' %}#f0fdf4{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--success);">{{ verified_count }}</div>
+                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
+                    ✅ Verified Reports
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Ready for complaint routing</span>
+            </div>
+        </a>
+
+        <!-- Complaints Filed Tab -->
+        <a href="{{ url_for('admin.dashboard', tab='complaints') }}" 
+           style="text-decoration: none; color: inherit; display: block;">
+            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'complaints' %}#1e40af{% else %}transparent{% endif %}; background: {% if active_tab == 'complaints' %}#eff6ff{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+                <div style="font-size: 2rem; font-weight: 700; color: #1e40af;">{{ complained_count }}</div>
+                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
+                    🏛️ Complaints Filed
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Routed to authorities</span>
+            </div>
+        </a>
+
+        <!-- Registered Users Tab -->
+        <a href="{{ url_for('admin.dashboard', tab='users') }}" 
+           style="text-decoration: none; color: inherit; display: block;">
+            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'users' %}#475569{% else %}transparent{% endif %}; background: {% if active_tab == 'users' %}#f8fafc{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+                <div style="font-size: 2rem; font-weight: 700; color: #475569;">{{ total_users_count }}</div>
+                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
+                    👥 Registered Users
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Manage roles & bans</span>
+            </div>
+        </a>
+
+        <!-- Flagged Queue Tab -->
+        <a href="{{ url_for('admin.dashboard', tab='flagged') }}" 
+           style="text-decoration: none; color: inherit; display: block;">
+            <div class="card" style="margin-bottom: 0; text-align: center; border: 2px solid {% if active_tab == 'flagged' %}var(--danger){% else %}transparent{% endif %}; background: {% if active_tab == 'flagged' %}#fff5f5{% else %}#ffffff{% endif %}; transition: all 0.2s;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--danger);">{{ flagged_count }}</div>
+                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
+                    ⚠️ Flagged Queue
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Citizen reports moderation</span>
+            </div>
+        </a>
     </div>
 
-    <!-- Moderation Queue -->
+    <!-- Active Tab Content Area -->
     <div class="card">
-        <div class="card-header">
-            <h2 style="font-size: 1.2rem;">Flagged Reports Queue ({{ flagged_reports|length }})</h2>
-            <span style="font-size: 0.82rem; color: var(--text-secondary);">
-                Reports flagged by residents for inappropriate imagery or spam
-            </span>
-        </div>
+        <!-- Tab 1: All Active Reports -->
+        {% if active_tab == 'all_reports' %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--text-primary);">All Civic Reports ({{ all_reports|length }})</h2>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Review, fast-track verify, or remove any reported civic issue.</span>
+                </div>
+            </div>
 
-        {% if flagged_reports %}
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                {% for r in flagged_reports %}
-                    <div style="display: flex; gap: 1rem; border: 1px solid #fee2e2; background: #fffaf0; padding: 1rem; border-radius: 8px; align-items: center;">
-                        <img src="{{ r.photo_url }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="font-weight: 700; color: #991b1b; font-size: 0.85rem;">
-                                    Flag Reason: {{ r.flag_reason or 'Citizen Flagged' }}
-                                </span>
-                                <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
+            {% if all_reports %}
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% for r in all_reports %}
+                        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 280px;">
+                                {% if r.photo_url %}
+                                    <img src="{{ r.photo_url }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); flex-shrink: 0;">
+                                {% else %}
+                                    <div style="width: 70px; height: 70px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">📍</div>
+                                {% endif %}
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
+                                        <span style="font-weight: 700; color: var(--text-primary);">{{ r.cat_label }}</span>
+                                        <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
+                                        {% if r.is_flagged %}
+                                            <span class="badge badge-Removed">Flagged</span>
+                                        {% endif %}
+                                    </div>
+                                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                        {{ r.description }}
+                                    </p>
+                                    <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.35rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                                        <span>📅 {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'Recent' }}</span>
+                                        <span>👍 {{ r.upvote_count }} / 10 Votes</span>
+                                        <span>📍 {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <p style="font-size: 0.9rem; margin-top: 0.25rem;">{{ r.description }}</p>
-                            <div style="font-size: 0.78rem; color: #78350f; margin-top: 0.35rem;">
-                                Coords: {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }} | Category: {{ r.category }}
+
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <a href="{{ url_for('reports.view', report_id=r._id) }}" class="btn btn-secondary btn-sm" target="_blank">
+                                    View Details
+                                </a>
+                                {% if r.status != 'Verified' and r.status != 'Complained' and r.status != 'Resolved' %}
+                                    <form method="POST" action="{{ url_for('admin.verify_report_instantly', report_id=r._id) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Instantly verify this report and unlock complaint routing?');">
+                                            ⚡ Verify Now
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove this report from public feed?');">
+                                        🗑️ Remove
+                                    </button>
+                                </form>
                             </div>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                            <form method="POST" action="{{ url_for('admin.moderate_report', report_id=r._id) }}">
-                                <input type="hidden" name="action" value="approve">
-                                <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;">
-                                    Approve & Unflag
-                                </button>
-                            </form>
-                            <form method="POST" action="{{ url_for('admin.moderate_report', report_id=r._id) }}" onsubmit="return confirm('Permanently remove this report from feed?');">
-                                <input type="hidden" name="action" value="remove">
-                                <button type="submit" class="btn btn-danger btn-sm" style="width: 100%;">
-                                    Remove Report
-                                </button>
-                            </form>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+                    No civic reports in database.
+                </div>
+            {% endif %}
+
+        <!-- Tab 2: Verified Reports -->
+        {% elif active_tab == 'verified' %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <div>
+                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--success);">Community & Admin Verified Reports ({{ verified_reports|length }})</h2>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Verified issues eligible for formal point-in-polygon complaint drafting.</span>
+                </div>
+            </div>
+
+            {% if verified_reports %}
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% for r in verified_reports %}
+                        <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 280px;">
+                                {% if r.photo_url %}
+                                    <img src="{{ r.photo_url }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+                                {% else %}
+                                    <div style="width: 70px; height: 70px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">📍</div>
+                                {% endif %}
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                        <span style="font-weight: 700;">{{ r.cat_label }}</span>
+                                        <span class="badge badge-Verified">Verified</span>
+                                    </div>
+                                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">{{ r.description }}</p>
+                                    <div style="font-size: 0.78rem; color: #047857; margin-top: 0.35rem; display: flex; gap: 1rem;">
+                                        <span>👍 {{ r.upvote_count }} Verifications</span>
+                                        <span>📍 {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <a href="{{ url_for('reports.view', report_id=r._id) }}" class="btn btn-secondary btn-sm" target="_blank">
+                                    View
+                                </a>
+                                <a href="{{ url_for('complaints.draft_view', report_id=r._id) }}" class="btn btn-primary btn-sm">
+                                    🏛️ Draft Complaint
+                                </a>
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove this verified report from feed?');">
+                                        🗑️ Remove
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+                    No verified reports currently awaiting complaint routing.
+                </div>
+            {% endif %}
+
+        <!-- Tab 3: Complaints Filed -->
+        {% elif active_tab == 'complaints' %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <div>
+                    <h2 style="font-size: 1.25rem; margin: 0; color: #1e40af;">Official Complaints Filed ({{ complaints_reports|length }})</h2>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Issues that have been routed and formally emailed to municipal authorities.</span>
+                </div>
             </div>
-        {% else %}
-            <div style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.95rem;">
-                ✓ Clean Queue: No reports currently flagged for moderation.
+
+            {% if complaints_reports %}
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% for r in complaints_reports %}
+                        <div style="background: #ffffff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div style="flex: 1; min-width: 280px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                    <span style="font-weight: 700;">{{ r.cat_label }}</span>
+                                    <span class="badge badge-Complained">Complained</span>
+                                </div>
+                                <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">{{ r.description }}</p>
+                                <div style="font-size: 0.78rem; color: #1e40af; margin-top: 0.35rem;">
+                                    Status Log: {{ r.status_log[-1].note if r.status_log else 'Formal complaint generated' }}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <a href="{{ url_for('reports.view', report_id=r._id) }}" class="btn btn-secondary btn-sm" target="_blank">
+                                    View
+                                </a>
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove this complaint report?');">
+                                        🗑️ Remove
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+                    No complaints formally filed yet.
+                </div>
+            {% endif %}
+
+        <!-- Tab 4: Registered Users Management -->
+        {% elif active_tab == 'users' %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--text-primary);">Registered User Management ({{ users_list|length }})</h2>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Assign moderator privileges, suspend/ban problematic accounts, or delete users.</span>
+                </div>
             </div>
+
+            {% if users_list %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); background: #f8fafc;">
+                                <th style="padding: 0.75rem 1rem;">User / Email</th>
+                                <th style="padding: 0.75rem 1rem;">Role</th>
+                                <th style="padding: 0.75rem 1rem;">Status</th>
+                                <th style="padding: 0.75rem 1rem;">Reports</th>
+                                <th style="padding: 0.75rem 1rem;">Joined</th>
+                                <th style="padding: 0.75rem 1rem; text-align: right;">Admin Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users_list %}
+                                <tr style="border-bottom: 1px solid var(--border-color); {% if u.is_banned %}background: #fff5f5;{% endif %}">
+                                    <td style="padding: 0.85rem 1rem;">
+                                        <div style="font-weight: 600; color: var(--text-primary);">{{ u.name }}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ u.email }}</div>
+                                    </td>
+                                    <td style="padding: 0.85rem 1rem;">
+                                        {% if u.role == 'admin' %}
+                                            <span class="badge" style="background: #e0e7ff; color: #3730a3;">ADMIN</span>
+                                        {% elif u.role == 'moderator' %}
+                                            <span class="badge" style="background: #dbeafe; color: #1e40af;">MODERATOR</span>
+                                        {% else %}
+                                            <span class="badge" style="background: #f1f5f9; color: #475569;">RESIDENT</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 0.85rem 1rem;">
+                                        {% if u.is_banned %}
+                                            <span class="badge badge-Removed">BANNED</span>
+                                        {% else %}
+                                            <span class="badge badge-Verified">ACTIVE</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 0.85rem 1rem;">
+                                        <span style="font-weight: 600;">{{ u.report_count }}</span>
+                                    </td>
+                                    <td style="padding: 0.85rem 1rem; font-size: 0.82rem; color: var(--text-secondary);">
+                                        {{ u.created_at.strftime('%d %b %Y') if u.created_at else '-' }}
+                                    </td>
+                                    <td style="padding: 0.85rem 1rem; text-align: right;">
+                                        {% if u.role == 'admin' or u._id|string == current_user.id %}
+                                            <span style="font-size: 0.8rem; color: #94a3b8; font-style: italic;">Protected Admin</span>
+                                        {% elif current_user.is_admin %}
+                                            <div style="display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                                                <!-- Role Promotion / Demotion -->
+                                                {% if u.role == 'resident' %}
+                                                    <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" style="display: inline;">
+                                                        <input type="hidden" name="role" value="moderator">
+                                                        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Promote {{ u.name }} to Moderator?');">
+                                                            + Mod
+                                                        </button>
+                                                    </form>
+                                                {% elif u.role == 'moderator' %}
+                                                    <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" style="display: inline;">
+                                                        <input type="hidden" name="role" value="resident">
+                                                        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Revoke moderator privileges from {{ u.name }}?');">
+                                                            - Demote
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+
+                                                <!-- Ban / Unban Toggle -->
+                                                <form method="POST" action="{{ url_for('admin.toggle_user_ban', user_id=u._id) }}" style="display: inline;">
+                                                    <button type="submit" class="btn {% if u.is_banned %}btn-success{% else %}btn-secondary{% endif %} btn-sm" onclick="return confirm('{% if u.is_banned %}Unban and restore access for {{ u.name }}?{% else %}Suspend / Ban {{ u.name }} and invalidate their sessions?{% endif %}');">
+                                                        {% if u.is_banned %}Unban{% else %}🚫 Ban{% endif %}
+                                                    </button>
+                                                </form>
+
+                                                <!-- Delete User -->
+                                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=u._id) }}" style="display: inline;">
+                                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('⚠️ Permanently delete {{ u.name }} and all their submitted reports/upvotes? This cannot be undone.');">
+                                                        🗑️ Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% else %}
+                                            <span style="font-size: 0.8rem; color: #94a3b8;">Admin Only</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+                    No registered users found.
+                </div>
+            {% endif %}
+
+        <!-- Tab 5: Flagged Reports Queue -->
+        {% elif active_tab == 'flagged' %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <div>
+                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--danger);">Citizen Flagged Reports Queue ({{ flagged_reports|length }})</h2>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Review citizen flags for spam, offensive imagery, or invalid locations.</span>
+                </div>
+            </div>
+
+            {% if flagged_reports %}
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% for r in flagged_reports %}
+                        <div style="display: flex; gap: 1rem; border: 1px solid #fee2e2; background: #fffaf0; padding: 1rem; border-radius: 8px; align-items: center; flex-wrap: wrap;">
+                            <img src="{{ r.photo_url }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+                            <div style="flex: 1; min-width: 260px;">
+                                <div style="display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                                    <span style="font-weight: 700; color: #991b1b; font-size: 0.85rem;">
+                                        Flag Reason: {{ r.flag_reason or 'Citizen Flagged' }}
+                                    </span>
+                                    <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
+                                </div>
+                                <p style="font-size: 0.9rem; margin-top: 0.25rem; color: var(--text-primary);">{{ r.description }}</p>
+                                <div style="font-size: 0.78rem; color: #78350f; margin-top: 0.35rem;">
+                                    Coords: {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }} | Category: {{ r.cat_label }}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <form method="POST" action="{{ url_for('admin.moderate_report', report_id=r._id) }}">
+                                    <input type="hidden" name="action" value="approve">
+                                    <button type="submit" class="btn btn-secondary btn-sm">
+                                        ✓ Approve & Unflag
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.verify_report_instantly', report_id=r._id) }}">
+                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Fast-track verify this flagged report?');">
+                                        ⚡ Verify
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" onsubmit="return confirm('Permanently remove this report from feed?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        🗑️ Remove
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary); font-size: 0.95rem;">
+                    ✓ Clean Queue: No civic reports currently flagged for moderation.
+                </div>
+            {% endif %}
         {% endif %}
     </div>
 </div>
