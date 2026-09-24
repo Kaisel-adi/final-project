@@ -126,5 +126,10 @@ def init_db_indexes(db: Database) -> dict[str, list[str]]:
     idx_digest_user = db.digest_log.create_index([("user_id", ASCENDING), ("sent_at", DESCENDING)], name="idx_digest_user_sent")
     created_indexes["digest_log"] = [idx_digest_user]
 
+    # 6. pending_signups collection
+    idx_pending_email = db.pending_signups.create_index([("email", ASCENDING)], unique=True, name="idx_pending_email_unique")
+    idx_pending_ttl = db.pending_signups.create_index([("expires_at", ASCENDING)], expireAfterSeconds=0, name="idx_pending_ttl")
+    created_indexes["pending_signups"] = [idx_pending_email, idx_pending_ttl]
+
     logger.info(f"Successfully initialized indexes: {list(created_indexes.keys())}")
     return created_indexes

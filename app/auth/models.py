@@ -22,6 +22,7 @@ class User(UserMixin):
         self.digest_opt_in = doc.get("digest_opt_in", True)
         self.digest_radius_km = float(doc.get("digest_radius_km", 5.0))
         self.created_at = doc.get("created_at")
+        self.email_verified = bool(doc.get("email_verified", True))
 
     @property
     def is_moderator(self) -> bool:
@@ -61,7 +62,11 @@ class User(UserMixin):
         if db is None:
             db = get_db()
 
+        from app.auth.validators import validate_email_format
         email_clean = email.strip().lower()
+        if not validate_email_format(email_clean):
+            raise ValueError("Invalid email format.")
+
         if db.users.find_one({"email": email_clean}):
             raise ValueError("An account with this email already exists.")
 
@@ -75,7 +80,8 @@ class User(UserMixin):
             "created_at": datetime.now(timezone.utc),
             "last_login_at": datetime.now(timezone.utc),
             "home_location": None,
-            "last_login_location": None
+            "last_login_location": None,
+            "email_verified": True
         }
 
         if home_coords and len(home_coords) == 2:

@@ -3,6 +3,8 @@ from bson import ObjectId
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app.auth.models import User
+from app.auth.validators import validate_email_format
+from app.auth.services import stage_pending_signup, verify_and_complete_signup, resend_verification_otp
 from app.reports.services import CATEGORIES
 from app.db import get_db
 
@@ -27,6 +29,15 @@ def register():
             flash("Name, email, and password are required.", "danger")
             return render_template("auth/register.html", name=name, email=email)
 
+        # Validate email format
+        if not validate_email_format(email):
+            flash("Please enter a valid email address.", "danger")
+            return render_template("auth/register.html", name=name, email=email)
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters long.", "danger")
+            return render_template("auth/register.html", name=name, email=email)
+
         home_coords = None
         if home_lat and home_lon:
             try:
@@ -38,7 +49,7 @@ def register():
                 pass
 
         try:
-            user = User.create(
+            stage_pending_signup(
                 name=name,
                 email=email,
                 password=password,
@@ -46,15 +57,68 @@ def register():
                 digest_opt_in=digest_opt_in,
                 digest_radius_km=digest_radius_km
             )
-            session.permanent = True
-            login_user(user, remember=True)
-            flash("Account created successfully! Welcome to GCIR.", "success")
-            return redirect(url_for("feed.feed_view"))
+            session["pending_signup_email"] = email.strip().lower()
+            flash(f"A 6-digit verification code has been sent to {email}. Please enter it below to complete sign-up.", "info")
+            return redirect(url_for("auth.verify_otp"))
         except ValueError as e:
             flash(str(e), "danger")
             return render_template("auth/register.html", name=name, email=email)
+        except Exception as e:
+            flash(f"Error initiating registration: {str(e)}", "danger")
+            return render_template("auth/register.html", name=name, email=email)
 
     return render_template("auth/register.html")
+
+
+@auth_bp.route("/verify-otp", methods=["GET", "POST"])
+def verify_otp():
+    if current_user.is_authenticated:
+        return redirect(url_for("feed.feed_view"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower() or session.get("pending_signup_email")
+        otp = request.form.get("otp", "").strip()
+
+        if not email:
+            flash("No pending registration session found. Please register again.", "danger")
+            return redirect(url_for("auth.register"))
+
+        if not otp:
+            flash("Please enter the 6-digit verification code.", "danger")
+            return render_template("auth/verify_otp.html", email=email)
+
+        user, msg = verify_and_complete_signup(email, otp)
+        if user:
+            session.permanent = True
+            session.pop("pending_signup_email", None)
+            login_user(user, remember=True)
+            flash(msg, "success")
+            return redirect(url_for("feed.feed_view"))
+        else:
+            flash(msg, "danger")
+            return render_template("auth/verify_otp.html", email=email)
+
+    email = session.get("pending_signup_email") or request.args.get("email", "").strip().lower()
+    if not email:
+        flash("Please enter your registration details first.", "warning")
+        return redirect(url_for("auth.register"))
+
+    return render_template("auth/verify_otp.html", email=email)
+
+
+@auth_bp.route("/resend-otp", methods=["POST"])
+def resend_otp():
+    if current_user.is_authenticated:
+        return redirect(url_for("feed.feed_view"))
+
+    email = request.form.get("email", "").strip().lower() or session.get("pending_signup_email")
+    if not email:
+        flash("No pending registration found.", "danger")
+        return redirect(url_for("auth.register"))
+
+    success, msg = resend_verification_otp(email)
+    flash(msg, "info" if success else "warning")
+    return redirect(url_for("auth.verify_otp", email=email))
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -67,6 +131,11 @@ def login():
         password = request.form.get("password", "")
         last_lat = request.form.get("last_lat")
         last_lon = request.form.get("last_lon")
+
+        # Validate email format
+        if not email or not validate_email_format(email):
+            flash("Please enter a valid email address.", "danger")
+            return render_template("auth/login.html")
 
         user = User.get_by_email(email)
         if user and user.check_password(password):

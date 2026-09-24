@@ -5,13 +5,21 @@ from flask import current_app
 logger = logging.getLogger(__name__)
 
 
+def _get_email_config(key: str, default=None):
+    from flask import current_app, has_app_context
+    if has_app_context():
+        return current_app.config.get(key, default)
+    from app.config import Config
+    return getattr(Config, key, default)
+
+
 def send_email(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
     """
     Dispatches transactional emails via configured backend:
-    'mock', 'resend', or 'sendgrid'.
+    'mock', 'resend', 'sendgrid', or 'smtp'.
     """
-    backend = current_app.config.get("EMAIL_BACKEND", "mock").lower()
-    from_email = current_app.config.get("EMAIL_FROM", "GCIR Civic Alerts <alerts@gcir.local>")
+    backend = str(_get_email_config("EMAIL_BACKEND", "mock")).lower()
+    from_email = str(_get_email_config("EMAIL_FROM", "GCIR Civic Alerts <alerts@gcir.local>"))
 
     if backend == "mock":
         logger.info(f"--- [MOCK EMAIL DISPATCH] ---")
@@ -22,7 +30,7 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str | Non
         return True
 
     elif backend == "resend":
-        api_key = current_app.config.get("RESEND_API_KEY")
+        api_key = _get_email_config("RESEND_API_KEY")
         if not api_key:
             logger.error("Resend API key missing.")
             return False
@@ -45,7 +53,7 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str | Non
             return False
 
     elif backend == "sendgrid":
-        api_key = current_app.config.get("SENDGRID_API_KEY")
+        api_key = _get_email_config("SENDGRID_API_KEY")
         if not api_key:
             logger.error("SendGrid API key missing.")
             return False
@@ -67,12 +75,12 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str | Non
             return False
 
     elif backend == "smtp":
-        host = current_app.config.get("SMTP_HOST")
-        port = int(current_app.config.get("SMTP_PORT", 587))
-        user = current_app.config.get("SMTP_USER")
-        password = current_app.config.get("SMTP_PASSWORD", "")
-        use_tls = current_app.config.get("SMTP_USE_TLS", True)
-        use_ssl = current_app.config.get("SMTP_USE_SSL", False)
+        host = _get_email_config("SMTP_HOST")
+        port = int(_get_email_config("SMTP_PORT", 587))
+        user = _get_email_config("SMTP_USER")
+        password = _get_email_config("SMTP_PASSWORD", "")
+        use_tls = _get_email_config("SMTP_USE_TLS", True)
+        use_ssl = _get_email_config("SMTP_USE_SSL", False)
 
         if not host:
             logger.error("SMTP_HOST is not configured.")
