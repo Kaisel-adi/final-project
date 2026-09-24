@@ -37,7 +37,7 @@ def save_image(file_obj) -> str:
             api_secret=current_app.config.get("CLOUDINARY_API_SECRET")
         )
         try:
-            upload_kwargs = {
+            upload_kwargs: dict[str, object] = {
                 "folder": "gcir_reports",
                 "resource_type": "video" if is_video else "image"
             }
