@@ -54,7 +54,7 @@ def provision_admin(email: str, password: str, name: str = "Civic Administrator"
                 }
             }
         )
-        print(f"✓ Updated existing account '{email_clean}' to role: admin with new password.")
+        print(f"[OK] Updated existing account '{email_clean}' to role: admin with new password.")
         return str(existing["_id"])
     else:
         doc = {
@@ -70,7 +70,7 @@ def provision_admin(email: str, password: str, name: str = "Civic Administrator"
             "last_login_at": now
         }
         res = db.users.insert_one(doc)
-        print(f"✓ Successfully created new admin account: '{email_clean}'")
+        print(f"[OK] Successfully created new admin account: '{email_clean}'")
         return str(res.inserted_id)
 
 
@@ -93,13 +93,13 @@ def main():
         password = getpass.getpass("Enter Admin Password (min 8 chars): ").strip()
         confirm = getpass.getpass("Confirm Password: ").strip()
         if password != confirm:
-            print("❌ Passwords do not match. Aborting.")
+            print("[ERROR] Passwords do not match. Aborting.")
             sys.exit(1)
 
     try:
         provision_admin(email, password, name)
     except Exception as e:
-        print(f"❌ Error provisioning admin: {e}")
+        print(f"[ERROR] Error provisioning admin: {e}")
         sys.exit(1)
 
 

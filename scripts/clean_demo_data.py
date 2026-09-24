@@ -38,16 +38,16 @@ def clean_demo_data(purge_all_reports: bool = True, db=None):
 
     # 1. Remove demo placeholder accounts
     res_users = db.users.delete_many({"email": {"$in": DEMO_EMAILS}})
-    print(f"✓ Removed {res_users.deleted_count} demo user account(s).")
+    print(f"[OK] Removed {res_users.deleted_count} demo user account(s).")
 
     # 2. Purge reports
     if purge_all_reports:
         res_reports = db.reports.delete_many({})
         res_upvotes = db.upvotes.delete_many({})
         res_digest = db.digest_log.delete_many({})
-        print(f"✓ Purged {res_reports.deleted_count} report(s).")
-        print(f"✓ Purged {res_upvotes.deleted_count} upvote(s).")
-        print(f"✓ Purged {res_digest.deleted_count} digest log(s).")
+        print(f"[OK] Purged {res_reports.deleted_count} report(s).")
+        print(f"[OK] Purged {res_upvotes.deleted_count} upvote(s).")
+        print(f"[OK] Purged {res_digest.deleted_count} digest log(s).")
 
     # 3. Ensure jurisdictions are intact
     juris_count = db.jurisdictions.count_documents({})
@@ -55,7 +55,7 @@ def clean_demo_data(purge_all_reports: bool = True, db=None):
         print("Jurisdictions collection was empty. Seeding official boundaries...")
         seed_database(db)
         juris_count = db.jurisdictions.count_documents({})
-    print(f"✓ Verified {juris_count} official jurisdictions (MCD 250 wards & NCR) are intact.")
+    print(f"[OK] Verified {juris_count} official jurisdictions (MCD 250 wards & NCR) are intact.")
 
     print("\nDatabase is now clean and production-ready!")
     print("=" * 60)
@@ -67,7 +67,7 @@ def main():
     args = parser.parse_args()
 
     if not args.yes:
-        confirm = input("⚠️  This will delete all demo reports, upvotes, and demo test accounts. Proceed? (y/N): ").strip().lower()
+        confirm = input("[WARN] This will delete all demo reports, upvotes, and demo test accounts. Proceed? (y/N): ").strip().lower()
         if confirm != "y":
             print("Operation cancelled.")
             sys.exit(0)
