@@ -125,17 +125,13 @@ Calibrated on 100 hand-labeled pairs (50 duplicate pairs, 50 non-duplicate pairs
    ```powershell
    .venv\Scripts\activate
    ```
-2. **Compile Boundaries & Seed Demo Data**:
+2. **Compile Boundaries & Create Admin**:
    ```powershell
    .venv\Scripts\python.exe scripts/etl_boundaries.py
-   .venv\Scripts\python.exe scripts/seed_demo_data.py
+   .venv\Scripts\python.exe scripts/create_admin.py
    ```
 3. **Start the Web Application**:
    ```powershell
    .venv\Scripts\python.exe wsgi.py
    ```
-4. **Log in with Demo Credentials**:
-   - **Resident**: `resident@gcir.local` (Password: `password123`)
-   - **Voter**: `voter@gcir.local` (Password: `password123`)
-   - **Admin**: `admin@gcir.local` (Password: `admin123`)
-5. Open your browser at **http://localhost:5000**.
+4. Open your browser at **http://localhost:5000** and sign in or register your resident account.

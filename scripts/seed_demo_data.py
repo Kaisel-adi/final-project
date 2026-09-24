@@ -37,11 +37,12 @@ def seed_demo(db=None):
 
     now = datetime.now(timezone.utc)
 
-    # 1. Users
+    # 1. Local demo sandbox accounts (for offline UI preview only)
+    demo_pass = generate_password_hash("demo-pass-local")
     resident = {
-        "name": "Arun Kumar",
+        "name": "Local Resident Tester",
         "email": "resident@gcir.local",
-        "password_hash": generate_password_hash("password123"),
+        "password_hash": demo_pass,
         "role": "resident",
         "home_location": {"type": "Point", "coordinates": [77.190, 28.650]},  # Karol Bagh
         "last_login_location": {"type": "Point", "coordinates": [77.190, 28.650]},
@@ -51,9 +52,9 @@ def seed_demo(db=None):
     }
 
     voter = {
-        "name": "Pooja Sharma",
+        "name": "Local Neighbor Tester",
         "email": "voter@gcir.local",
-        "password_hash": generate_password_hash("password123"),
+        "password_hash": demo_pass,
         "role": "resident",
         "home_location": {"type": "Point", "coordinates": [77.195, 28.652]},  # Karol Bagh nearby
         "digest_opt_in": True,
@@ -61,20 +62,9 @@ def seed_demo(db=None):
         "created_at": now
     }
 
-    admin = {
-        "name": "Chief Civic Moderator",
-        "email": "admin@gcir.local",
-        "password_hash": generate_password_hash("admin123"),
-        "role": "admin",
-        "home_location": {"type": "Point", "coordinates": [77.2167, 28.6315]},  # Connaught Place
-        "digest_opt_in": True,
-        "digest_radius_km": 10.0,
-        "created_at": now
-    }
-
     r_id = db.users.insert_one(resident).inserted_id
     v_id = db.users.insert_one(voter).inserted_id
-    a_id = db.users.insert_one(admin).inserted_id
+    a_id = r_id  # Associate Connaught Place issue with resident
 
     # 2. Seed realistic civic reports across Delhi-NCR
     demo_reports = [
@@ -213,11 +203,10 @@ def seed_demo(db=None):
 
     # Compute DBSCAN clusters on seeded reports
     clusters = compute_dbscan_hotspots(eps_km=0.5, min_samples=2, db=db)
-    print(f"Computed {len(clusters)} initial hotspot clusters.")
-    print("Demo accounts created:")
-    print("  - Resident: resident@gcir.local (password123)")
-    print("  - Secondary Voter: voter@gcir.local (password123)")
-    print("  - Admin / Mod: admin@gcir.local (admin123)")
+    print("Local demo sandbox accounts created:")
+    print("  - Resident: resident@gcir.local")
+    print("  - Secondary Voter: voter@gcir.local")
+    print("Note: To create a secure Admin account, run: python scripts/create_admin.py")
 
 
 if __name__ == "__main__":

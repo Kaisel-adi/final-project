@@ -125,15 +125,20 @@ Open **http://localhost:5000** in your browser.
 
 ---
 
-## 👥 Demo Accounts
+## 🔐 Admin Account Setup
 
-The database includes three pre-seeded accounts for testing:
+To create or update a secure administrator account, run the CLI utility:
 
-| Role | Email | Password | Home Pin Location |
-|---|---|---|---|
-| **Resident (Reporter)** | `resident@gcir.local` | `password123` | Karol Bagh, Delhi |
-| **Resident (Voter)** | `voter@gcir.local` | `password123` | Karol Bagh (Nearby), Delhi |
-| **Civic Moderator / Admin** | `admin@gcir.local` | `admin123` | Connaught Place, NDMC |
+```bash
+python scripts/create_admin.py
+```
+This will securely prompt you for your admin email and password (passwords are securely hashed with PBKDF2:SHA256 and never committed to version control).
+
+### Database Cleanup & Production Reset
+To wipe demo reports and sandbox test data from your database (while preserving official municipal boundary jurisdictions):
+```bash
+python scripts/clean_demo_data.py
+```
 
 ---
 

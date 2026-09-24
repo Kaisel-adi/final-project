@@ -54,7 +54,7 @@ def create_app(config_class=Config):
     def index():
         return redirect(url_for("feed.feed_view"))
 
-    # Auto-seed database if empty (e.g. running in mock mode or fresh DB, not during tests)
+    # Ensure jurisdiction boundaries are loaded if empty
     if not app.config.get("TESTING"):
         with app.app_context():
             try:
@@ -63,10 +63,7 @@ def create_app(config_class=Config):
                 if db.jurisdictions.count_documents({}) == 0:
                     from scripts.etl_boundaries import seed_database
                     seed_database(db)
-                if db.reports.count_documents({}) == 0:
-                    from scripts.seed_demo_data import seed_demo
-                    seed_demo(db)
             except Exception as e:
-                app.logger.warning(f"Auto-seeding skipped: {e}")
+                app.logger.warning(f"Jurisdiction auto-seed notice: {e}")
 
     return app

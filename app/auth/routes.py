@@ -72,7 +72,7 @@ def login():
             
             # Update last_login_at and optionally last_login_location
             db = get_db()
-            update_fields = {"last_login_at": datetime.now(timezone.utc)}
+            update_fields: dict[str, object] = {"last_login_at": datetime.now(timezone.utc)}
             if last_lat and last_lon:
                 try:
                     lat, lon = float(last_lat), float(last_lon)
