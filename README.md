@@ -9,6 +9,8 @@
 > **Community-verified, geo-spatial civic grievance platform.**  
 > Residents report geo-tagged civic problems (potholes, garbage dumps, water leaks, broken streetlights), nearby neighbors verify them with upvotes, and upon reaching the verification threshold (10 votes), the system automatically performs hierarchical point-in-polygon spatial routing to draft and address formal complaint emails to the exact responsible authority (Ward > Sector > District > State).
 
+[**visit-us here**](https://geo-tagged-civic-issue-reporter.onrender.com)
+
 ---
 
 ## 🌟 Key Capabilities
