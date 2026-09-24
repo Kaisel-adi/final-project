@@ -210,3 +210,31 @@ def test_admin_test_email_diagnostic_route(client, mock_db):
     html = res.get_data(as_text=True)
     assert "Email backend is currently running in MOCK mode" in html
 
+
+def test_brevo_api_dispatch_mock(app, monkeypatch):
+    from app.services.email import send_email_with_status
+
+    class MockResponse:
+        def __init__(self, status_code, text):
+            self.status_code = status_code
+            self.text = text
+
+    with app.app_context():
+        app.config["EMAIL_BACKEND"] = "brevo"
+        app.config["BREVO_API_KEY"] = "xkeysib-test-fake-key"
+        app.config["EMAIL_FROM"] = "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+
+        # Mock successful Brevo response
+        import requests
+        monkeypatch.setattr(requests, "post", lambda url, headers, json, timeout: MockResponse(201, "OK"))
+
+        success, msg = send_email_with_status("resident@delhi.org", "Subject", "<p>Hello</p>", "Hello")
+        assert success is True
+        assert "Brevo" in msg
+
+        # Mock failure Brevo response
+        monkeypatch.setattr(requests, "post", lambda url, headers, json, timeout: MockResponse(401, "Key unauthorized"))
+        success, err = send_email_with_status("resident@delhi.org", "Subject", "<p>Hello</p>", "Hello")
+        assert success is False
+        assert "Brevo API error" in err or "Key unauthorized" in err
+

@@ -47,6 +47,7 @@ class Config:
     # Email settings
     EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "mock").strip().strip('"').strip("'")
     EMAIL_FROM = os.environ.get("EMAIL_FROM", "GCIR Civic Alerts <alerts@gcir.local>").strip().strip('"').strip("'")
+    BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "").strip().strip('"').strip("'")
     RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip().strip('"').strip("'")
     SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "").strip().strip('"').strip("'")
     SMTP_HOST = os.environ.get("SMTP_HOST", "").strip().strip('"').strip("'")

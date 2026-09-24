@@ -40,15 +40,13 @@ def get_effective_email_backend() -> str:
     if is_testing:
         return raw_backend or "mock"
 
-    if raw_backend in ("smtp", "resend", "sendgrid"):
+    if raw_backend in ("smtp", "resend", "sendgrid", "brevo"):
         return raw_backend
 
     # Auto-detection when backend is mock/unset:
-    smtp_host = _clean_str(_get_email_config("SMTP_HOST", ""))
-    smtp_user = _clean_str(_get_email_config("SMTP_USER", ""))
-    if smtp_host and smtp_user:
-        logger.info("Auto-detected SMTP credentials; upgrading email backend to 'smtp'.")
-        return "smtp"
+    if _clean_str(_get_email_config("BREVO_API_KEY", "")):
+        logger.info("Auto-detected BREVO_API_KEY; upgrading email backend to 'brevo'.")
+        return "brevo"
 
     if _clean_str(_get_email_config("RESEND_API_KEY", "")):
         logger.info("Auto-detected RESEND_API_KEY; upgrading email backend to 'resend'.")
@@ -57,6 +55,12 @@ def get_effective_email_backend() -> str:
     if _clean_str(_get_email_config("SENDGRID_API_KEY", "")):
         logger.info("Auto-detected SENDGRID_API_KEY; upgrading email backend to 'sendgrid'.")
         return "sendgrid"
+
+    smtp_host = _clean_str(_get_email_config("SMTP_HOST", ""))
+    smtp_user = _clean_str(_get_email_config("SMTP_USER", ""))
+    if smtp_host and smtp_user:
+        logger.info("Auto-detected SMTP credentials; upgrading email backend to 'smtp'.")
+        return "smtp"
 
     return "mock"
 
@@ -79,7 +83,7 @@ def _sanitize_from_email(from_email: str, backend: str, smtp_user: str) -> str:
         if clean_from.lower() != clean_user.lower():
             return f"GCIR Civic Alerts <{clean_user}>"
 
-    return clean_from or "GCIR Civic Alerts <alerts@gcir.local>"
+    return clean_from or "GCIR Civic Alerts <gcir.alerts@gmail.com>"
 
 
 def _dispatch_via_smtp(
@@ -162,6 +166,9 @@ def _dispatch_via_smtp(
             last_error = f"{label} dispatch error: {err}"
             logger.warning(f"{last_error}. Proceeding to next port if available...")
 
+    if "101" in last_error or "unreachable" in last_error.lower():
+        last_error += " [Render Free Tier blocks raw SMTP ports 25, 465, and 587. To send emails on Render, use an HTTPS API like Brevo (BREVO_API_KEY) or Resend (RESEND_API_KEY), or upgrade to a paid Render plan.]"
+
     logger.error(f"All SMTP attempts failed to {to_email}. Last error: {last_error}")
     return False, last_error
 
@@ -171,7 +178,7 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
     Dispatches email and returns a tuple: (success: bool, status_message: str).
     """
     backend = get_effective_email_backend()
-    from_raw = _clean_str(_get_email_config("EMAIL_FROM", "GCIR Civic Alerts <alerts@gcir.local>"))
+    from_raw = _clean_str(_get_email_config("EMAIL_FROM", "GCIR Civic Alerts <gcir.alerts@gmail.com>"))
     smtp_user = _clean_str(_get_email_config("SMTP_USER", ""))
     from_email = _sanitize_from_email(from_raw, backend, smtp_user)
 
@@ -238,6 +245,48 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
             return False, err
         except Exception as e:
             err = f"SendGrid dispatch error: {e}"
+            logger.error(err)
+            return False, err
+
+    elif backend == "brevo":
+        api_key = _clean_str(_get_email_config("BREVO_API_KEY", ""))
+        if not api_key:
+            err = "Brevo API key missing in environment (BREVO_API_KEY)."
+            logger.error(err)
+            return False, err
+        try:
+            sender_name = "GCIR Civic Alerts"
+            sender_email = from_email
+            if "<" in from_email and ">" in from_email:
+                sender_name = from_email.split("<")[0].strip() or "GCIR Civic Alerts"
+                sender_email = from_email.split("<")[-1].replace(">", "").strip()
+
+            payload = {
+                "sender": {"name": sender_name, "email": sender_email},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_body,
+            }
+            if text_body:
+                payload["textContent"] = text_body
+
+            res = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                    "api-key": api_key
+                },
+                json=payload,
+                timeout=12
+            )
+            if res.status_code in (200, 201, 202):
+                return True, "Delivered via Brevo (HTTPS REST API)"
+            err = f"Brevo API error HTTP {res.status_code}: {res.text}"
+            logger.error(err)
+            return False, err
+        except Exception as e:
+            err = f"Brevo dispatch error: {e}"
             logger.error(err)
             return False, err
 
