@@ -49,7 +49,7 @@ def register():
                 pass
 
         try:
-            stage_pending_signup(
+            pending = stage_pending_signup(
                 name=name,
                 email=email,
                 password=password,
@@ -58,9 +58,12 @@ def register():
                 digest_radius_km=digest_radius_km
             )
             session["pending_signup_email"] = email.strip().lower()
-            flash(f"A 6-digit verification code has been sent to {email}. Please enter it below to complete sign-up.", "info")
+            if pending.get("is_mock"):
+                flash(f"A 6-digit verification code has been sent to {email}. [Dev Mode Code: {pending['otp']}]", "info")
+            else:
+                flash(f"A 6-digit verification code has been sent to {email}. Please check your inbox and spam folder, and enter it below.", "info")
             return redirect(url_for("auth.verify_otp"))
-        except ValueError as e:
+        except (ValueError, RuntimeError) as e:
             flash(str(e), "danger")
             return render_template("auth/register.html", name=name, email=email)
         except Exception as e:

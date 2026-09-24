@@ -28,6 +28,13 @@
                     📧 Run Digest Now
                 </button>
             </form>
+            {% if current_user.is_admin %}
+            <form method="POST" action="{{ url_for('admin.test_email_dispatch') }}" style="display: inline;">
+                <button type="submit" class="btn btn-outline-primary btn-sm" onclick="return confirm('Send live diagnostic email to {{ current_user.email }}?');">
+                    🧪 Test Email
+                </button>
+            </form>
+            {% endif %}
         </div>
     </div>
 

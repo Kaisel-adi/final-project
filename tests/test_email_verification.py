@@ -128,3 +128,85 @@ def test_resend_otp_generates_new_code(app, client, mock_db):
     pending_updated = mock_db.pending_signups.find_one({"email": email})
     assert len(pending_updated["otp"]) == 6
     assert pending_updated["otp"].isdigit()
+
+
+def test_email_sanitization_and_auto_detection(app):
+    from app.services.email import _sanitize_from_email, get_effective_email_backend
+
+    with app.app_context():
+        # Inside test context, TESTING is True so it stays mock
+        assert get_effective_email_backend() == "mock"
+
+        # Test from_email sanitization for Gmail SMTP
+        clean1 = _sanitize_from_email("GCIR Civic Alerts <alerts@gcir.local>", "smtp", "gcir.alerts@gmail.com")
+        assert clean1 == "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+
+        clean2 = _sanitize_from_email("alerts@gcir.local", "smtp", "gcir.alerts@gmail.com")
+        assert clean2 == "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+
+        clean3 = _sanitize_from_email("My Civic App <custom@other.com>", "smtp", "gcir.alerts@gmail.com")
+        assert clean3 == "My Civic App <gcir.alerts@gmail.com>"
+
+        # In mock mode, doesn't force smtp_user
+        clean4 = _sanitize_from_email("alerts@gcir.local", "mock", "")
+        assert clean4 == "alerts@gcir.local"
+
+
+def test_registration_aborts_on_dispatch_failure(client, monkeypatch):
+    import app.auth.services
+
+    # Mock send_verification_otp_email to simulate SMTP connection failure
+    monkeypatch.setattr(
+        app.auth.services,
+        "send_verification_otp_email",
+        lambda to_email, name, otp: (False, "Port 587 and 465 connection timed out")
+    )
+
+    res = client.post("/auth/register", data={
+        "name": "Failed User",
+        "email": "fail@civic.test",
+        "password": "validpassword123"
+    }, follow_redirects=True)
+
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    # Must NOT flash success and must display the failure reason
+    assert "Unable to dispatch verification email" in html
+    assert "Please enter it below to complete sign-up" not in html
+
+
+def test_resend_fails_gracefully_on_dispatch_failure(app, client, mock_db, monkeypatch):
+    email = "resendfail@delhi.org"
+    with app.app_context():
+        stage_pending_signup(name="Resend Fail", email=email, password="password123", db=mock_db)
+
+    # Bypass cooldown
+    import datetime
+    mock_db.pending_signups.update_one(
+        {"email": email},
+        {"$set": {"last_sent_at": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=40)}}
+    )
+
+    import app.auth.services
+    monkeypatch.setattr(
+        app.auth.services,
+        "send_verification_otp_email",
+        lambda to_email, name, otp: (False, "Authentication error: Bad app password")
+    )
+
+    res = client.post("/auth/resend-otp", data={"email": email}, follow_redirects=True)
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Failed to dispatch verification email" in html
+
+
+def test_admin_test_email_diagnostic_route(client, mock_db):
+    admin = User.create(name="Admin", email="admin@civic.test", password="adminpass", role="admin", db=mock_db)
+    with client.session_transaction() as sess:
+        sess["_user_id"] = admin.id
+
+    res = client.post("/admin/test-email", follow_redirects=True)
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "Email backend is currently running in MOCK mode" in html
+

@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash
 from app.auth.validators import validate_email_format
 from app.auth.models import User
-from app.services.email import send_email
+from app.services.email import send_email, send_email_with_status
 from app.db import get_db
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ def generate_otp() -> str:
     return f"{secrets.randbelow(900000) + 100000}"
 
 
-def send_verification_otp_email(to_email: str, name: str, otp: str) -> bool:
+def send_verification_otp_email(to_email: str, name: str, otp: str) -> tuple[bool, str]:
     """Dispatches a professional OTP verification email."""
     subject = f"Verify Your Email — GCIR Code: {otp}"
 
@@ -62,7 +62,7 @@ This code will expire in {OTP_VALIDITY_MINUTES} minutes.
 If you did not request this, please safely ignore this message.
 """
 
-    return send_email(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
+    return send_email_with_status(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
 
 
 def stage_pending_signup(
@@ -111,8 +111,15 @@ def stage_pending_signup(
         upsert=True
     )
 
-    send_verification_otp_email(to_email=email_clean, name=name.strip(), otp=otp)
-    logger.info(f"Verification OTP generated and sent to {email_clean}")
+    sent, status_msg = send_verification_otp_email(to_email=email_clean, name=name.strip(), otp=otp)
+    if not sent:
+        logger.error(f"Failed to dispatch verification email to {email_clean}: {status_msg}")
+        raise RuntimeError(f"Unable to dispatch verification email: {status_msg}. Please verify your email or check server SMTP configuration.")
+
+    if status_msg == "mock":
+        pending_doc["is_mock"] = True
+
+    logger.info(f"Verification OTP generated and sent to {email_clean} ({status_msg})")
     return pending_doc
 
 
@@ -214,6 +221,13 @@ def resend_verification_otp(email: str, db=None) -> tuple[bool, str]:
         }
     )
 
-    send_verification_otp_email(to_email=email_clean, name=pending.get("name", "Resident"), otp=new_otp)
-    logger.info(f"New verification OTP sent to {email_clean}")
-    return True, "A new 6-digit verification code has been sent to your email."
+    sent, status_msg = send_verification_otp_email(to_email=email_clean, name=pending.get("name", "Resident"), otp=new_otp)
+    if not sent:
+        logger.error(f"Failed to resend verification OTP to {email_clean}: {status_msg}")
+        return False, f"Failed to dispatch verification email: {status_msg}. Please try again later."
+
+    if status_msg == "mock":
+        return True, f"A new 6-digit verification code has been sent to your email. [Dev Mode Code: {new_otp}]"
+
+    logger.info(f"New verification OTP sent to {email_clean} ({status_msg})")
+    return True, "A new 6-digit verification code has been sent to your email. Please check your inbox and spam folder."

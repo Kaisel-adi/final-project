@@ -45,16 +45,17 @@ class Config:
     CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
     
     # Email settings
-    EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "mock")
-    EMAIL_FROM = os.environ.get("EMAIL_FROM", "GCIR Civic Alerts <alerts@gcir.local>")
-    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
-    SMTP_HOST = os.environ.get("SMTP_HOST", "")
-    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-    SMTP_USER = os.environ.get("SMTP_USER", "")
-    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-    SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "True").lower() in ("true", "1", "yes")
-    SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "False").lower() in ("true", "1", "yes")
+    EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "mock").strip().strip('"').strip("'")
+    EMAIL_FROM = os.environ.get("EMAIL_FROM", "GCIR Civic Alerts <alerts@gcir.local>").strip().strip('"').strip("'")
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip().strip('"').strip("'")
+    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "").strip().strip('"').strip("'")
+    SMTP_HOST = os.environ.get("SMTP_HOST", "").strip().strip('"').strip("'")
+    _smtp_port_str = os.environ.get("SMTP_PORT", "587").strip().strip('"').strip("'")
+    SMTP_PORT = int(_smtp_port_str) if _smtp_port_str.isdigit() else 587
+    SMTP_USER = os.environ.get("SMTP_USER", "").strip().strip('"').strip("'")
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "").strip().strip('"').strip("'")
+    SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "True").strip().strip('"').strip("'").lower() in ("true", "1", "yes")
+    SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "False").strip().strip('"').strip("'").lower() in ("true", "1", "yes")
     
     # ML settings
     HOTSPOT_DBSCAN_EPS_KM = 0.5  # 500 meters

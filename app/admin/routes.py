@@ -318,3 +318,42 @@ def trigger_digest_now():
         msg = result.get("message", "No matching unverified issues within resident radii to dispatch.")
         flash(f"Digest run completed: {msg}", "info")
     return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/test-email", methods=["POST"])
+@login_required
+@admin_only_required
+def test_email_dispatch():
+    """Admin privilege: Dispatches a live test email to current admin and returns live diagnostic status."""
+    from app.services.email import send_email_with_status, get_effective_email_backend
+    recipient = current_user.email
+    backend = get_effective_email_backend()
+
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    subject = "GCIR Admin Diagnostic — SMTP & Email Delivery Test"
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #1a73e8; margin-top: 0;">GCIR Email Dispatch Confirmed</h2>
+        <p>Hello <strong>{current_user.name}</strong>,</p>
+        <p>This email confirms that your GCIR email delivery backend is active and operational on your server.</p>
+        <div style="background: #f8fafc; border-left: 4px solid #1a73e8; padding: 12px; margin: 16px 0; border-radius: 4px;">
+            <strong>Diagnostic Details:</strong><br/>
+            <span>Active Backend: <code>{backend.upper()}</code></span><br/>
+            <span>Recipient: <code>{recipient}</code></span><br/>
+            <span>Timestamp: <code>{now_str}</code></span>
+        </div>
+        <p style="font-size: 13px; color: #64748b;">Dispatched from the Civic Administration Dashboard.</p>
+    </div>
+    """
+    text_body = f"Hello {current_user.name},\n\nGCIR Email delivery backend ({backend.upper()}) is operational.\nRecipient: {recipient}\nTimestamp: {now_str}"
+
+    success, msg = send_email_with_status(recipient, subject, html_body, text_body)
+    if success:
+        if msg == "mock":
+            flash(f"⚠️ Email backend is currently running in MOCK mode. No actual email was sent to {recipient}. Set SMTP environment variables in your deployment dashboard to enable live email delivery.", "warning")
+        else:
+            flash(f"✅ Email test SUCCESSFUL! Dispatched to {recipient} ({msg}). Check your inbox!", "success")
+    else:
+        flash(f"❌ Email test FAILED: {msg}. Please check SMTP credentials and settings in your deployment dashboard.", "danger")
+
+    return redirect(url_for("admin.dashboard"))
