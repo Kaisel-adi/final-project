@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — GCIR{% endblock %}
+
+{% block content %}
+<div style="max-width: 440px; margin: 2rem auto;">
+    <div class="card">
+        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary);">Resident Login</h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Sign in to report civic issues and verify reports in your neighborhood.
+        </p>
+
+        <form method="POST" id="login-form">
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input class="form-input" type="email" id="email" name="email" required placeholder="name@example.com">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-input" type="password" id="password" name="password" required placeholder="••••••••">
+            </div>
+
+            <!-- Optional browser location capture on login -->
+            <input type="hidden" id="last_lat" name="last_lat">
+            <input type="hidden" id="last_lon" name="last_lon">
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Sign In</button>
+        </form>
+
+        <div style="margin-top: 1.5rem; text-align: center; font-size: 0.88rem; color: var(--text-secondary);">
+            Don't have an account? <a href="{{ url_for('auth.register') }}" style="color: var(--primary); font-weight: 600;">Sign Up</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Softly attempt to capture user's login coordinates if browser permission granted
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            document.getElementById('last_lat').value = pos.coords.latitude;
+            document.getElementById('last_lon').value = pos.coords.longitude;
+        }, function(err) {
+            // Silently fallback if denied
+        }, { timeout: 4000 });
+    }
+</script>
+{% endblock %}

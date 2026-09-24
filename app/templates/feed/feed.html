@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Nearby Civic Issues — GCIR{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.25rem;">
+    <!-- Filter bar -->
+    <form method="GET" action="{{ url_for('feed.feed_view') }}" class="card" style="padding: 1rem; margin-bottom: 1rem;">
+        <input type="hidden" name="lat" id="filter_lat" value="{{ center_lat }}">
+        <input type="hidden" name="lon" id="filter_lon" value="{{ center_lon }}">
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <select name="category" class="form-select" onchange="this.form.submit()" style="padding: 0.4rem 0.8rem; font-size: 0.88rem;">
+                        <option value="">All Categories</option>
+                        {% for key, label in categories %}
+                            <option value="{{ key }}" {% if category_filter == key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <select name="status" class="form-select" onchange="this.form.submit()" style="padding: 0.4rem 0.8rem; font-size: 0.88rem;">
+                        <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>All Statuses</option>
+                        <option value="Reported" {% if status_filter == 'Reported' %}selected{% endif %}>Reported (Needs Verification)</option>
+                        <option value="Verified" {% if status_filter == 'Verified' %}selected{% endif %}>Verified</option>
+                        <option value="Complained" {% if status_filter == 'Complained' %}selected{% endif %}>Complained</option>
+                        <option value="Resolved" {% if status_filter == 'Resolved' %}selected{% endif %}>Resolved</option>
+                    </select>
+                </div>
+
+                <div>
+                    <select name="radius" class="form-select" onchange="this.form.submit()" style="padding: 0.4rem 0.8rem; font-size: 0.88rem;">
+                        <option value="1.0" {% if radius_km == 1.0 %}selected{% endif %}>Within 1 km</option>
+                        <option value="3.0" {% if radius_km == 3.0 %}selected{% endif %}>Within 3 km</option>
+                        <option value="5.0" {% if radius_km == 5.0 %}selected{% endif %}>Within 5 km</option>
+                        <option value="10.0" {% if radius_km == 10.0 %}selected{% endif %}>Within 10 km</option>
+                        <option value="25.0" {% if radius_km == 25.0 %}selected{% endif %}>Within 25 km</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                Found <strong>{{ reports|length }}</strong> issue{% if reports|length != 1 %}s{% endif %} nearby
+            </div>
+        </div>
+    </form>
+
+    <!-- Split view: list on left, interactive map on right -->
+    <div class="feed-layout">
+        <!-- Feed List -->
+        <div class="feed-sidebar">
+            {% if reports %}
+                {% for r in reports %}
+                    <a href="{{ url_for('reports.view', report_id=r._id) }}" class="issue-card">
+                        <img src="{{ r.photo_url }}" alt="Issue" class="issue-thumb">
+                        <div class="issue-content">
+                            <div>
+                                <div class="issue-meta">
+                                    <span style="font-weight: 600; color: var(--primary);">{{ r.category_label }}</span>
+                                    <span>{{ r._dist_km }} km away</span>
+                                </div>
+                                <div class="issue-desc">{{ r.description }}</div>
+                            </div>
+                            <div class="issue-footer">
+                                <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
+                                <span style="font-weight: 600; color: #475569;">
+                                    👍 {{ r.upvote_count }} / 10
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <div class="card" style="text-align: center; padding: 3rem 1.5rem;">
+                    <span style="font-size: 2.5rem;">🎉</span>
+                    <h3 style="margin-top: 0.5rem; font-size: 1.1rem;">No Issues Found Nearby</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.25rem;">
+                        No open civic issues reported within {{ radius_km }} km of your location.
+                    </p>
+                    <a href="{{ url_for('reports.create') }}" class="btn btn-primary" style="margin-top: 1rem;">
+                        Report a New Issue
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Interactive Map -->
+        <div class="feed-map-container">
+            <div id="feed-map"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const centerLat = {{ center_lat }};
+    const centerLon = {{ center_lon }};
+    const radiusKm = {{ radius_km }};
+
+    const map = L.map('feed-map').setView([centerLat, centerLon], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Draw user center circle
+    L.circle([centerLat, centerLon], {
+        radius: radiusKm * 1000,
+        color: '#1a73e8',
+        fillColor: '#1a73e8',
+        fillOpacity: 0.08,
+        weight: 1.5
+    }).addTo(map);
+
+    // Marker for user's location
+    L.marker([centerLat, centerLon], {
+        title: "Your Location",
+        icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        })
+    }).addTo(map).bindPopup("<strong>You are here</strong>");
+
+    // Fetch dynamic GeoJSON markers
+    const apiQuery = new URLSearchParams({
+        lat: centerLat,
+        lon: centerLon,
+        radius: radiusKm,
+        category: "{{ category_filter }}",
+        status: "{{ status_filter }}"
+    });
+
+    fetch(`{{ url_for('feed.api_reports') }}?${apiQuery.toString()}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.features) {
+                data.features.forEach(feat => {
+                    const coords = feat.geometry.coordinates;
+                    const props = feat.properties;
+                    
+                    const markerColor = props.status === 'Verified' ? 'green' : (props.status === 'Complained' ? 'violet' : 'gold');
+                    const markerIcon = L.icon({
+                        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${markerColor}.png`,
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    });
+
+                    const popupContent = `
+                        <div style="max-width: 200px;">
+                            <img src="${props.photo_url}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px;"/>
+                            <div style="font-weight: bold; margin-top: 4px;">${props.category_label}</div>
+                            <div style="font-size: 0.8rem; color: #555;">${props.description}</div>
+                            <div style="margin-top: 6px;">
+                                <span class="badge badge-${props.status}" style="font-size: 0.7rem;">${props.status}</span>
+                                <span style="font-size: 0.75rem; float: right; font-weight: bold;">👍 ${props.upvote_count}/10</span>
+                            </div>
+                            <a href="/reports/${props.id}" style="display: block; margin-top: 8px; font-size: 0.8rem; text-align: center; color: #1a73e8; font-weight: bold;">View Details &rarr;</a>
+                        </div>
+                    `;
+
+                    L.marker([coords[1], coords[0]], { icon: markerIcon })
+                        .addTo(map)
+                        .bindPopup(popupContent);
+                });
+            }
+        });
+</script>
+{% endblock %}

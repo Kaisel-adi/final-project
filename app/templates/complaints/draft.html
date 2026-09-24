@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Official Complaint Draft — GCIR{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 1.5rem auto;">
+    <div style="margin-bottom: 1rem;">
+        <a href="{{ url_for('reports.view', report_id=report._id) }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">
+            &larr; Back to Incident #{{ report._id|string|truncate(10, True, '') }}
+        </a>
+    </div>
+
+    <!-- Authority Card -->
+    <div class="card" style="border-left: 5px solid var(--primary);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+                <span class="badge" style="background: #e8f0fe; color: var(--primary); font-size: 0.75rem;">
+                    Responsible Authority: {{ authority.level|upper }} LEVEL
+                </span>
+                <h2 style="font-size: 1.3rem; margin-top: 0.35rem; color: var(--text-primary);">
+                    {{ authority.name }}
+                </h2>
+                <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                    {{ authority.body }}
+                </div>
+            </div>
+            <div style="text-align: right; font-size: 0.85rem;">
+                <div><strong>Email:</strong> <a href="mailto:{{ authority.contact_email }}" style="color: var(--primary);">{{ authority.contact_email }}</a></div>
+                <div><strong>Helpline:</strong> {{ authority.phone }}</div>
+                {% if authority.website %}
+                    <div><a href="{{ authority.website }}" target="_blank" style="color: var(--text-secondary); font-size: 0.8rem;">Official Portal &nearr;</a></div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if authority.is_fallback %}
+            <div style="margin-top: 1rem; padding: 0.75rem; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; font-size: 0.85rem; color: #92400e;">
+                ⚠️ <strong>Notice:</strong> No direct local ward office was indexed for this exact point. This draft has been routed to the supervising <strong>District/State Authority</strong>.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Complaint Email Preview -->
+    <div class="card">
+        <div class="card-header">
+            <h3 style="font-size: 1.1rem; color: var(--text-primary);">Pre-Formatted Complaint Email</h3>
+            <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                Ready for dispatch via your personal email client
+            </span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Subject</label>
+            <input class="form-input" type="text" id="email-subject" value="{{ subject }}" readonly style="background: #f8fafc; font-weight: 500;">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Recipient (To:)</label>
+            <input class="form-input" type="text" id="email-recipient" value="{{ authority.contact_email }}" readonly style="background: #f8fafc;">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Body</label>
+            <textarea class="form-textarea" id="email-body" rows="12" readonly style="background: #f8fafc; font-family: monospace; font-size: 0.88rem; line-height: 1.5;">{{ body }}</textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
+            <a href="{{ mailto_url }}" class="btn btn-primary" style="flex: 1; text-align: center; font-size: 1rem;">
+                ✉️ Open in Your Email App
+            </a>
+            <button type="button" class="btn btn-secondary" id="btn-copy" onclick="copyComplaintText()">
+                📋 Copy Text to Clipboard
+            </button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+        <!-- Mark as Sent Confirmation -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.88rem; color: #166534;">
+                <strong>Sent the complaint?</strong> Mark this report as officially filed so your neighborhood can track authority resolution.
+            </div>
+            <form method="POST" action="{{ url_for('complaints.mark_sent', report_id=report._id) }}">
+                <button type="submit" class="btn btn-success btn-sm">
+                    ✓ Confirm Complaint Sent
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyComplaintText() {
+        const bodyText = document.getElementById('email-body').value;
+        navigator.clipboard.writeText(bodyText).then(() => {
+            const btn = document.getElementById('btn-copy');
+            const orig = btn.innerText;
+            btn.innerText = "✓ Copied to Clipboard!";
+            btn.style.background = "#dcfce7";
+            setTimeout(() => {
+                btn.innerText = orig;
+                btn.style.background = "";
+            }, 2500);
+        }).catch(err => {
+            alert("Could not copy automatically. Please select text manually.");
+        });
+    }
+</script>
+{% endblock %}

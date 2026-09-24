@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: gcir-civic-reporter
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python scripts/etl_boundaries.py
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: DATABASE_NAME
+        value: gcir_db
+      - key: CRON_SECRET_TOKEN
+        generateValue: true
+      - key: VERIFY_THRESHOLD
+        value: "10"
+      - key: PROXIMITY_FLAG_RADIUS_KM
+        value: "5.0"
+      - key: USE_CLOUDINARY
+        value: "false"
+      - key: EMAIL_BACKEND
+        value: "mock"

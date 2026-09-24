@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category_label }} — GCIR{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 1.5rem auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <a href="{{ url_for('feed.feed_view') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">
+            &larr; Back to Nearby Feed
+        </a>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span class="badge badge-{{ report.status }}">{{ report.status }}</span>
+            {% if report.is_flagged %}
+                <span class="badge" style="background: #fee2e2; color: #991b1b;">Flagged for Review</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+            <!-- Left: Photo Evidence -->
+            <div style="background: #000; min-height: 380px; display: flex; align-items: center; justify-content: center; position: relative;">
+                <img src="{{ report.photo_url }}" alt="Evidence Photo" style="max-width: 100%; max-height: 480px; object-fit: contain;">
+                <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
+                    Verified Photo
+                </span>
+            </div>
+
+            <!-- Right: Details, Upvotes, & Actions -->
+            <div style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">
+                                {{ category_label }}
+                            </span>
+                            <h1 style="font-size: 1.4rem; margin-top: 0.2rem; color: var(--text-primary);">
+                                Incident #{{ report._id|string|truncate(10, True, '') }}
+                            </h1>
+                        </div>
+                    </div>
+
+                    <p style="margin-top: 1rem; font-size: 0.95rem; color: #334155; line-height: 1.6;">
+                        {{ report.description }}
+                    </p>
+
+                    <div style="margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-secondary);">
+                        <div>Reported by: <strong>{{ author_name }}</strong></div>
+                        <div>Date: {{ report.created_at.strftime('%d %b %Y, %I:%M %p') if report.created_at else 'Recent' }}</div>
+                        <div>Coordinates: {{ report.location.coordinates[1]|round(5) }}, {{ report.location.coordinates[0]|round(5) }}</div>
+                    </div>
+
+                    <!-- Upvote & Verification Progress -->
+                    <div style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 600; font-size: 0.9rem;">Community Verification</span>
+                            <span style="font-weight: 700; color: var(--primary);">{{ report.upvote_count }} / 10 Upvotes</span>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        {% set progress = (report.upvote_count / 10.0 * 100)|int if report.upvote_count < 10 else 100 %}
+                        <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
+                            <div style="width: {{ progress }}%; height: 100%; background: {% if report.upvote_count >= 10 %}var(--success){% else %}var(--primary){% endif %}; transition: width 0.3s;"></div>
+                        </div>
+
+                        {% if current_user.is_authenticated %}
+                            {% if is_author %}
+                                <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: center;">
+                                    ℹ️ You reported this issue. Community members will verify it.
+                                </div>
+                            {% elif has_upvoted %}
+                                <div style="font-size: 0.85rem; color: var(--success); font-weight: 600; text-align: center;">
+                                    ✓ You have verified this issue.
+                                </div>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('reports.upvote', report_id=report._id) }}">
+                                    <input type="hidden" name="user_lat" id="vote_user_lat">
+                                    <input type="hidden" name="user_lon" id="vote_user_lon">
+                                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                                        👍 Upvote & Verify Issue
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem;">
+                                Log in to verify this issue
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Complaint Unlock Banner -->
+                <div style="margin-top: 1.5rem;">
+                    {% if report.status in ['Verified', 'Complained', 'Resolved'] %}
+                        <a href="{{ url_for('complaints.draft_view', report_id=report._id) }}" class="btn btn-success" style="width: 100%; font-size: 1rem; padding: 0.75rem;">
+                            📋 View & Send Complaint Draft &rarr;
+                        </a>
+                        <p style="font-size: 0.78rem; color: var(--success); text-align: center; margin-top: 0.35rem; font-weight: 600;">
+                            ✓ Verified by community. Ready for official submission!
+                        </p>
+                    {% else %}
+                        <div style="background: #f1f5f9; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.85rem; color: var(--text-secondary);">
+                            🔒 Complaint drafting unlocks after <strong>10 verified community upvotes</strong>.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mini Map & Nearby Corroboration -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <div class="card" style="margin-bottom: 0;">
+            <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">Location on Map</h3>
+            <div style="height: 220px; border-radius: 8px; overflow: hidden;">
+                <div id="detail-map"></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 0;">
+            <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">
+                Corroborating Reports (within 200m): {{ corroborating_count }}
+            </h3>
+            {% if nearby_reports %}
+                <ul style="list-style: none; font-size: 0.85rem;">
+                    {% for nr in nearby_reports %}
+                        <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
+                            <a href="{{ url_for('reports.view', report_id=nr._id) }}" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+                                {{ nr.category|title }}: {{ nr.description[:60] }}...
+                            </a>
+                            <span class="badge badge-{{ nr.status }}" style="font-size: 0.7rem; float: right;">{{ nr.status }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 1rem;">
+                    No other civic issues recorded within 200 meters.
+                </p>
+            {% endif %}
+
+            {% if current_user.is_authenticated and not report.is_flagged %}
+                <div style="margin-top: 1.5rem; text-align: right;">
+                    <form method="POST" action="{{ url_for('reports.flag', report_id=report._id) }}" onsubmit="return confirm('Flag this post for moderator review?');" style="display: inline;">
+                        <input type="hidden" name="reason" value="Citizen report flagged for moderation">
+                        <button type="submit" style="background: none; border: none; color: #94a3b8; font-size: 0.78rem; cursor: pointer; text-decoration: underline;">
+                            🚩 Report / Flag Content
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const reportLat = {{ report.location.coordinates[1] }};
+    const reportLon = {{ report.location.coordinates[0] }};
+
+    const map = L.map('detail-map').setView([reportLat, reportLon], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    L.marker([reportLat, reportLon]).addTo(map)
+        .bindPopup("<strong>{{ category_label }}</strong><br/>{{ report.description[:60] }}")
+        .openPopup();
+
+    // Softly capture voter coordinates for proximity check if available
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            const latEl = document.getElementById('vote_user_lat');
+            const lonEl = document.getElementById('vote_user_lon');
+            if (latEl && lonEl) {
+                latEl.value = pos.coords.latitude;
+                lonEl.value = pos.coords.longitude;
+            }
+        });
+    }
+</script>
+{% endblock %}

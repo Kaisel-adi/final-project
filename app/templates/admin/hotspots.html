@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Civic Hotspots & Clusters — GCIR{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 1.5rem auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h1 style="font-size: 1.6rem; color: var(--text-primary);">DBSCAN Spatial Hotspot Clusters</h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                Clustering civic reports using the Haversine metric (eps = 500m, min_samples = 3).
+            </p>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+            &larr; Back to Dashboard
+        </a>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+        <!-- Hotspots Map -->
+        <div class="card" style="padding: 0; overflow: hidden; height: 550px;">
+            <div id="hotspot-map" style="width: 100%; height: 100%;"></div>
+        </div>
+
+        <!-- Clusters List -->
+        <div style="overflow-y: auto; max-height: 550px;">
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Detected Hotspots ({{ clusters|length }})</h3>
+            
+            {% if clusters %}
+                {% for c in clusters %}
+                    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid var(--danger);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: var(--danger);">
+                                Hotspot Cluster #{{ c.cluster_id + 1 }}
+                            </span>
+                            <span class="badge" style="background: #fee2e2; color: #991b1b;">
+                                {{ c.size }} Reports
+                            </span>
+                        </div>
+                        <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.35rem;">
+                            Centroid: {{ c.center[0] }}, {{ c.center[1] }}
+                        </div>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem;">
+                            <strong>Categories:</strong>
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                                {% for cat, count in c.categories.items() %}
+                                    <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+                                        {{ cat }}: {{ count }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="card" style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                    No dense clusters (>= 3 reports within 500m) detected yet.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const map = L.map('hotspot-map').setView([28.6139, 77.2090], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const clustersData = {{ clusters|tojson }};
+    
+    if (clustersData.length > 0) {
+        const bounds = [];
+        clustersData.forEach(c => {
+            const lat = c.center[0];
+            const lon = c.center[1];
+            bounds.push([lat, lon]);
+
+            // Draw hotspot buffer circle (500m)
+            L.circle([lat, lon], {
+                radius: 500,
+                color: '#d93025',
+                fillColor: '#d93025',
+                fillOpacity: 0.2,
+                weight: 2
+            }).addTo(map).bindPopup(`
+                <strong>Hotspot Cluster #${c.cluster_id + 1}</strong><br/>
+                Size: ${c.size} reports<br/>
+                Lat: ${lat}, Lon: ${lon}
+            `);
+
+            // Centroid marker
+            L.marker([lat, lon]).addTo(map);
+        });
+
+        if (bounds.length > 1) {
+            map.fitBounds(bounds);
+        } else {
+            map.setView(bounds[0], 13);
+        }
+    }
+</script>
+{% endblock %}

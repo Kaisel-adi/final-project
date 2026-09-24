@@ -1,0 +1,58 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+
+
+class Config:
+    """Base configuration."""
+    SECRET_KEY = os.environ.get("SECRET_KEY", "default-dev-secret-key-change-me")
+    
+    # MongoDB settings
+    MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/gcir_db")
+    DATABASE_NAME = os.environ.get("DATABASE_NAME", "gcir_db")
+    USE_MOCK_DB = os.environ.get("USE_MOCK_DB", "False").lower() in ("true", "1", "yes")
+    
+    # Verification & Civic settings
+    VERIFY_THRESHOLD = int(os.environ.get("VERIFY_THRESHOLD", "10"))
+    PROXIMITY_FLAG_RADIUS_KM = float(os.environ.get("PROXIMITY_FLAG_RADIUS_KM", "5.0"))
+    NEARBY_FEED_DEFAULT_RADIUS_KM = float(os.environ.get("NEARBY_FEED_DEFAULT_RADIUS_KM", "5.0"))
+    CORROBORATING_RADIUS_METERS = 200.0
+    
+    # Cron Security Token
+    CRON_SECRET_TOKEN = os.environ.get("CRON_SECRET_TOKEN", "gcir-dev-cron-token-xyz")
+    
+    # File upload settings
+    UPLOAD_FOLDER = BASE_DIR / "app" / "static" / "uploads"
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+    
+    # Cloudinary settings
+    USE_CLOUDINARY = os.environ.get("USE_CLOUDINARY", "False").lower() in ("true", "1", "yes")
+    CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+    CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
+    CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
+    
+    # Email settings
+    EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "mock")
+    EMAIL_FROM = os.environ.get("EMAIL_FROM", "GCIR Civic Alerts <alerts@gcir.local>")
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+    
+    # ML settings
+    HOTSPOT_DBSCAN_EPS_KM = 0.5  # 500 meters
+    HOTSPOT_MIN_SAMPLES = 3
+    DUPLICATE_DISTANCE_METERS = 200.0
+    DUPLICATE_SIMILARITY_THRESHOLD = 0.65
+
+
+class TestConfig(Config):
+    """Testing configuration."""
+    TESTING = True
+    SECRET_KEY = "test-secret-key"
+    DATABASE_NAME = "gcir_test_db"
+    USE_CLOUDINARY = False
+    EMAIL_BACKEND = "mock"

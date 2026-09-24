@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GCIR — Geo-Tagged Civic Issue Reporter{% endblock %}</title>
+    <!-- Modern Sans-serif Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('feed.feed_view') }}" class="logo">
+                <span class="logo-icon">📍</span>
+                <span class="logo-text">GCIR</span>
+                <span class="logo-badge">Delhi-NCR</span>
+            </a>
+            <nav class="nav-links">
+                <a href="{{ url_for('feed.feed_view') }}" class="nav-item">Nearby Feed</a>
+                <a href="{{ url_for('reports.create') }}" class="nav-btn-report">+ Report Issue</a>
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_moderator %}
+                        <a href="{{ url_for('admin.dashboard') }}" class="nav-item badge-admin">Admin Panel</a>
+                        <a href="{{ url_for('admin.hotspots') }}" class="nav-item">Hotspots</a>
+                    {% endif %}
+                    <a href="{{ url_for('auth.profile') }}" class="nav-item user-profile">
+                        👤 {{ current_user.name }}
+                    </a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-item logout-link">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="nav-item">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="nav-item nav-btn-signup">Sign Up</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="alerts-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span class="alert-text">{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <p>© 2026 GCIR — Geo-Tagged Civic Issue Reporter. Community-verified civic governance.</p>
+            <p class="footer-sub">Pilot Area: NCT of Delhi (MCD 250 Wards) & NCR Districts. Boundary data sourced under CC BY 4.0.</p>
+        </div>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

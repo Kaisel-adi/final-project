@@ -1,0 +1,711 @@
+[
+  {
+    "name": "Karol Bagh Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-karolbagh@mcd.nic.in",
+    "phone": "011-25754562",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.16,
+            28.63
+          ],
+          [
+            77.2,
+            28.63
+          ],
+          [
+            77.2,
+            28.67
+          ],
+          [
+            77.16,
+            28.67
+          ],
+          [
+            77.16,
+            28.63
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "City - SP Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-citysp@mcd.nic.in",
+    "phone": "011-23261971",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.2,
+            28.64
+          ],
+          [
+            77.24,
+            28.64
+          ],
+          [
+            77.24,
+            28.67
+          ],
+          [
+            77.2,
+            28.67
+          ],
+          [
+            77.2,
+            28.64
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "Civil Lines Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-civillines@mcd.nic.in",
+    "phone": "011-23914106",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.17,
+            28.67
+          ],
+          [
+            77.23,
+            28.67
+          ],
+          [
+            77.23,
+            28.73
+          ],
+          [
+            77.17,
+            28.73
+          ],
+          [
+            77.17,
+            28.67
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "Rohini Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-rohini@mcd.nic.in",
+    "phone": "011-27051410",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.05,
+            28.7
+          ],
+          [
+            77.15,
+            28.7
+          ],
+          [
+            77.15,
+            28.77
+          ],
+          [
+            77.05,
+            28.77
+          ],
+          [
+            77.05,
+            28.7
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "South Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-south@mcd.nic.in",
+    "phone": "011-26510071",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.16,
+            28.5
+          ],
+          [
+            77.24,
+            28.5
+          ],
+          [
+            77.24,
+            28.57
+          ],
+          [
+            77.16,
+            28.57
+          ],
+          [
+            77.16,
+            28.5
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "Central Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-central@mcd.nic.in",
+    "phone": "011-29812707",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.22,
+            28.54
+          ],
+          [
+            77.28,
+            28.54
+          ],
+          [
+            77.28,
+            28.6
+          ],
+          [
+            77.22,
+            28.6
+          ],
+          [
+            77.22,
+            28.54
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "West Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-west@mcd.nic.in",
+    "phone": "011-25442211",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.07,
+            28.6
+          ],
+          [
+            77.15,
+            28.6
+          ],
+          [
+            77.15,
+            28.68
+          ],
+          [
+            77.07,
+            28.68
+          ],
+          [
+            77.07,
+            28.6
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "Najafgarh - Dwarka Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-najafgarh@mcd.nic.in",
+    "phone": "011-25010372",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            76.95,
+            28.55
+          ],
+          [
+            77.08,
+            28.55
+          ],
+          [
+            77.08,
+            28.64
+          ],
+          [
+            76.95,
+            28.64
+          ],
+          [
+            76.95,
+            28.55
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "Shahdara North Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-shahdaranorth@mcd.nic.in",
+    "phone": "011-22822855",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.25,
+            28.67
+          ],
+          [
+            77.32,
+            28.67
+          ],
+          [
+            77.32,
+            28.74
+          ],
+          [
+            77.25,
+            28.74
+          ],
+          [
+            77.25,
+            28.67
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "Shahdara South Zone (MCD)",
+    "level": "ward",
+    "body": "Municipal Corporation of Delhi (MCD)",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "dc-shahdarasouth@mcd.nic.in",
+    "phone": "011-22384725",
+    "website": "https://mcdonline.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.25,
+            28.6
+          ],
+          [
+            77.33,
+            28.6
+          ],
+          [
+            77.33,
+            28.67
+          ],
+          [
+            77.25,
+            28.67
+          ],
+          [
+            77.25,
+            28.6
+          ]
+        ]
+      ]
+    },
+    "source": "OpenCity / Delhi MCD 2022 Delimitation",
+    "source_date": "2022-10-17"
+  },
+  {
+    "name": "New Delhi Municipal Council (NDMC)",
+    "level": "ward",
+    "body": "New Delhi Municipal Council",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "water_leak",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "complaints@ndmc.gov.in",
+    "phone": "1533",
+    "website": "https://ndmc.gov.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.19,
+            28.58
+          ],
+          [
+            77.24,
+            28.58
+          ],
+          [
+            77.24,
+            28.635
+          ],
+          [
+            77.19,
+            28.635
+          ],
+          [
+            77.19,
+            28.58
+          ]
+        ]
+      ]
+    },
+    "source": "NDMC Official Open Boundary",
+    "source_date": "2022-01-01"
+  },
+  {
+    "name": "Delhi Jal Board (DJB)",
+    "level": "state",
+    "body": "Delhi Jal Board",
+    "categories": [
+      "water_leak",
+      "sewage"
+    ],
+    "contact_email": "delhijalboard@nic.in",
+    "phone": "1916",
+    "website": "https://delhijalboard.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            76.84,
+            28.4
+          ],
+          [
+            77.35,
+            28.4
+          ],
+          [
+            77.35,
+            28.88
+          ],
+          [
+            76.84,
+            28.88
+          ],
+          [
+            76.84,
+            28.4
+          ]
+        ]
+      ]
+    },
+    "source": "DataMeet Delhi State Boundary",
+    "source_date": "2022-01-01"
+  },
+  {
+    "name": "Public Works Department (PWD Delhi)",
+    "level": "state",
+    "body": "PWD GNCTD",
+    "categories": [
+      "pothole"
+    ],
+    "contact_email": "pwd-helpline@delhi.gov.in",
+    "phone": "1800110093",
+    "website": "https://pwd.delhigovt.nic.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            76.84,
+            28.4
+          ],
+          [
+            77.35,
+            28.4
+          ],
+          [
+            77.35,
+            28.88
+          ],
+          [
+            76.84,
+            28.88
+          ],
+          [
+            76.84,
+            28.4
+          ]
+        ]
+      ]
+    },
+    "source": "DataMeet Delhi State Boundary",
+    "source_date": "2022-01-01"
+  },
+  {
+    "name": "National Capital Territory of Delhi (State Body)",
+    "level": "state",
+    "body": "Government of NCT of Delhi",
+    "categories": [
+      "other"
+    ],
+    "contact_email": "pgmsdelhi@nic.in",
+    "phone": "1031",
+    "website": "https://pgms.delhi.gov.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            76.84,
+            28.4
+          ],
+          [
+            77.35,
+            28.4
+          ],
+          [
+            77.35,
+            28.88
+          ],
+          [
+            76.84,
+            28.88
+          ],
+          [
+            76.84,
+            28.4
+          ]
+        ]
+      ]
+    },
+    "source": "DataMeet Delhi State Boundary",
+    "source_date": "2022-01-01"
+  },
+  {
+    "name": "Noida Authority (Gautam Buddha Nagar)",
+    "level": "district",
+    "body": "New Okhla Industrial Development Authority",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "water_leak",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "noida@noidaauthorityonline.in",
+    "phone": "0120-2422201",
+    "website": "https://noidaauthorityonline.in",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.29,
+            28.45
+          ],
+          [
+            77.45,
+            28.45
+          ],
+          [
+            77.45,
+            28.63
+          ],
+          [
+            77.29,
+            28.63
+          ],
+          [
+            77.29,
+            28.45
+          ]
+        ]
+      ]
+    },
+    "source": "DataMeet India Districts (Gautam Buddha Nagar)",
+    "source_date": "2022-01-01"
+  },
+  {
+    "name": "Ghaziabad Nagar Nigam (GNN)",
+    "level": "district",
+    "body": "Ghaziabad Municipal Corporation",
+    "categories": [
+      "pothole",
+      "garbage",
+      "streetlight",
+      "parks",
+      "water_leak",
+      "sewage",
+      "other"
+    ],
+    "contact_email": "gmc@onlinegnn.com",
+    "phone": "18001803012",
+    "website": "https://onlinegnn.com",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            77.35,
+            28.63
+          ],
+          [
+            77.52,
+            28.63
+          ],
+          [
+            77.52,
+            28.75
+          ],
+          [
+            77.35,
+            28.75
+          ],
+          [
+            77.35,
+            28.63
+          ]
+        ]
+      ]
+    },
+    "source": "DataMeet India Districts (Ghaziabad)",
+    "source_date": "2022-01-01"
+  }
+]
