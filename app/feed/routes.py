@@ -35,7 +35,7 @@ def feed_view():
     status_filter = request.args.get("status", "")
 
     # Build Mongo query
-    query = {}
+    query: dict[str, object] = {}
     
     # Non-flagged or unmoderated by default
     query["is_flagged"] = {"$ne": True}
@@ -107,7 +107,7 @@ def api_reports():
     category = request.args.get("category", "")
     status = request.args.get("status", "")
 
-    query = {"is_flagged": {"$ne": True}}
+    query: dict[str, object] = {"is_flagged": {"$ne": True}}
     if category:
         query["category"] = category
     if status and status != "all":

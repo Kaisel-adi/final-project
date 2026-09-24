@@ -31,7 +31,7 @@ def get_mongo_client(uri: str | None = None) -> MongoClient:
             uri = Config.MONGODB_URI
 
         try:
-            client = MongoClient(uri, serverSelectionTimeoutMS=2000)
+            client = MongoClient(uri, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
             client.admin.command("ping")
             _mongo_client = client
         except Exception as e:
@@ -41,6 +41,18 @@ def get_mongo_client(uri: str | None = None) -> MongoClient:
             _mongo_client = mongomock.MongoClient()
 
     return _mongo_client
+
+
+def is_mock_database() -> bool:
+    """Returns True if the active database is using mongomock in-memory storage."""
+    global _mongo_client
+    if _mongo_client is None:
+        get_mongo_client()
+    try:
+        import mongomock
+        return isinstance(_mongo_client, mongomock.MongoClient)
+    except ImportError:
+        return False
 
 
 def get_db(db_name: str | None = None) -> Database:

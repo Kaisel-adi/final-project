@@ -54,6 +54,32 @@ def create_app(config_class=Config):
     def index():
         return redirect(url_for("feed.feed_view"))
 
+    @app.route("/health")
+    def health():
+        from app.db import is_mock_database, get_db
+        from flask import jsonify
+        db = get_db()
+        is_mock = is_mock_database()
+        try:
+            user_count = db.users.count_documents({})
+            report_count = db.reports.count_documents({})
+            db_status = "connected"
+        except Exception as e:
+            db_status = str(e)
+            user_count = -1
+            report_count = -1
+
+        return jsonify({
+            "status": "healthy",
+            "database": {
+                "status": db_status,
+                "is_mock": is_mock,
+                "database_name": app.config.get("DATABASE_NAME", "gcir_db"),
+                "total_users": user_count,
+                "total_reports": report_count
+            }
+        })
+
     # Ensure jurisdiction boundaries are loaded if empty
     if not app.config.get("TESTING"):
         with app.app_context():
