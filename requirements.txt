@@ -13,3 +13,4 @@ requests>=2.32.0
 mongomock>=4.3.0
 pytest>=8.0.0
 gunicorn>=23.0.0
+Pillow>=10.0.0

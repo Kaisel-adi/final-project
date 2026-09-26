@@ -16,9 +16,9 @@
         </a>
     </div>
 
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+    <div class="hotspots-layout">
         <!-- Hotspots Map -->
-        <div class="card" style="padding: 0; overflow: hidden; height: 550px;">
+        <div class="card hotspot-map-card" style="padding: 0; overflow: hidden; height: 550px;">
             <div id="hotspot-map" style="width: 100%; height: 100%;"></div>
         </div>
 
@@ -64,9 +64,30 @@
 
 {% block scripts %}
 <script>
+    function createSvgPin(colorHex) {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="42" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.5"/>
+                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.9"/>
+                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
+            </svg>
+        `;
+        return L.divIcon({
+            className: 'custom-map-pin',
+            html: svg,
+            iconSize: [28, 42],
+            iconAnchor: [14, 42],
+            popupAnchor: [0, -38]
+        });
+    }
+
     const map = L.map('hotspot-map').setView([28.6139, 77.2090], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+        keepBuffer: 2,
+        updateWhenIdle: true,
+        updateWhenZooming: false
     }).addTo(map);
 
     const clustersData = {{ clusters|tojson }};
@@ -91,8 +112,8 @@
                 Lat: ${lat}, Lon: ${lon}
             `);
 
-            // Centroid marker
-            L.marker([lat, lon]).addTo(map);
+            // Centroid marker with zero-network SVG pin
+            L.marker([lat, lon], { icon: createSvgPin('#d93025') }).addTo(map);
         });
 
         if (bounds.length > 1) {

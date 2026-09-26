@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, request
 from flask_login import LoginManager
 from app.config import Config
 
@@ -8,6 +8,13 @@ from app.config import Config
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Cache headers for static assets on mobile/slow connections
+    @app.after_request
+    def add_performance_headers(response):
+        if request.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=604800"
+        return response
 
     # Ensure upload directory exists
     upload_dir = Path(app.config.get("UPLOAD_FOLDER", app.root_path + "/static/uploads"))

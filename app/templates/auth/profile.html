@@ -171,7 +171,7 @@
                 <div id="picker-map" style="width: 100%; height: 100%;"></div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.75rem; align-items: end; margin-bottom: 1.25rem;">
+            <div class="form-grid-coords">
                 <div>
                     <label class="form-label" style="font-size: 0.8rem;">Latitude</label>
                     <input class="form-input" type="text" id="home_lat" name="home_lat" value="{{ coords[1] }}" readonly>
@@ -225,12 +225,33 @@
     const initLat = parseFloat("{{ coords[1] }}") || 28.6139;
     const initLon = parseFloat("{{ coords[0] }}") || 77.2090;
 
+    function createSvgPin(colorHex) {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="44" style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35)); cursor: grab;">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.8"/>
+                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.95"/>
+                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
+            </svg>
+        `;
+        return L.divIcon({
+            className: 'custom-map-pin',
+            html: svg,
+            iconSize: [30, 44],
+            iconAnchor: [15, 44],
+            popupAnchor: [0, -40]
+        });
+    }
+
     const map = L.map('picker-map').setView([initLat, initLon], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+        keepBuffer: 2,
+        updateWhenIdle: true,
+        updateWhenZooming: false
     }).addTo(map);
 
-    let marker = L.marker([initLat, initLon], { draggable: true }).addTo(map);
+    let marker = L.marker([initLat, initLon], { draggable: true, icon: createSvgPin('#1a73e8') }).addTo(map);
 
     function updateCoords(lat, lon) {
         document.getElementById('home_lat').value = lat.toFixed(6);

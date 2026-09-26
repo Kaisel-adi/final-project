@@ -17,16 +17,16 @@
     </div>
 
     <div class="card" style="padding: 0; overflow: hidden;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+        <div class="report-detail-layout">
             <!-- Left: Photo/Video Evidence -->
-            <div style="background: #000; min-height: 380px; display: flex; align-items: center; justify-content: center; position: relative;">
+            <div class="report-detail-media">
                 {% if report.photo_url|is_video %}
                     <video src="{{ report.photo_url }}" controls playsinline style="max-width: 100%; max-height: 480px; width: 100%; background: #000;"></video>
                     <span style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
                         🎥 Video Evidence
                     </span>
                 {% else %}
-                    <img src="{{ report.photo_url }}" alt="Evidence Photo" style="max-width: 100%; max-height: 480px; object-fit: contain;">
+                    <img src="{{ report.photo_url }}" alt="Evidence Photo" loading="lazy" decoding="async" style="max-width: 100%; max-height: 480px; object-fit: contain;">
                     <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
                         Verified Photo
                     </span>
@@ -34,7 +34,7 @@
             </div>
 
             <!-- Right: Details, Upvotes, & Actions -->
-            <div style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="report-detail-content">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div>
@@ -116,7 +116,7 @@
     </div>
 
     <!-- Mini Map & Nearby Corroboration -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <div class="report-detail-grid-bottom">
         <div class="card" style="margin-bottom: 0;">
             <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">Location on Map</h3>
             <div style="height: 220px; border-radius: 8px; overflow: hidden;">
@@ -165,12 +165,33 @@
     const reportLat = {{ report.location.coordinates[1] }};
     const reportLon = {{ report.location.coordinates[0] }};
 
+    function createSvgPin(colorHex) {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="42" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.5"/>
+                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.9"/>
+                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
+            </svg>
+        `;
+        return L.divIcon({
+            className: 'custom-map-pin',
+            html: svg,
+            iconSize: [28, 42],
+            iconAnchor: [14, 42],
+            popupAnchor: [0, -38]
+        });
+    }
+
     const map = L.map('detail-map').setView([reportLat, reportLon], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+        keepBuffer: 2,
+        updateWhenIdle: true,
+        updateWhenZooming: false
     }).addTo(map);
 
-    L.marker([reportLat, reportLon]).addTo(map)
+    L.marker([reportLat, reportLon], { icon: createSvgPin('#1a73e8') }).addTo(map)
         .bindPopup("<strong>{{ category_label }}</strong><br/>{{ report.description[:60] }}")
         .openPopup();
 

@@ -12,7 +12,7 @@
 
     <!-- Authority Card -->
     <div class="card" style="border-left: 5px solid var(--primary);">
-        <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div class="authority-header">
             <div>
                 <span class="badge badge-primary-light" style="font-size: 0.75rem;">
                     Responsible Authority: {{ authority.level|upper }} LEVEL
@@ -24,8 +24,8 @@
                     {{ authority.body }}
                 </div>
             </div>
-            <div style="text-align: right; font-size: 0.85rem;">
-                <div><strong>Email:</strong> <a href="mailto:{{ authority.contact_email }}" style="color: var(--primary);">{{ authority.contact_email }}</a></div>
+            <div class="authority-contact-block">
+                <div><strong>Email:</strong> <a href="mailto:{{ authority.contact_email }}" style="color: var(--primary); word-break: break-all;">{{ authority.contact_email }}</a></div>
                 <div><strong>Helpline:</strong> {{ authority.phone }}</div>
                 {% if authority.website %}
                     <div><a href="{{ authority.website }}" target="_blank" style="color: var(--text-secondary); font-size: 0.8rem;">Official Portal &nearr;</a></div>
@@ -61,15 +61,15 @@
 
         <div class="form-group">
             <label class="form-label">Body</label>
-            <textarea class="form-textarea" id="email-body" rows="12" readonly style="background: #f8fafc; font-family: monospace; font-size: 0.88rem; line-height: 1.5;">{{ body }}</textarea>
+            <textarea class="form-textarea" id="email-body" rows="12" readonly style="background: #f8fafc; font-family: monospace; font-size: 0.95rem; line-height: 1.5;">{{ body }}</textarea>
         </div>
 
         <!-- Action Buttons -->
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
-            <a href="{{ mailto_url }}" class="btn btn-primary" style="flex: 1; text-align: center; font-size: 1rem;">
+            <a href="{{ mailto_url }}" class="btn btn-primary" style="flex: 1; min-width: 200px; text-align: center; font-size: 1rem;">
                 ✉️ Open in Your Email App
             </a>
-            <button type="button" class="btn btn-secondary" id="btn-copy" onclick="copyComplaintText()">
+            <button type="button" class="btn btn-secondary" id="btn-copy" onclick="copyComplaintText()" style="flex: 1; min-width: 200px;">
                 📋 Copy Text to Clipboard
             </button>
         </div>
@@ -77,8 +77,8 @@
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
 
         <!-- Mark as Sent Confirmation -->
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 0.88rem; color: #166534;">
+        <div class="confirmation-box">
+            <div style="font-size: 0.88rem; color: #166534; flex: 1; min-width: 240px;">
                 <strong>Sent the complaint?</strong> Mark this report as officially filed so your neighborhood can track authority resolution.
             </div>
             <form method="POST" action="{{ url_for('complaints.mark_sent', report_id=report._id) }}">

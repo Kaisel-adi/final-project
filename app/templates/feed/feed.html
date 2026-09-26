@@ -5,14 +5,14 @@
 {% block content %}
 <div style="margin-bottom: 1.25rem;">
     <!-- Filter bar -->
-    <form method="GET" action="{{ url_for('feed.feed_view') }}" class="card" style="padding: 1rem; margin-bottom: 1rem;">
+    <form method="GET" action="{{ url_for('feed.feed_view') }}" class="card" style="padding: 0.85rem 1rem; margin-bottom: 1rem;">
         <input type="hidden" name="lat" id="filter_lat" value="{{ center_lat }}">
         <input type="hidden" name="lon" id="filter_lon" value="{{ center_lon }}">
         
-        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <div class="feed-filter-bar">
+            <div class="feed-filter-controls">
                 <div>
-                    <select name="category" class="form-select" onchange="this.form.submit()" style="padding: 0.4rem 0.8rem; font-size: 0.88rem;">
+                    <select name="category" class="form-select" onchange="this.form.submit()" style="padding: 0.45rem 0.8rem; font-size: 0.88rem;">
                         <option value="">All Categories</option>
                         {% for key, label in categories %}
                             <option value="{{ key }}" {% if category_filter == key %}selected{% endif %}>{{ label }}</option>
@@ -21,7 +21,7 @@
                 </div>
 
                 <div>
-                    <select name="status" class="form-select" onchange="this.form.submit()" style="padding: 0.4rem 0.8rem; font-size: 0.88rem;">
+                    <select name="status" class="form-select" onchange="this.form.submit()" style="padding: 0.45rem 0.8rem; font-size: 0.88rem;">
                         <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>All Statuses</option>
                         <option value="Reported" {% if status_filter == 'Reported' %}selected{% endif %}>Reported (Needs Verification)</option>
                         <option value="Verified" {% if status_filter == 'Verified' %}selected{% endif %}>Verified</option>
@@ -31,7 +31,7 @@
                 </div>
 
                 <div>
-                    <select name="radius" class="form-select" onchange="this.form.submit()" style="padding: 0.4rem 0.8rem; font-size: 0.88rem;">
+                    <select name="radius" class="form-select" onchange="this.form.submit()" style="padding: 0.45rem 0.8rem; font-size: 0.88rem;">
                         <option value="1.0" {% if radius_km == 1.0 %}selected{% endif %}>Within 1 km</option>
                         <option value="3.0" {% if radius_km == 3.0 %}selected{% endif %}>Within 3 km</option>
                         <option value="5.0" {% if radius_km == 5.0 %}selected{% endif %}>Within 5 km</option>
@@ -41,23 +41,33 @@
                 </div>
             </div>
 
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">
                 Found <strong>{{ reports|length }}</strong> issue{% if reports|length != 1 %}s{% endif %} nearby
             </div>
         </div>
     </form>
 
-    <!-- Split view: list on left, interactive map on right -->
-    <div class="feed-layout">
+    <!-- Mobile View Switcher (Visible only on screens <= 900px) -->
+    <div class="feed-view-toggle-bar" role="tablist">
+        <button type="button" class="view-toggle-btn is-active" id="btn-view-list" onclick="setFeedMobileView('list')">
+            📋 List View ({{ reports|length }})
+        </button>
+        <button type="button" class="view-toggle-btn" id="btn-view-map" onclick="setFeedMobileView('map')">
+            🗺️ Interactive Map
+        </button>
+    </div>
+
+    <!-- Feed Layout: List on left, map on right on desktop; switched via tabs on mobile -->
+    <div class="feed-layout show-list" id="feed-layout-container">
         <!-- Feed List -->
-        <div class="feed-sidebar">
+        <div class="feed-sidebar" id="feed-sidebar">
             {% if reports %}
                 {% for r in reports %}
                     <a href="{{ url_for('reports.view', report_id=r._id) }}" class="issue-card">
                         {% if r.photo_url|is_video %}
-                            <video src="{{ r.photo_url }}" class="issue-thumb" muted playsinline preload="metadata"></video>
+                            <video src="{{ r.photo_url }}" class="issue-thumb" muted playsinline preload="none"></video>
                         {% else %}
-                            <img src="{{ r.photo_url }}" alt="Issue" class="issue-thumb">
+                            <img src="{{ r.photo_url }}" alt="Issue evidence" class="issue-thumb" loading="lazy" decoding="async">
                         {% endif %}
                         <div class="issue-content">
                             <div>
@@ -91,7 +101,7 @@
         </div>
 
         <!-- Interactive Map -->
-        <div class="feed-map-container">
+        <div class="feed-map-container" id="feed-map-container">
             <div id="feed-map"></div>
         </div>
     </div>
@@ -104,9 +114,32 @@
     const centerLon = {{ center_lon }};
     const radiusKm = {{ radius_km }};
 
+    // Fast zero-network SVG Pin Marker Generator
+    function createSvgPin(colorHex, isUser = false) {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="42" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.5"/>
+                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="${isUser ? '0.95' : '0.85'}"/>
+                ${isUser ? `<circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>` : ''}
+            </svg>
+        `;
+        return L.divIcon({
+            className: 'custom-map-pin',
+            html: svg,
+            iconSize: [28, 42],
+            iconAnchor: [14, 42],
+            popupAnchor: [0, -38]
+        });
+    }
+
+    // Initialize Map with performance optimizations for weak networks
     const map = L.map('feed-map').setView([centerLat, centerLon], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+        keepBuffer: 2,
+        updateWhenIdle: true,
+        updateWhenZooming: false
     }).addTo(map);
 
     // Draw user center circle
@@ -118,18 +151,11 @@
         weight: 1.5
     }).addTo(map);
 
-    // Marker for user's location
+    // Marker for user's location (instant SVG icon)
     L.marker([centerLat, centerLon], {
         title: "Your Location",
-        icon: L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        })
-    }).addTo(map).bindPopup("<strong>You are here</strong>");
+        icon: createSvgPin('#1a73e8', true)
+    }).addTo(map).bindPopup("<strong>📍 You are here</strong>");
 
     // Fetch dynamic GeoJSON markers
     const apiQuery = new URLSearchParams({
@@ -148,28 +174,21 @@
                     const coords = feat.geometry.coordinates;
                     const props = feat.properties;
                     
-                    const markerColor = props.status === 'Verified' ? 'green' : (props.status === 'Complained' ? 'violet' : 'gold');
-                    const markerIcon = L.icon({
-                        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${markerColor}.png`,
-                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                    });
+                    const markerColor = props.status === 'Verified' ? '#1e8e3e' : (props.status === 'Complained' ? '#7c3aed' : '#f59e0b');
+                    const markerIcon = createSvgPin(markerColor, false);
 
                     const popupContent = `
-                        <div style="max-width: 200px;">
+                        <div style="max-width: 210px;">
                             ${props.photo_url && (props.photo_url.toLowerCase().endsWith('.mp4') || props.photo_url.toLowerCase().endsWith('.webm') || props.photo_url.toLowerCase().endsWith('.mov') || props.photo_url.includes('/video/upload/'))
-                                ? `<video src="${props.photo_url}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px;" muted playsinline preload="metadata"></video>`
-                                : `<img src="${props.photo_url}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px;"/>`}
-                            <div style="font-weight: bold; margin-top: 4px;">${props.category_label}</div>
-                            <div style="font-size: 0.8rem; color: #555;">${props.description}</div>
-                            <div style="margin-top: 6px;">
-                                <span class="badge badge-${props.status}" style="font-size: 0.7rem;">${props.status}</span>
-                                <span style="font-size: 0.75rem; float: right; font-weight: bold;">👍 ${props.upvote_count}/10</span>
+                                ? `<video src="${props.photo_url}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px;" muted playsinline preload="none"></video>`
+                                : `<img src="${props.photo_url}" loading="lazy" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px;"/>`}
+                            <div style="font-weight: bold; margin-top: 4px; font-size: 0.9rem;">${props.category_label}</div>
+                            <div style="font-size: 0.8rem; color: #555; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${props.description}</div>
+                            <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                <span class="badge badge-${props.status}" style="font-size: 0.68rem; padding: 2px 6px;">${props.status}</span>
+                                <span style="font-size: 0.78rem; font-weight: bold; color: #475569;">👍 ${props.upvote_count}/10</span>
                             </div>
-                            <a href="/reports/${props.id}" style="display: block; margin-top: 8px; font-size: 0.8rem; text-align: center; color: #1a73e8; font-weight: bold;">View Details &rarr;</a>
+                            <a href="/reports/${props.id}" style="display: block; margin-top: 8px; font-size: 0.82rem; text-align: center; color: #1a73e8; font-weight: bold; text-decoration: none;">View Details &rarr;</a>
                         </div>
                     `;
 
@@ -179,5 +198,27 @@
                 });
             }
         });
+
+    // Mobile View Switcher Logic
+    function setFeedMobileView(view) {
+        const container = document.getElementById('feed-layout-container');
+        const btnList = document.getElementById('btn-view-list');
+        const btnMap = document.getElementById('btn-view-map');
+
+        if (view === 'map') {
+            container.classList.remove('show-list');
+            container.classList.add('show-map');
+            btnMap.classList.add('is-active');
+            btnList.classList.remove('is-active');
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 60);
+        } else {
+            container.classList.remove('show-map');
+            container.classList.add('show-list');
+            btnList.classList.add('is-active');
+            btnMap.classList.remove('is-active');
+        }
+    }
 </script>
 {% endblock %}

@@ -5,15 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}GCIR — Geo-Tagged Civic Issue Reporter{% endblock %}</title>
     <!-- Modern Sans-serif Typography -->
+    <!-- Network & Resource Performance Hints -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    <link rel="dns-prefetch" href="https://tile.openstreetmap.org">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+    <!-- Offline / Weak Connection Toast -->
+    <div id="offline-toast" class="offline-toast" role="status" aria-live="polite">
+        📡 Offline mode: Weak or no internet connection. Showing cached data.
+    </div>
+
     <header class="navbar">
         <div class="nav-container">
             <a href="{{ url_for('feed.feed_view') }}" class="logo">
@@ -21,7 +30,16 @@
                 <span class="logo-text">GCIR</span>
                 <span class="logo-badge">Delhi-NCR</span>
             </a>
-            <nav class="nav-links">
+
+            <!-- Mobile Hamburger Toggle -->
+            <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+            </button>
+
+            <!-- Desktop & Expanded Mobile Nav Menu -->
+            <nav class="nav-links" id="nav-links">
                 <a href="{{ url_for('feed.feed_view') }}" class="nav-item">Nearby Feed</a>
                 <a href="{{ url_for('reports.create') }}" class="nav-btn-report">+ Report Issue</a>
                 {% if current_user.is_authenticated %}
@@ -58,6 +76,35 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Mobile Bottom Navigation Bar (Thumb-friendly mobile UX) -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <a href="{{ url_for('feed.feed_view') }}" class="mobile-nav-item {% if request.endpoint == 'feed.feed_view' %}is-active{% endif %}">
+            <span class="mobile-nav-icon">📍</span>
+            <span class="mobile-nav-label">Feed</span>
+        </a>
+        <a href="{{ url_for('reports.create') }}" class="mobile-nav-item mobile-nav-cta {% if request.endpoint == 'reports.create' %}is-active{% endif %}">
+            <span class="mobile-nav-icon-circle">+</span>
+            <span class="mobile-nav-label">Report</span>
+        </a>
+        {% if current_user.is_authenticated %}
+            {% if current_user.is_moderator %}
+                <a href="{{ url_for('admin.dashboard') }}" class="mobile-nav-item {% if 'admin.' in request.endpoint %}is-active{% endif %}">
+                    <span class="mobile-nav-icon">🛡️</span>
+                    <span class="mobile-nav-label">Admin</span>
+                </a>
+            {% endif %}
+            <a href="{{ url_for('auth.profile') }}" class="mobile-nav-item {% if request.endpoint == 'auth.profile' %}is-active{% endif %}">
+                <span class="mobile-nav-icon">👤</span>
+                <span class="mobile-nav-label">Profile</span>
+            </a>
+        {% else %}
+            <a href="{{ url_for('auth.login') }}" class="mobile-nav-item {% if request.endpoint in ['auth.login', 'auth.register'] %}is-active{% endif %}">
+                <span class="mobile-nav-icon">🔑</span>
+                <span class="mobile-nav-label">Login</span>
+            </a>
+        {% endif %}
+    </nav>
+
     <footer class="footer">
         <div class="footer-container">
             <p>© 2026 GCIR — Geo-Tagged Civic Issue Reporter. Community-verified civic governance.</p>
@@ -67,6 +114,42 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Mobile Hamburger Menu Toggle
+        const navToggle = document.getElementById('nav-toggle');
+        const navLinks = document.getElementById('nav-links');
+        if (navToggle && navLinks) {
+            navToggle.addEventListener('click', function() {
+                const expanded = navToggle.getAttribute('aria-expanded') === 'true';
+                navToggle.setAttribute('aria-expanded', !expanded);
+                navLinks.classList.toggle('is-open');
+                navToggle.classList.toggle('is-open');
+            });
+            // Close mobile menu on clicking any link
+            navLinks.querySelectorAll('a').forEach(a => {
+                a.addEventListener('click', () => {
+                    navLinks.classList.remove('is-open');
+                    navToggle.classList.remove('is-open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+
+        // Weak/Offline Connection Detection
+        const offlineToast = document.getElementById('offline-toast');
+        function updateNetworkStatus() {
+            if (!navigator.onLine && offlineToast) {
+                offlineToast.style.display = 'block';
+            } else if (offlineToast) {
+                offlineToast.style.display = 'none';
+            }
+        }
+        window.addEventListener('offline', updateNetworkStatus);
+        window.addEventListener('online', updateNetworkStatus);
+        if (!navigator.onLine) {
+            updateNetworkStatus();
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

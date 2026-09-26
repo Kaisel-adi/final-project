@@ -56,8 +56,37 @@ def save_image(file_obj) -> str:
     upload_dir = Path(upload_folder)
     upload_dir.mkdir(parents=True, exist_ok=True)
     destination = upload_dir / unique_filename
-    file_obj.seek(0)
-    file_obj.save(destination)
+
+    # Optimize and auto-orient images if not a video
+    optimized = False
+    if not is_video:
+        try:
+            from PIL import Image, ImageOps
+            file_obj.seek(0)
+            with Image.open(file_obj) as img:
+                img = ImageOps.exif_transpose(img)
+                save_format = "JPEG" if ext in {"jpg", "jpeg"} else ("PNG" if ext == "png" else "WEBP")
+                if save_format in {"JPEG", "WEBP"} and img.mode in ("RGBA", "P", "LA"):
+                    img = img.convert("RGB")
+                
+                max_dim = 1600
+                if max(img.width, img.height) > max_dim:
+                    img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+                
+                if save_format == "JPEG":
+                    img.save(destination, format="JPEG", quality=82, optimize=True)
+                elif save_format == "WEBP":
+                    img.save(destination, format="WEBP", quality=80)
+                else:
+                    img.save(destination, optimize=True)
+                optimized = True
+        except Exception as img_err:
+            logger.debug(f"Pillow image optimization skipped/failed: {img_err}. Saving raw file.")
+
+    if not optimized:
+        file_obj.seek(0)
+        file_obj.save(destination)
+
     return f"/static/uploads/{unique_filename}"
 
 

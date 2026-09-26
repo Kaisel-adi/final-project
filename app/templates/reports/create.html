@@ -78,7 +78,7 @@
                 <div id="picker-map" style="width: 100%; height: 100%;"></div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="form-grid-2col" style="margin-bottom: 1.25rem;">
                 <div>
                     <label class="form-label" style="font-size: 0.8rem;">Latitude</label>
                     <input class="form-input" type="text" id="latitude" name="latitude" value="{{ default_lat or 28.6139 }}" readonly required>
@@ -171,12 +171,34 @@
     const initLat = parseFloat("{{ default_lat or 28.6139 }}");
     const initLon = parseFloat("{{ default_lon or 77.2090 }}");
 
+    // Fast zero-network SVG Pin Marker Generator
+    function createSvgPin(colorHex) {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="44" style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35)); cursor: grab;">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.8"/>
+                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.95"/>
+                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
+            </svg>
+        `;
+        return L.divIcon({
+            className: 'custom-map-pin',
+            html: svg,
+            iconSize: [30, 44],
+            iconAnchor: [15, 44],
+            popupAnchor: [0, -40]
+        });
+    }
+
     const map = L.map('picker-map').setView([initLat, initLon], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+        keepBuffer: 2,
+        updateWhenIdle: true,
+        updateWhenZooming: false
     }).addTo(map);
 
-    let marker = L.marker([initLat, initLon], { draggable: true }).addTo(map);
+    let marker = L.marker([initLat, initLon], { draggable: true, icon: createSvgPin('#1a73e8') }).addTo(map);
 
     function updateInputs(lat, lon) {
         document.getElementById('latitude').value = lat.toFixed(6);
@@ -270,6 +292,59 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
+    // Fast Client-Side Image Downscaler (Crucial for weak 2G/3G/4G cellular connections)
+    async function compressImageIfNeeded(file) {
+        if (!file || !file.type || !file.type.startsWith('image/')) return file;
+        if (file.size < 350 * 1024) return file; // Skip already compact files
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                img.onload = () => {
+                    const maxDim = 1280;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (!blob || blob.size >= file.size) {
+                            resolve(file);
+                            return;
+                        }
+                        const safeName = (file.name || 'civic_photo.jpg').replace(/\.[^/.]+$/, "") + ".jpg";
+                        const compressedFile = new File([blob], safeName, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        compressedFile._originalSize = file.size;
+                        resolve(compressedFile);
+                    }, 'image/jpeg', 0.82);
+                };
+                img.onerror = () => resolve(file);
+                img.src = e.target.result;
+            };
+            reader.onerror = () => resolve(file);
+            reader.readAsDataURL(file);
+        });
+    }
+
     // Update main form preview box
     function updateMediaPreview(file) {
         if (!file) {
@@ -298,7 +373,11 @@
         }
 
         mediaPreviewName.textContent = file.name;
-        mediaPreviewSize.textContent = `${isVideo ? '🎥 Video' : '📸 Photo'} • ${formatBytes(file.size)}`;
+        if (file._originalSize && file._originalSize > file.size) {
+            mediaPreviewSize.innerHTML = `${isVideo ? '🎥 Video' : '📸 Photo'} • ${formatBytes(file.size)} <span class="compression-badge">⚡ Optimized for fast upload (${formatBytes(file._originalSize)} &rarr; ${formatBytes(file.size)})</span>`;
+        } else {
+            mediaPreviewSize.textContent = `${isVideo ? '🎥 Video' : '📸 Photo'} • ${formatBytes(file.size)}`;
+        }
         mediaPreviewBox.style.display = 'flex';
         fileStatusText.textContent = '✓ Evidence attached';
     }
@@ -308,9 +387,23 @@
         photoInput.click();
     });
 
-    photoInput.addEventListener('change', () => {
+    photoInput.addEventListener('change', async () => {
         if (photoInput.files && photoInput.files[0]) {
-            updateMediaPreview(photoInput.files[0]);
+            const originalFile = photoInput.files[0];
+            if (originalFile.type && originalFile.type.startsWith('image/')) {
+                fileStatusText.textContent = '⚡ Optimizing image for fast upload...';
+                const optimizedFile = await compressImageIfNeeded(originalFile);
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(optimizedFile);
+                    photoInput.files = dt.files;
+                } catch (e) {
+                    console.warn("DataTransfer update warning:", e);
+                }
+                updateMediaPreview(optimizedFile);
+            } else {
+                updateMediaPreview(originalFile);
+            }
         }
     });
 
@@ -583,13 +676,17 @@
         startCameraStream();
     });
 
-    btnAcceptMedia.addEventListener('click', () => {
+    btnAcceptMedia.addEventListener('click', async () => {
         if (!capturedBlob || !capturedFileName) return;
 
-        const capturedFile = new File([capturedBlob], capturedFileName, {
+        let capturedFile = new File([capturedBlob], capturedFileName, {
             type: capturedType,
             lastModified: Date.now()
         });
+
+        if (capturedType && capturedType.startsWith('image/')) {
+            capturedFile = await compressImageIfNeeded(capturedFile);
+        }
 
         // Set to native input using DataTransfer
         try {
