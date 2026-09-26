@@ -97,8 +97,19 @@ def init_db_indexes(db: Database) -> dict[str, list[str]]:
     idx_reports_geo = db.reports.create_index([("location", GEOSPHERE)], name="idx_reports_location_2dsphere")
     idx_reports_status = db.reports.create_index([("status", ASCENDING), ("created_at", DESCENDING)], name="idx_reports_status_created")
     idx_reports_author = db.reports.create_index([("author_id", ASCENDING)], name="idx_reports_author")
+    idx_reports_author_created = db.reports.create_index([("author_id", ASCENDING), ("created_at", DESCENDING)], name="idx_reports_author_created")
+    idx_reports_created = db.reports.create_index([("created_at", DESCENDING)], name="idx_reports_created")
+    idx_reports_cat_status = db.reports.create_index([("category", ASCENDING), ("status", ASCENDING)], name="idx_reports_cat_status")
     idx_reports_cluster = db.reports.create_index([("cluster_id", ASCENDING)], name="idx_reports_cluster")
-    created_indexes["reports"] = [idx_reports_geo, idx_reports_status, idx_reports_author, idx_reports_cluster]
+    created_indexes["reports"] = [
+        idx_reports_geo,
+        idx_reports_status,
+        idx_reports_author,
+        idx_reports_author_created,
+        idx_reports_created,
+        idx_reports_cat_status,
+        idx_reports_cluster
+    ]
 
     # 2. users collection
     idx_users_email = db.users.create_index([("email", ASCENDING)], unique=True, name="idx_users_email_unique")

@@ -1,3 +1,4 @@
+import math
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
@@ -86,23 +87,41 @@ def view(report_id):
 
     # Corroborating reports within 200m
     lon, lat = report["location"]["coordinates"]
+    nearby_reports = []
     try:
-        nearby_reports = list(db.reports.find({
-            "_id": {"$ne": rep_oid},
-            "location": {
-                "$geoWithin": {
-                    "$centerSphere": [[lon, lat], 0.2 / 6378.1]  # 200m radius in radians
+        pipeline = [
+            {
+                "$geoNear": {
+                    "near": {"type": "Point", "coordinates": [lon, lat]},
+                    "distanceField": "distance_meters",
+                    "maxDistance": 200.0,
+                    "spherical": True,
+                    "query": {"_id": {"$ne": rep_oid}}
                 }
-            }
-        }).limit(10))
+            },
+            {"$limit": 10}
+        ]
+        nearby_reports = list(db.reports.aggregate(pipeline))
+        for nr in nearby_reports:
+            if "_dist_km" not in nr and "distance_meters" in nr:
+                nr["_dist_km"] = round(nr["distance_meters"] / 1000.0, 3)
     except Exception:
-        all_nearby = list(db.reports.find({"_id": {"$ne": rep_oid}}))
+        # Bounding box fallback for 200m (0.2km) to avoid full collection scan
+        lat_delta = (0.2 / 111.0) * 1.05
+        cos_lat = max(0.1, abs(math.cos(math.radians(lat))))
+        lon_delta = (0.2 / (111.0 * cos_lat)) * 1.05
+        candidate_nearby = list(db.reports.find({
+            "_id": {"$ne": rep_oid},
+            "location.coordinates.0": {"$gte": lon - lon_delta, "$lte": lon + lon_delta},
+            "location.coordinates.1": {"$gte": lat - lat_delta, "$lte": lat + lat_delta}
+        }).limit(50))
         nearby_reports = []
-        for nr in all_nearby:
+        for nr in candidate_nearby:
             nr_coords = nr.get("location", {}).get("coordinates", [])
             if len(nr_coords) == 2:
                 dist = haversine_distance_km(lon, lat, nr_coords[0], nr_coords[1])
                 if dist <= 0.2:
+                    nr["_dist_km"] = round(dist, 3)
                     nearby_reports.append(nr)
             if len(nearby_reports) >= 10:
                 break

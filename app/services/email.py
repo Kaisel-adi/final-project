@@ -1,3 +1,5 @@
+import functools
+import concurrent.futures
 import logging
 from typing import Any
 import requests
@@ -8,15 +10,25 @@ from email.mime.text import MIMEText
 
 logger = logging.getLogger(__name__)
 
+# Background email executor for non-blocking asynchronous dispatch
+_email_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="email_worker")
 
-def _clean_str(val: Any) -> str:
-    """Safely strips leading/trailing whitespace and surrounding quotation marks."""
-    if val is None:
-        return ""
-    s = str(val).strip()
-    if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
+
+@functools.lru_cache(maxsize=512)
+def _cached_clean_str(s: str) -> str:
+    s = s.strip()
+    if len(s) >= 2 and ((s[0] == '"' and s[-1] == '"') or (s[0] == "'" and s[-1] == "'")):
         s = s[1:-1].strip()
     return s
+
+
+def _clean_str(val: Any) -> str:
+    """Safely strips leading/trailing whitespace and surrounding quotation marks with LRU caching."""
+    if val is None:
+        return ""
+    if isinstance(val, str):
+        return _cached_clean_str(val)
+    return _cached_clean_str(str(val))
 
 
 def _get_email_config(key: str, default=None):
@@ -65,15 +77,8 @@ def get_effective_email_backend() -> str:
     return "mock"
 
 
-def _sanitize_from_email(from_email: str, backend: str, smtp_user: str) -> str:
-    """
-    Ensures the sender address is valid and accepted by mail servers.
-    Gmail and major SMTP relays reject or discard emails from '@gcir.local'
-    or emails where the sender differs from the authenticated SMTP username.
-    """
-    clean_from = _clean_str(from_email)
-    clean_user = _clean_str(smtp_user)
-
+@functools.lru_cache(maxsize=128)
+def _cached_sanitize_from_email(clean_from: str, backend: str, clean_user: str) -> str:
     if backend == "smtp" and clean_user:
         if not clean_from or "@gcir.local" in clean_from or "@" not in clean_from:
             return f"GCIR Civic Alerts <{clean_user}>"
@@ -84,6 +89,17 @@ def _sanitize_from_email(from_email: str, backend: str, smtp_user: str) -> str:
             return f"GCIR Civic Alerts <{clean_user}>"
 
     return clean_from or "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+
+
+def _sanitize_from_email(from_email: str, backend: str, smtp_user: str) -> str:
+    """
+    Ensures the sender address is valid and accepted by mail servers with caching.
+    Gmail and major SMTP relays reject or discard emails from '@gcir.local'
+    or emails where the sender differs from the authenticated SMTP username.
+    """
+    clean_from = _clean_str(from_email)
+    clean_user = _clean_str(smtp_user)
+    return _cached_sanitize_from_email(clean_from, backend or "mock", clean_user)
 
 
 def _dispatch_via_smtp(
@@ -135,12 +151,13 @@ def _dispatch_via_smtp(
         tls_mode = attempt["tls"]
         label = attempt["label"]
 
+        timeout_val = int(_get_email_config("SMTP_TIMEOUT", 6))
         try:
-            logger.info(f"Connecting to SMTP server {host}:{p} via {label} (timeout=12s)...")
+            logger.info(f"Connecting to SMTP server {host}:{p} via {label} (timeout={timeout_val}s)...")
             if ssl_mode:
-                server = smtplib.SMTP_SSL(host, p, timeout=12)
+                server = smtplib.SMTP_SSL(host, p, timeout=timeout_val)
             else:
-                server = smtplib.SMTP(host, p, timeout=12)
+                server = smtplib.SMTP(host, p, timeout=timeout_val)
                 if tls_mode:
                     server.starttls()
 
@@ -335,10 +352,51 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
     return False, err
 
 
-def send_email(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
+def send_email_async(
+    to_email: str,
+    subject: str,
+    html_body: str,
+    text_body: str | None = None,
+    callback: Any = None
+) -> concurrent.futures.Future:
+    """
+    Dispatches email asynchronously in a background thread to prevent blocking HTTP requests.
+    Preserves Flask application context if active.
+    """
+    from flask import current_app, has_app_context
+    app = current_app._get_current_object() if has_app_context() else None
+
+    def _task():
+        if app:
+            with app.app_context():
+                res = send_email_with_status(to_email, subject, html_body, text_body)
+                if callback:
+                    try:
+                        callback(res)
+                    except Exception as cb_err:
+                        logger.error(f"Error in async email callback: {cb_err}")
+                return res
+        else:
+            res = send_email_with_status(to_email, subject, html_body, text_body)
+            if callback:
+                try:
+                    callback(res)
+                except Exception as cb_err:
+                    logger.error(f"Error in async email callback: {cb_err}")
+            return res
+
+    return _email_executor.submit(_task)
+
+
+def send_email(to_email: str, subject: str, html_body: str, text_body: str | None = None, background: bool = False) -> bool:
     """
     Dispatches transactional email. Returns True if succeeded, False otherwise.
+    When background=True, dispatches via background thread pool executor to unblock critical path.
     Maintains complete backward compatibility for callers.
     """
+    if background:
+        send_email_async(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
+        return True
+
     success, _ = send_email_with_status(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
     return success

@@ -218,11 +218,27 @@ def profile():
     # Fetch latest user document with resilient fallback
     user_doc = db.users.find_one({"_id": user_id}) or getattr(current_user, "doc", {}) or {}
 
-    # Fetch all reports submitted by this user
+    # Pagination parameters for user's reports
     try:
-        user_reports = list(db.reports.find({"author_id": user_id}).sort("created_at", -1))
+        page = max(1, int(request.args.get("page", 1)))
+    except (ValueError, TypeError):
+        page = 1
+    per_page = 10
+
+    # Fetch total count and paginated reports submitted by this user
+    try:
+        total_reports_count = db.reports.count_documents({"author_id": user_id})
+        user_reports = list(
+            db.reports.find({"author_id": user_id})
+            .sort("created_at", -1)
+            .skip((page - 1) * per_page)
+            .limit(per_page)
+        )
     except Exception:
+        total_reports_count = 0
         user_reports = []
+
+    total_pages = max(1, (total_reports_count + per_page - 1) // per_page) if total_reports_count > 0 else 1
 
     cat_dict = dict(CATEGORIES)
     for r in user_reports:
@@ -238,6 +254,9 @@ def profile():
         "auth/profile.html",
         user_doc=user_doc,
         user_reports=user_reports,
+        total_reports_count=total_reports_count,
+        page=page,
+        total_pages=total_pages,
         coords=coords
     )
 

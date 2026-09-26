@@ -1,20 +1,63 @@
+import time
+import logging
 import numpy as np
 from sklearn.cluster import DBSCAN
 from app.db import get_db
 
+logger = logging.getLogger(__name__)
 
-def compute_dbscan_hotspots(eps_km: float = 0.5, min_samples: int = 3, db=None) -> list[dict]:
+# In-memory hotspots cluster cache with TTL to eliminate redundant CPU/memory spikes
+_CLUSTERS_CACHE: dict = {}
+DEFAULT_HOTSPOTS_CACHE_TTL = 300.0  # 5 minutes TTL
+
+
+def clear_hotspots_cache() -> None:
+    """Explicitly clears the hotspots cluster cache."""
+    global _CLUSTERS_CACHE
+    _CLUSTERS_CACHE.clear()
+
+
+def compute_dbscan_hotspots(
+    eps_km: float = 0.5,
+    min_samples: int = 3,
+    db=None,
+    force_refresh: bool = False,
+    ttl_seconds: float = DEFAULT_HOTSPOTS_CACHE_TTL
+) -> list[dict]:
     """
     Applies DBSCAN clustering on active civic report coordinates using haversine metric.
+    Includes in-memory TTL caching based on active report count and latest report timestamp.
     Updates cluster_id on report documents and returns detected hotspot cluster summaries.
     """
     if db is None:
         db = get_db()
 
-    # Fetch active reports with valid coordinates
+    active_filter = {"status": {"$in": ["Reported", "Verified", "Complained"]}}
+
+    # Check cache if not forcing refresh
+    if not force_refresh:
+        try:
+            total_active = db.reports.count_documents(active_filter)
+            latest_doc = db.reports.find_one(active_filter, {"_id": 1}, sort=[("created_at", -1)])
+            latest_id = str(latest_doc["_id"]) if latest_doc else None
+            cache_key = (round(eps_km, 4), min_samples, total_active, latest_id)
+
+            now = time.time()
+            if cache_key in _CLUSTERS_CACHE:
+                entry = _CLUSTERS_CACHE[cache_key]
+                if (now - entry["timestamp"]) < ttl_seconds:
+                    logger.debug("Returning cached DBSCAN hotspot clusters.")
+                    return entry["data"]
+        except Exception as e:
+            logger.debug(f"Cache check bypass: {e}")
+            cache_key = None
+    else:
+        cache_key = None
+
+    # Fetch active reports with lean projection (coordinates and category only, skipping descriptions)
     reports = list(db.reports.find(
-        {"status": {"$in": ["Reported", "Verified", "Complained"]}},
-        {"_id": 1, "location": 1, "category": 1, "description": 1}
+        active_filter,
+        {"_id": 1, "location.coordinates": 1, "category": 1}
     ))
 
     if len(reports) < min_samples:
@@ -68,4 +111,11 @@ def compute_dbscan_hotspots(eps_km: float = 0.5, min_samples: int = 3, db=None) 
         })
 
     cluster_summaries.sort(key=lambda c: c["size"], reverse=True)
+
+    if cache_key is not None:
+        _CLUSTERS_CACHE[cache_key] = {
+            "timestamp": time.time(),
+            "data": cluster_summaries
+        }
+
     return cluster_summaries
