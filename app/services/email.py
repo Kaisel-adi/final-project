@@ -151,7 +151,8 @@ def _dispatch_via_smtp(
         tls_mode = attempt["tls"]
         label = attempt["label"]
 
-        timeout_val = int(_get_email_config("SMTP_TIMEOUT", 6))
+        timeout_config = _get_email_config("SMTP_TIMEOUT", 6)
+        timeout_val = int(timeout_config) if timeout_config is not None else 6
         try:
             logger.info(f"Connecting to SMTP server {host}:{p} via {label} (timeout={timeout_val}s)...")
             if ssl_mode:
@@ -364,7 +365,7 @@ def send_email_async(
     Preserves Flask application context if active.
     """
     from flask import current_app, has_app_context
-    app = current_app._get_current_object() if has_app_context() else None
+    app = current_app if has_app_context() else None
 
     def _task():
         if app:
