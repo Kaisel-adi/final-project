@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-62%20Passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-67%20Passing-brightgreen.svg)](tests/)
 [![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-green.svg)](https://www.mongodb.com/cloud/atlas)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v3.4-38bdf8.svg)](https://tailwindcss.com/)
 [![Pilot Region](https://img.shields.io/badge/Pilot%20Region-Delhi--NCR%20(250%20Wards)-teal.svg)](data/)
@@ -25,6 +25,7 @@
 
 ### 2. Smooth Chunk-Based Feed & Infinite Scrolling
 - **Subsequent Chunk Pagination**: Initial visit loads 10 reports; scrolling down seamlessly streams 5 reports per chunk via lightweight HTML partials (`_cards.html`, `_sentinel.html`).
+- **Visual Upvote & Liked State Distinction**: Persistent visual feedback distinguishes liked reports from unliked reports with a filled rose heart icon, pill background, and real-time state sync across infinite scroll chunks.
 - **Adjustable Neighborhood Radii**: Residents can set their neighborhood radius (5km, 10km, 15km, 20km, 25km, 30km).
 - **Dedicated Community Feed**: Fixed 100km metropolitan radius feed providing broader regional visibility.
 - **Dynamic Sorting & Filtering**: Sort without page reloads by *Most Liked*, *Newest*, *Reported*, *Pending Verification*, *Verified*, or *Distance (Closest to Farthest)*.
@@ -243,11 +244,11 @@ python scripts/clean_demo_data.py
 
 ## 🧪 Testing & Validation
 
-### Run Full Test Suite (62 Tests)
+### Run Full Test Suite (67 Tests)
 ```bash
 python -m pytest tests/ -v
 ```
-All **62 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
+All **67 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
 - **Authentication & Roles**: Password hashing, duplicate email handling, session management.
 - **Email Validation & OTP**: Regex syntax tests, OTP generation, 15-min expiration, and resend cooldown.
 - **Reports & Verification**: GeoJSON coordinate validation, proximity checks, 10-vote threshold flip.
@@ -256,6 +257,7 @@ All **62 automated unit and integration tests** run deterministically in isolate
 - **Responsiveness & Performance**: Mobile bottom navigation bars, SVG pins, lazy-loading media, client image compression, debounced maps, and static caching headers.
 - **Authority Router & Complaints**: Point-in-polygon routing across MCD Wards and draft generation.
 - **Machine Learning**: DBSCAN clustering and TF-IDF duplicate identification.
+- **WSGI & Keep-Alive Daemon**: Production Render background ping worker threading, startup grace period, and `/health` reachability.
 
 ---
 
