@@ -259,7 +259,7 @@ def test_email_caching_and_async_dispatch(app):
     # Sanitization caching
     s1 = _sanitize_from_email("alerts@gcir.local", "smtp", "alerts@gmail.com")
     s2 = _sanitize_from_email("alerts@gcir.local", "smtp", "alerts@gmail.com")
-    assert s1 == "GCIR Civic Alerts <alerts@gmail.com>"
+    assert s1 == "Garuda Civic Alerts <alerts@gmail.com>"
     assert s1 is s2
 
     # Async email dispatch

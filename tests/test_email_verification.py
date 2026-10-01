@@ -138,11 +138,11 @@ def test_email_sanitization_and_auto_detection(app):
         assert get_effective_email_backend() == "mock"
 
         # Test from_email sanitization for Gmail SMTP
-        clean1 = _sanitize_from_email("GCIR Civic Alerts <alerts@gcir.local>", "smtp", "gcir.alerts@gmail.com")
-        assert clean1 == "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+        clean1 = _sanitize_from_email("Garuda Civic Alerts <alerts@gcir.local>", "smtp", "gcir.alerts@gmail.com")
+        assert clean1 == "Garuda Civic Alerts <gcir.alerts@gmail.com>"
 
         clean2 = _sanitize_from_email("alerts@gcir.local", "smtp", "gcir.alerts@gmail.com")
-        assert clean2 == "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+        assert clean2 == "Garuda Civic Alerts <gcir.alerts@gmail.com>"
 
         clean3 = _sanitize_from_email("My Civic App <custom@other.com>", "smtp", "gcir.alerts@gmail.com")
         assert clean3 == "My Civic App <gcir.alerts@gmail.com>"
@@ -222,7 +222,7 @@ def test_brevo_api_dispatch_mock(app, monkeypatch):
     with app.app_context():
         app.config["EMAIL_BACKEND"] = "brevo"
         app.config["BREVO_API_KEY"] = "xkeysib-test-fake-key"
-        app.config["EMAIL_FROM"] = "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+        app.config["EMAIL_FROM"] = "Garuda Civic Alerts <gcir.alerts@gmail.com>"
 
         # Mock successful Brevo response
         import requests
