@@ -10,7 +10,7 @@
 > **"See the change. Be the change!"**  
 > **Garuda** is a community-driven, geo-spatial civic grievance platform. Residents report geo-tagged civic problems (potholes, garbage dumps, water leaks, broken streetlights), nearby neighbors verify them with upvotes, and upon reaching the verification threshold (10 votes), the platform automatically performs hierarchical point-in-polygon spatial routing to draft and address formal complaint emails to the exact responsible authority (Ward > Sector > District > State).
 
-[**Live Demo on Render**](https://geo-tagged-civic-issue-reporter.onrender.com)
+[**Live Demo on Render**](https://garuda-62ty.onrender.com)
 
 ---
 
@@ -171,8 +171,8 @@ flowchart TD
 ### 2. Environment Setup
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/Geo-TaggedCivicIssueReporter.git
-cd Geo-TaggedCivicIssueReporter
+git clone https://github.com/Kaisel-adi/final-project.git
+cd final-project
 
 # Create and activate virtual environment
 python -m venv .venv
