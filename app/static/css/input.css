@@ -207,3 +207,23 @@ input.border-rose-500 {
   box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.25) !important;
 }
 
+/* Material Symbols Filled State */
+.icon-filled,
+.material-symbols-outlined.icon-filled {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+}
+
+/* Active Liked State for Feed Cards */
+.btn-feed-like.is-liked {
+  color: #e11d48 !important; /* rose-600 */
+}
+.btn-feed-like.is-liked .material-symbols-outlined {
+  color: #e11d48 !important;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+}
+.btn-feed-like.is-liked .like-count {
+  color: #e11d48 !important;
+  font-weight: 700 !important;
+}
+
+

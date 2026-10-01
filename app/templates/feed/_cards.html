@@ -88,9 +88,15 @@
     <!-- Footer Interaction Bar -->
     <div class="flex items-center justify-between pt-2.5 border-t border-slate-100 text-xs text-slate-500 font-medium mt-1">
         <div class="flex items-center gap-4">
-            <button type="button" class="btn-feed-like flex items-center gap-1.5 text-slate-500 hover:text-rose-600 font-medium transition-colors cursor-pointer" data-report-id="{{ r._id }}" title="Upvote / Like this issue">
-                <span class="material-symbols-outlined text-base transition-transform">favorite_border</span>
-                <span class="like-count font-medium">{{ r.upvote_count }}</span>
+            <button type="button" 
+                    class="btn-feed-like flex items-center gap-1.5 px-2 py-1 -ml-2 rounded-lg transition-all cursor-pointer {% if r.has_upvoted %}text-rose-600 bg-rose-50/70 is-liked font-semibold{% else %}text-slate-500 hover:text-rose-600 hover:bg-rose-50/40 font-medium{% endif %}" 
+                    data-report-id="{{ r._id }}" 
+                    data-has-upvoted="{{ 'true' if r.has_upvoted else 'false' }}"
+                    title="{{ 'You have verified & upvoted this issue' if r.has_upvoted else 'Upvote / Like this issue' }}">
+                <span class="material-symbols-outlined text-base transition-transform {% if r.has_upvoted %}icon-filled text-rose-600 scale-105{% endif %}">
+                    {{ 'favorite' if r.has_upvoted else 'favorite_border' }}
+                </span>
+                <span class="like-count font-medium {% if r.has_upvoted %}text-rose-600 font-bold{% endif %}">{{ r.upvote_count }}</span>
             </button>
             <span class="flex items-center gap-1.5 hover:text-slate-700">
                 <span class="material-symbols-outlined text-base">chat_bubble_outline</span>

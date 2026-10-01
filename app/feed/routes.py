@@ -187,6 +187,20 @@ def enrich_feed_reports(db, reports, center_lon, center_lat):
         except Exception:
             pass
 
+    # Batch load user upvotes so the UI can accurately distinguish liked vs unliked reports
+    user_upvoted_set = set()
+    if current_user.is_authenticated:
+        try:
+            usr_oid = ObjectId(current_user.id)
+            if report_ids:
+                upvotes = db.upvotes.find(
+                    {"user_id": usr_oid, "report_id": {"$in": report_ids}},
+                    projection={"report_id": 1}
+                )
+                user_upvoted_set = {u["report_id"] for u in upvotes}
+        except Exception:
+            pass
+
     for r in reports:
         r["category_label"] = cat_dict.get(r.get("category"), r.get("category", "General"))
         a_name = users_map.get(r.get("author_id"), "Community Resident")
@@ -202,6 +216,7 @@ def enrich_feed_reports(db, reports, center_lon, center_lat):
         r["comments_count"] = comments_map.get(r["_id"], 0)
         if "upvote_count" not in r:
             r["upvote_count"] = 0
+        r["has_upvoted"] = r.get("_id") in user_upvoted_set
 
     return reports
 

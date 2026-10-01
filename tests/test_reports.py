@@ -100,3 +100,60 @@ def test_proximity_soft_check(mock_db):
         # Soft check: vote is accepted (success is True) but flagged for distance!
         assert res_far["success"] is True
         assert res_far["is_distance_flagged"] is True
+
+
+def test_feed_and_view_liked_state_distinction(client, mock_db):
+    author = User.create(name="Author User", email="author_state@example.com", password="pwd", db=mock_db)
+    voter = User.create(name="Voter User", email="voter_state@example.com", password="pwd",
+                        home_coords=[77.200, 28.610], db=mock_db)
+
+    rep1 = create_report(author.id, "pothole", "Pothole in Block A", "https://img.local/1.jpg", [77.201, 28.611], db=mock_db)
+    rep2 = create_report(author.id, "garbage", "Garbage on Block B", "https://img.local/2.jpg", [77.202, 28.612], db=mock_db)
+
+    # Voter upvotes rep1 only
+    upvote_report(str(rep1["_id"]), voter, db=mock_db)
+
+    # Log in as voter
+    with client.session_transaction() as sess:
+        sess["_user_id"] = voter.id
+
+    # 1. Feed page rendering
+    res_feed = client.get("/feed?view=list")
+    assert res_feed.status_code == 200
+    feed_html = res_feed.get_data(as_text=True)
+
+    # Rep1 card should clearly be marked as liked/upvoted
+    assert f'data-report-id="{rep1["_id"]}"' in feed_html
+    assert 'is-liked' in feed_html
+    assert 'data-has-upvoted="true"' in feed_html
+    assert 'favorite' in feed_html
+
+    # Rep2 card should be unliked
+    assert f'data-report-id="{rep2["_id"]}"' in feed_html
+    assert 'data-has-upvoted="false"' in feed_html
+    assert 'favorite_border' in feed_html
+
+    # 2. Infinite scroll chunk API (/feed/api/chunk)
+    res_chunk = client.get("/feed/api/chunk?offset=0&limit=10")
+    assert res_chunk.status_code == 200
+    chunk_json = res_chunk.get_json()
+    assert chunk_json["success"] is True
+    chunk_html = chunk_json["html"]
+
+    assert f'data-report-id="{rep1["_id"]}"' in chunk_html
+    assert 'data-has-upvoted="true"' in chunk_html
+    assert f'data-report-id="{rep2["_id"]}"' in chunk_html
+    assert 'data-has-upvoted="false"' in chunk_html
+
+    # 3. Report details view for liked report
+    res_view1 = client.get(f"/reports/{rep1['_id']}")
+    assert res_view1.status_code == 200
+    view1_html = res_view1.get_data(as_text=True)
+    assert "You have verified & upvoted this civic issue." in view1_html
+
+    # 4. Report details view for unliked report
+    res_view2 = client.get(f"/reports/{rep2['_id']}")
+    assert res_view2.status_code == 200
+    view2_html = res_view2.get_data(as_text=True)
+    assert "Upvote & Verify Incident" in view2_html
+

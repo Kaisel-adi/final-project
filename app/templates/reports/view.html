@@ -109,8 +109,9 @@
                                     ℹ️ You reported this issue. Community neighbors will verify it.
                                 </div>
                             {% elif has_upvoted %}
-                                <div class="text-center py-2 text-xs font-bold text-emerald-700 bg-emerald-100/60 rounded-xl">
-                                    ✓ You have verified this civic issue in your neighborhood.
+                                <div class="text-center py-2.5 px-3 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200/80 rounded-xl flex items-center justify-center gap-1.5 shadow-xs">
+                                    <span class="material-symbols-outlined text-base icon-filled text-rose-600">favorite</span>
+                                    <span>You have verified & upvoted this civic issue.</span>
                                 </div>
                             {% else %}
                                 <form id="form-upvote-detail" method="POST" action="{{ url_for('reports.upvote', report_id=report._id) }}">
@@ -464,10 +465,10 @@
                             const parentBox = formUpvote.parentElement;
                             formUpvote.remove();
                             const verifiedNotice = document.createElement('div');
-                            verifiedNotice.className = 'text-center py-2 text-xs font-bold text-emerald-700 bg-emerald-100/60 rounded-xl animate-fade-in flex items-center justify-center gap-1.5';
+                            verifiedNotice.className = 'text-center py-2.5 px-3 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200/80 rounded-xl animate-fade-in flex items-center justify-center gap-1.5 shadow-xs';
                             verifiedNotice.innerHTML = `
-                                <span class="material-symbols-outlined text-sm">check_circle</span>
-                                <span>✓ You have verified this civic issue in your neighborhood.</span>
+                                <span class="material-symbols-outlined text-base icon-filled text-rose-600">favorite</span>
+                                <span>You have verified & upvoted this civic issue.</span>
                             `;
                             parentBox.appendChild(verifiedNotice);
                         } else {

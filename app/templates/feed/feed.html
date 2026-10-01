@@ -495,6 +495,12 @@
                     return;
                 }
 
+                // If already upvoted, inform resident
+                if (likeBtn.dataset.hasUpvoted === 'true') {
+                    showFeedToast('ℹ️ You have already verified and liked this issue.', true);
+                    return;
+                }
+
                 if (likeBtn.dataset.busy === 'true') return;
                 likeBtn.dataset.busy = 'true';
 
@@ -503,9 +509,19 @@
                 const heartIcon = likeBtn.querySelector('.material-symbols-outlined');
                 const prevCount = parseInt(countEl ? countEl.textContent : '0', 10) || 0;
 
-                // Optimistic visual pop
-                if (countEl) countEl.textContent = prevCount + 1;
-                if (heartIcon) heartIcon.classList.add('scale-125');
+                // Optimistic visual transition to liked state
+                if (countEl) {
+                    countEl.textContent = prevCount + 1;
+                    countEl.classList.add('text-rose-600', 'font-bold');
+                }
+                if (heartIcon) {
+                    heartIcon.textContent = 'favorite';
+                    heartIcon.classList.add('icon-filled', 'text-rose-600', 'scale-125');
+                }
+                likeBtn.classList.remove('text-slate-500');
+                likeBtn.classList.add('text-rose-600', 'bg-rose-50/70', 'is-liked', 'font-semibold');
+                likeBtn.dataset.hasUpvoted = 'true';
+                likeBtn.title = 'You have verified & upvoted this issue';
 
                 fetch(`/reports/${reportId}/upvote`, {
                     method: 'POST',
@@ -516,21 +532,52 @@
                 .then(res => res.json())
                 .then(data => {
                     likeBtn.dataset.busy = 'false';
-                    if (heartIcon) heartIcon.classList.remove('scale-125');
+                    if (heartIcon) {
+                        heartIcon.classList.remove('scale-125');
+                        heartIcon.classList.add('scale-105');
+                    }
                     if (data.success) {
                         if (countEl && typeof data.upvote_count !== 'undefined') {
                             countEl.textContent = data.upvote_count;
                         }
                         showFeedToast('✓ Upvoted! Thank you for verifying.', true);
                     } else {
-                        if (countEl) countEl.textContent = prevCount;
-                        showFeedToast(data.error || 'Could not record upvote.');
+                        // If already upvoted on server, keep the liked state intact
+                        if (data.error && data.error.toLowerCase().includes('already')) {
+                            likeBtn.dataset.hasUpvoted = 'true';
+                            showFeedToast('ℹ️ You have already verified this issue.', true);
+                        } else {
+                            // Revert optimistic update
+                            likeBtn.dataset.hasUpvoted = 'false';
+                            likeBtn.title = 'Upvote / Like this issue';
+                            likeBtn.classList.remove('text-rose-600', 'bg-rose-50/70', 'is-liked', 'font-semibold');
+                            likeBtn.classList.add('text-slate-500');
+                            if (countEl) {
+                                countEl.textContent = prevCount;
+                                countEl.classList.remove('text-rose-600', 'font-bold');
+                            }
+                            if (heartIcon) {
+                                heartIcon.textContent = 'favorite_border';
+                                heartIcon.classList.remove('icon-filled', 'text-rose-600', 'scale-105');
+                            }
+                            showFeedToast(data.error || 'Could not record upvote.');
+                        }
                     }
                 })
                 .catch(err => {
                     likeBtn.dataset.busy = 'false';
-                    if (heartIcon) heartIcon.classList.remove('scale-125');
-                    if (countEl) countEl.textContent = prevCount;
+                    likeBtn.dataset.hasUpvoted = 'false';
+                    likeBtn.title = 'Upvote / Like this issue';
+                    likeBtn.classList.remove('text-rose-600', 'bg-rose-50/70', 'is-liked', 'font-semibold');
+                    likeBtn.classList.add('text-slate-500');
+                    if (heartIcon) {
+                        heartIcon.textContent = 'favorite_border';
+                        heartIcon.classList.remove('icon-filled', 'text-rose-600', 'scale-125', 'scale-105');
+                    }
+                    if (countEl) {
+                        countEl.textContent = prevCount;
+                        countEl.classList.remove('text-rose-600', 'font-bold');
+                    }
                     showFeedToast('Network issue while upvoting.');
                 });
                 return;
