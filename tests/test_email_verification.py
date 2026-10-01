@@ -238,3 +238,45 @@ def test_brevo_api_dispatch_mock(app, monkeypatch):
         assert success is False
         assert "Brevo API error" in err or "Key unauthorized" in err
 
+
+def test_otp_not_in_email_notification_snippet(app, monkeypatch):
+    import app.auth.services as auth_svc
+
+    captured = {}
+
+    def mock_send(to_email, subject, html_body, text_body):
+        captured["to_email"] = to_email
+        captured["subject"] = subject
+        captured["html_body"] = html_body
+        captured["text_body"] = text_body
+        return True, "mock"
+
+    monkeypatch.setattr(auth_svc, "send_email_with_status", mock_send)
+
+    with app.app_context():
+        otp = "741258"
+        success, _ = auth_svc.send_verification_otp_email("citizen@example.com", "John Citizen", otp)
+        assert success is True
+
+        # Subject must NOT leak the OTP
+        assert otp not in captured["subject"]
+
+        # Plain text notification preview: the first 150 characters must NOT expose the OTP
+        snippet_window = captured["text_body"][:150]
+        assert otp not in snippet_window
+        assert "Security Notice:" in snippet_window
+
+        # HTML body must contain hidden preheader and anti-snippet whitespace padding
+        html = captured["html_body"]
+        assert "display:none" in html
+        assert "Security Notice:" in html
+        assert "&#847;&zwnj;&nbsp;&#8199;&shy;" in html
+
+        # The OTP must only be inside the main body, not before the anti-snippet padding
+        padding_pos = html.find("&#847;&zwnj;&nbsp;&#8199;&shy;")
+        otp_pos = html.find(otp)
+        assert padding_pos != -1
+        assert otp_pos != -1
+        assert otp_pos > padding_pos
+
+

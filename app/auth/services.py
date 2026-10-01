@@ -20,9 +20,23 @@ def generate_otp() -> str:
 
 def send_verification_otp_email(to_email: str, name: str, otp: str) -> tuple[bool, str]:
     """Dispatches a professional OTP verification email."""
-    subject = f"Verify Your Email — Garuda Code"
+    subject = "Verify Your Email Address — Garuda"
+
+    # Anti-snippet preheader for email notifications:
+    # Forces lock-screen and inbox notifications to display this security notice
+    # instead of revealing the one-time password in the notification preview.
+    preheader_notice = "Security Notice: Open this email to securely view your verification code. Do not share this code."
+    anti_snippet_padding = "&#847;&zwnj;&nbsp;&#8199;&shy;" * 45
 
     html_body = f"""
+    <!-- Hidden Preheader: Prevents OTP from leaking into device lock-screen notifications and inbox snippets -->
+    <div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
+        {preheader_notice}
+    </div>
+    <div style="display:none;max-height:0px;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;">
+        {anti_snippet_padding}
+    </div>
+
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: #0d9488; padding: 24px; text-align: center; color: #ffffff;">
             <div style="font-size: 28px; margin-bottom: 4px;"><img src="https://garuda-62ty.onrender.com/static/img/garuda-icon.png" alt="Garuda logo" width="30px" height="30px"></div>
@@ -52,11 +66,16 @@ def send_verification_otp_email(to_email: str, name: str, otp: str) -> tuple[boo
     </div>
     """
 
-    text_body = f"""Hi {name},
-    Thank you for signing up for Garuda.
-    Your 6-digit email verification code is: {otp}
-    This code will expire in {OTP_VALIDITY_MINUTES} minutes.
-    If you did not request this, please safely ignore this message."""
+    text_body = (
+        f"Security Notice: Please open this email in your mailbox to view your verification code. "
+        f"For account security, do not share your verification code with anyone.\n\n"
+        f"Hi {name},\n\n"
+        f"Thank you for joining Garuda to report and verify civic issues in your neighborhood. "
+        f"Please enter the 6-digit verification code below to confirm ownership of this email address:\n\n"
+        f"Verification Code: {otp}\n\n"
+        f"This code will expire in {OTP_VALIDITY_MINUTES} minutes.\n"
+        f"If you did not request this, please safely ignore this message."
+    )
 
     return send_email_with_status(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
 

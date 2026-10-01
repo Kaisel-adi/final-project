@@ -7,6 +7,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        'brand-green': '#0d9488',
         brand: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -18,6 +19,7 @@ module.exports = {
           700: '#15803d',
           800: '#166534',
           900: '#14532d',
+          green: '#0d9488',
         },
         header: {
           teal: '#0d9488',

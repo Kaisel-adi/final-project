@@ -1041,4 +1041,41 @@ img, video {
     }
 }
 
+/* Explicit brand-green utility fallbacks */
+.bg-brand-green {
+    background-color: #0d9488 !important;
+}
+.text-brand-green {
+    color: #0d9488 !important;
+}
+.border-brand-green {
+    border-color: #0d9488 !important;
+}
+
+/* Translucent CTA Button for Auth Pages (Sign in, Register, Verify Email) */
+.btn-cta-auth {
+    background-color: rgba(5, 150, 105, 0.85) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #ffffff !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.btn-cta-auth:hover {
+    background-color: rgb(5, 150, 105) !important;
+    box-shadow: 0 4px 14px -1px rgba(5, 150, 105, 0.3) !important;
+}
+.btn-cta-auth:active {
+    background-color: rgb(4, 120, 87) !important;
+    transform: scale(0.995);
+}
+
+/* Mandatory Field Validation: Red Outline on Submit/Invalid */
+input:user-invalid,
+.was-validated input:invalid,
+input.border-rose-500 {
+    border-color: #f43f5e !important;
+    box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.25) !important;
+}
+
+
 

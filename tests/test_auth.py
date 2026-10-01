@@ -44,3 +44,65 @@ def test_user_roles(mock_db):
     assert resident.is_admin is False
     assert admin.is_moderator is True
     assert admin.is_admin is True
+
+
+def test_login_ui_elements(client):
+    res = client.get("/auth/login")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # Password eye toggle button
+    assert 'id="toggle-password"' in html
+    assert 'id="toggle-password-icon"' in html
+    assert 'visibility' in html
+
+    # Mandatory red asterisks
+    assert 'Email Address <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>' in html
+    assert 'Password <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>' in html
+
+    # Translucent CTA button (btn-cta-auth & bg-emerald-600/85)
+    assert 'btn-cta-auth' in html
+    assert 'bg-emerald-600/85' in html
+
+    # Interactive validation script
+    assert 'border-rose-500' in html
+
+
+def test_register_ui_elements(client):
+    res = client.get("/auth/register")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # Password eye toggle button
+    assert 'id="toggle-password"' in html
+    assert 'id="toggle-password-icon"' in html
+    assert 'visibility' in html
+
+    # Mandatory red asterisks for Name, Email, Password
+    assert 'Full Name <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>' in html
+    assert 'Email Address <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>' in html
+    assert 'Password <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>' in html
+
+    # Translucent CTA button
+    assert 'btn-cta-auth' in html
+    assert 'bg-emerald-600/85' in html
+
+    # Interactive validation script
+    assert 'border-rose-500' in html
+
+
+def test_verify_otp_ui_elements(client):
+    res = client.get("/auth/verify-otp?email=citizen@example.com")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # Mandatory red asterisk for OTP
+    assert 'Enter 6-Digit Code <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>' in html
+
+    # Translucent CTA button
+    assert 'btn-cta-auth' in html
+    assert 'bg-emerald-600/85' in html
+
+    # Interactive validation script
+    assert 'border-rose-500' in html
+

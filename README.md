@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-58%20Passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-62%20Passing-brightgreen.svg)](tests/)
 [![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-green.svg)](https://www.mongodb.com/cloud/atlas)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v3.4-38bdf8.svg)](https://tailwindcss.com/)
 [![Pilot Region](https://img.shields.io/badge/Pilot%20Region-Delhi--NCR%20(250%20Wards)-teal.svg)](data/)
@@ -37,6 +37,8 @@
 ### 4. Email Validation & 6-Digit OTP Verification
 - **Strict RFC 5322 Syntax Validation**: Validates email integrity across sign-up, login, and password management.
 - **Cryptographic 6-Digit OTP**: Secure numeric codes (`secrets.randbelow(900000) + 100000`) dispatched via Brevo, Resend, SendGrid, or SMTP.
+- **Notification Anti-Snippet Privacy Protection**: Uses zero-width invisible padding and preheaders so lock-screen notifications and inbox preview snippets never expose OTP verification codes.
+- **Enhanced Auth UX & Validation**: Password visibility toggle button (eye icon), real-time mandatory field indicators (`*`), interactive red-outline error states upon empty submission, and high-visibility translucent CTA buttons.
 - **Staged Registration & TTL Cleanup**: Pending sign-ups are stored with securely hashed passwords and auto-purged after 15 minutes via MongoDB TTL indexes.
 - **Anti-Spam Resend Protection**: Cooldown timer (30 seconds) prevents email flooding.
 
@@ -241,11 +243,11 @@ python scripts/clean_demo_data.py
 
 ## 🧪 Testing & Validation
 
-### Run Full Test Suite (58 Tests)
+### Run Full Test Suite (62 Tests)
 ```bash
 python -m pytest tests/ -v
 ```
-All **58 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
+All **62 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
 - **Authentication & Roles**: Password hashing, duplicate email handling, session management.
 - **Email Validation & OTP**: Regex syntax tests, OTP generation, 15-min expiration, and resend cooldown.
 - **Reports & Verification**: GeoJSON coordinate validation, proximity checks, 10-vote threshold flip.

@@ -18,10 +18,10 @@
             </p>
         </div>
 
-        <form method="POST" id="login-form" class="space-y-4">
+        <form method="POST" id="login-form" class="space-y-4" novalidate>
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="email">
-                    Email Address
+                    Email Address <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>
                 </label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -34,14 +34,21 @@
 
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="password">
-                    Password
+                    Password <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>
                 </label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <span class="material-symbols-outlined text-[20px]">key</span>
                     </span>
-                    <input class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 text-slate-900 text-sm font-medium transition-all" 
+                    <input class="w-full pl-10 pr-11 py-2.5 rounded-xl border border-slate-200 focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 text-slate-900 text-sm font-medium transition-all" 
                            type="password" id="password" name="password" required placeholder="••••••••">
+                    <button type="button" 
+                            id="toggle-password" 
+                            class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer transition-colors" 
+                            aria-label="Show password"
+                            title="Show password">
+                        <span class="material-symbols-outlined text-[20px] select-none" id="toggle-password-icon">visibility</span>
+                    </button>
                 </div>
             </div>
 
@@ -50,7 +57,8 @@
             <input type="hidden" id="last_lon" name="last_lon">
 
             <button type="submit" 
-                    class="w-full py-3 px-4 rounded-xl bg-brand-green hover:bg-emerald-600 text-white font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2 mt-2">
+                    id="btn-login-submit"
+                    class="btn-cta-auth w-full py-3 px-4 rounded-xl bg-emerald-600/85 hover:bg-emerald-600 active:bg-emerald-700 text-white font-bold text-sm shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 mt-2">
                 <span>Sign In</span>
                 <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
@@ -77,6 +85,66 @@
         }, function(err) {
             // Silently fallback if denied
         }, { timeout: 4000 });
+    }
+
+    // Toggle password visibility
+    const togglePwdBtn = document.getElementById('toggle-password');
+    const pwdInput = document.getElementById('password');
+    const togglePwdIcon = document.getElementById('toggle-password-icon');
+    if (togglePwdBtn && pwdInput && togglePwdIcon) {
+        togglePwdBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isCurrentlyPassword = pwdInput.type === 'password';
+            pwdInput.type = isCurrentlyPassword ? 'text' : 'password';
+            togglePwdIcon.textContent = isCurrentlyPassword ? 'visibility_off' : 'visibility';
+            const labelText = isCurrentlyPassword ? 'Hide password' : 'Show password';
+            togglePwdBtn.setAttribute('aria-label', labelText);
+            togglePwdBtn.setAttribute('title', labelText);
+        });
+    }
+
+    // Mandatory Form Validation: Red Outline on empty/invalid submit attempt
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        const requiredInputs = loginForm.querySelectorAll('input[required]');
+
+        loginForm.addEventListener('submit', function(e) {
+            let hasInvalid = false;
+            let firstInvalid = null;
+
+            requiredInputs.forEach(function(input) {
+                if (!input.checkValidity()) {
+                    input.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                    input.classList.remove('border-slate-200');
+                    hasInvalid = true;
+                    if (!firstInvalid) firstInvalid = input;
+                } else {
+                    input.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                    input.classList.add('border-slate-200');
+                }
+            });
+
+            if (hasInvalid) {
+                e.preventDefault();
+                loginForm.classList.add('was-validated');
+                if (firstInvalid) firstInvalid.focus();
+            }
+        });
+
+        requiredInputs.forEach(function(input) {
+            input.addEventListener('input', function() {
+                if (input.checkValidity()) {
+                    input.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                    input.classList.add('border-slate-200');
+                }
+            });
+            input.addEventListener('blur', function() {
+                if (loginForm.classList.contains('was-validated') && !input.checkValidity()) {
+                    input.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                    input.classList.remove('border-slate-200');
+                }
+            });
+        });
     }
 </script>
 {% endblock %}

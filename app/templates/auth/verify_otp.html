@@ -21,12 +21,12 @@
         </div>
 
         <!-- OTP Submission Form -->
-        <form method="POST" action="{{ url_for('auth.verify_otp') }}" class="space-y-4">
+        <form method="POST" id="verify-otp-form" action="{{ url_for('auth.verify_otp') }}" class="space-y-4" novalidate>
             <input type="hidden" name="email" value="{{ email }}">
 
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" for="otp">
-                    Enter 6-Digit Code
+                    Enter 6-Digit Code <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true">*</span>
                 </label>
                 <input class="w-full py-3 px-4 rounded-2xl border-2 border-slate-200 focus:border-brand-green focus:ring-4 focus:ring-brand-green/10 text-slate-900 text-2xl sm:text-3xl font-extrabold tracking-[0.5em] text-center font-mono transition-all" 
                        type="text" 
@@ -45,7 +45,8 @@
             </div>
 
             <button type="submit" 
-                    class="w-full py-3 px-4 rounded-xl bg-brand-green hover:bg-emerald-600 text-white font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+                    id="btn-verify-submit"
+                    class="btn-cta-auth w-full py-3 px-4 rounded-xl bg-emerald-600/85 hover:bg-emerald-600 active:bg-emerald-700 text-white font-bold text-sm shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2">
                 <span>Verify & Activate Account</span>
                 <span class="material-symbols-outlined text-[18px]">verified</span>
             </button>
@@ -70,4 +71,42 @@
 
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Mandatory Form Validation: Red Outline on empty/invalid submit attempt
+    const verifyForm = document.getElementById('verify-otp-form');
+    if (verifyForm) {
+        const otpInput = document.getElementById('otp');
+
+        verifyForm.addEventListener('submit', function(e) {
+            if (!otpInput.checkValidity() || !otpInput.value.trim()) {
+                e.preventDefault();
+                otpInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                otpInput.classList.remove('border-slate-200');
+                verifyForm.classList.add('was-validated');
+                otpInput.focus();
+            } else {
+                otpInput.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                otpInput.classList.add('border-slate-200');
+            }
+        });
+
+        if (otpInput) {
+            otpInput.addEventListener('input', function() {
+                if (otpInput.checkValidity() && otpInput.value.trim().length === 6) {
+                    otpInput.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                    otpInput.classList.add('border-slate-200');
+                }
+            });
+            otpInput.addEventListener('blur', function() {
+                if (verifyForm.classList.contains('was-validated') && (!otpInput.checkValidity() || !otpInput.value.trim())) {
+                    otpInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/25');
+                    otpInput.classList.remove('border-slate-200');
+                }
+            });
+        }
+    }
+</script>
 {% endblock %}
