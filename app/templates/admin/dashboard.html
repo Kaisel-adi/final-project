@@ -1,166 +1,245 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Management Dashboard — GCIR{% endblock %}
+{% block title %}Admin Management Dashboard — Garuda{% endblock %}
 
 {% block content %}
-<div style="max-width: 1200px; margin: 1.5rem auto;">
-    <!-- Page Header -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Top Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <h1 style="font-size: 1.6rem; color: var(--text-primary); margin: 0;">Civic Administration Dashboard</h1>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Civic Administration</h1>
                 {% if current_user.is_admin %}
-                    <span class="badge badge-admin">SUPER ADMIN</span>
+                    <span class="badge badge-admin inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
+                        SUPER ADMIN
+                    </span>
                 {% else %}
-                    <span class="badge badge-moderator">MODERATOR</span>
+                    <span class="badge badge-moderator inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                        MODERATOR
+                    </span>
                 {% endif %}
             </div>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.35rem;">
-                Monitor civic reports, review flagged content, override verifications, and manage user roles.
+            <p class="text-sm text-slate-500 mt-1">
+                Monitor civic reports, review flagged content, override verifications, and route municipal complaints.
             </p>
         </div>
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <a href="{{ url_for('admin.hotspots') }}" class="btn btn-secondary btn-sm">
-                🔥 DBSCAN Hotspots
+
+        <!-- Global Admin Action Buttons -->
+        <div class="flex items-center gap-2.5 flex-wrap">
+            <a href="{{ url_for('admin.hotspots') }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold shadow-sm transition-colors">
+                <span class="material-symbols-outlined text-rose-500 text-[18px]">local_fire_department</span>
+                <span>DBSCAN Hotspots</span>
             </a>
-            <form method="POST" action="{{ url_for('admin.trigger_digest_now') }}" style="display: inline;">
-                <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Dispatch email digest to opted-in residents now?');">
-                    📧 Run Digest Now
+
+            <form method="POST" action="{{ url_for('admin.trigger_digest_now') }}" class="inline">
+                <button type="submit" 
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-green hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm transition-colors"
+                        onclick="return confirm('Dispatch email digest to opted-in residents now?');">
+                    <span class="material-symbols-outlined text-white text-[18px]">send</span>
+                    <span>Run Digest Now</span>
                 </button>
             </form>
+
             {% if current_user.is_admin %}
-            <form method="POST" action="{{ url_for('admin.test_email_dispatch') }}" style="display: inline;">
-                <button type="submit" class="btn btn-outline-primary btn-sm" onclick="return confirm('Send live diagnostic email to {{ current_user.email }}?');">
-                    🧪 Test Email
+            <form method="POST" action="{{ url_for('admin.test_email_dispatch') }}" class="inline">
+                <button type="submit" 
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs sm:text-sm font-semibold transition-colors"
+                        onclick="return confirm('Send live diagnostic email to {{ current_user.email }}?');">
+                    <span class="material-symbols-outlined text-[18px]">science</span>
+                    <span>Test Email</span>
                 </button>
             </form>
             {% endif %}
         </div>
     </div>
 
-    <!-- Clickable Quick Stats / Management Tabs -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-        <!-- All Reports Tab -->
+    <!-- Quick Stats & Tab Switcher Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <!-- Tab 1: All Reports -->
         <a href="{{ url_for('admin.dashboard', tab='all_reports') }}" 
-           style="text-decoration: none; color: inherit; display: block;">
-            <div class="card stat-tab-card {% if active_tab == 'all_reports' %}active-primary{% endif %}">
-                <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">{{ total_reports_count }}</div>
-                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
-                    📋 Total Reports
-                </div>
-                <span style="font-size: 0.75rem; color: var(--text-secondary);">Click to view all</span>
+           class="card stat-tab-card {% if active_tab == 'all_reports' %}active-primary border-brand-green ring-2 ring-brand-green/20 bg-emerald-50/30{% else %}border-slate-200 hover:border-slate-300 hover:shadow{% endif %} group block p-4 rounded-2xl bg-white border transition-all duration-150 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center 
+                             {% if active_tab == 'all_reports' %}bg-brand-green text-white{% else %}bg-slate-100 text-slate-600 group-hover:bg-slate-200{% endif %}">
+                    <span class="material-symbols-outlined text-[20px]">assignment</span>
+                </span>
+                <span class="text-xs font-semibold text-slate-400">View Tab</span>
             </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_reports_count }}</div>
+            <div class="text-xs sm:text-sm font-semibold text-slate-700 mt-1">All Reports</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Submitted issues</div>
         </a>
 
-        <!-- Community Verified Tab -->
+        <!-- Tab 2: Verified Reports -->
         <a href="{{ url_for('admin.dashboard', tab='verified') }}" 
-           style="text-decoration: none; color: inherit; display: block;">
-            <div class="card stat-tab-card {% if active_tab == 'verified' %}active-success{% endif %}">
-                <div style="font-size: 2rem; font-weight: 700; color: var(--success);">{{ verified_count }}</div>
-                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
-                    ✅ Verified Reports
-                </div>
-                <span style="font-size: 0.75rem; color: var(--text-secondary);">Ready for complaint routing</span>
+           class="card stat-tab-card {% if active_tab == 'verified' %}active-success border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/30{% else %}border-slate-200 hover:border-slate-300 hover:shadow{% endif %} group block p-4 rounded-2xl bg-white border transition-all duration-150 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center 
+                             {% if active_tab == 'verified' %}bg-emerald-600 text-white{% else %}bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100{% endif %}">
+                    <span class="material-symbols-outlined text-[20px]">verified</span>
+                </span>
+                <span class="text-xs font-semibold text-emerald-600">Routing</span>
             </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-emerald-600 tracking-tight">{{ verified_count }}</div>
+            <div class="text-xs sm:text-sm font-semibold text-slate-700 mt-1">Verified</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Ready for complaint</div>
         </a>
 
-        <!-- Complaints Filed Tab -->
+        <!-- Tab 3: Complaints Filed -->
         <a href="{{ url_for('admin.dashboard', tab='complaints') }}" 
-           style="text-decoration: none; color: inherit; display: block;">
-            <div class="card stat-tab-card {% if active_tab == 'complaints' %}active-blue{% endif %}">
-                <div style="font-size: 2rem; font-weight: 700; color: #1e40af;">{{ complained_count }}</div>
-                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
-                    🏛️ Complaints Filed
-                </div>
-                <span style="font-size: 0.75rem; color: var(--text-secondary);">Routed to authorities</span>
+           class="card stat-tab-card {% if active_tab == 'complaints' %}active-blue border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/30{% else %}border-slate-200 hover:border-slate-300 hover:shadow{% endif %} group block p-4 rounded-2xl bg-white border transition-all duration-150 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center 
+                             {% if active_tab == 'complaints' %}bg-blue-600 text-white{% else %}bg-blue-50 text-blue-600 group-hover:bg-blue-100{% endif %}">
+                    <span class="material-symbols-outlined text-[20px]">account_balance</span>
+                </span>
+                <span class="text-xs font-semibold text-blue-600">Dispatched</span>
             </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-blue-700 tracking-tight">{{ complained_count }}</div>
+            <div class="text-xs sm:text-sm font-semibold text-slate-700 mt-1">Complaints</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Routed to authority</div>
+        </a>
+
+        <!-- Tab 4: Flagged Queue -->
+        <a href="{{ url_for('admin.dashboard', tab='flagged') }}" 
+           class="card stat-tab-card {% if active_tab == 'flagged' %}active-danger border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/30{% else %}border-slate-200 hover:border-slate-300 hover:shadow{% endif %} group block p-4 rounded-2xl bg-white border transition-all duration-150 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center 
+                             {% if active_tab == 'flagged' %}bg-rose-600 text-white{% else %}{% if flagged_count > 0 %}bg-rose-100 text-rose-600{% else %}bg-slate-100 text-slate-600{% endif %}{% endif %}">
+                    <span class="material-symbols-outlined text-[20px]">flag</span>
+                </span>
+                {% if flagged_count > 0 %}
+                    <span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-rose-500 text-white animate-pulse">Action</span>
+                {% else %}
+                    <span class="text-xs font-semibold text-slate-400">Clear</span>
+                {% endif %}
+            </div>
+            <div class="text-2xl sm:text-3xl font-extrabold {% if flagged_count > 0 %}text-rose-600{% else %}text-slate-900{% endif %} tracking-tight">
+                {{ flagged_count }}
+            </div>
+            <div class="text-xs sm:text-sm font-semibold text-slate-700 mt-1">Flagged Queue</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Spam & safety review</div>
         </a>
 
         {% if current_user.is_admin %}
-            <!-- Registered Users Tab -->
-            <a href="{{ url_for('admin.dashboard', tab='users') }}" 
-               style="text-decoration: none; color: inherit; display: block;">
-                <div class="card stat-tab-card {% if active_tab == 'users' %}active-slate{% endif %}">
-                    <div style="font-size: 2rem; font-weight: 700; color: #475569;">{{ total_users_count }}</div>
-                    <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
-                        👥 Registered Users
-                    </div>
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Manage roles & bans</span>
-                </div>
-            </a>
-        {% endif %}
-
-        <!-- Flagged Queue Tab -->
-        <a href="{{ url_for('admin.dashboard', tab='flagged') }}" 
-           style="text-decoration: none; color: inherit; display: block;">
-            <div class="card stat-tab-card {% if active_tab == 'flagged' %}active-danger{% endif %}">
-                <div style="font-size: 2rem; font-weight: 700; color: var(--danger);">{{ flagged_count }}</div>
-                <div style="font-size: 0.88rem; color: var(--text-primary); font-weight: 600; margin-top: 0.25rem;">
-                    ⚠️ Flagged Queue
-                </div>
-                <span style="font-size: 0.75rem; color: var(--text-secondary);">Citizen reports moderation</span>
+        <!-- Tab 5: Registered Users -->
+        <a href="{{ url_for('admin.dashboard', tab='users') }}" 
+           class="card stat-tab-card {% if active_tab == 'users' %}active-slate border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/30{% else %}border-slate-200 hover:border-slate-300 hover:shadow{% endif %} group block p-4 rounded-2xl bg-white border transition-all duration-150 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center 
+                             {% if active_tab == 'users' %}bg-indigo-600 text-white{% else %}bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100{% endif %}">
+                    <span class="material-symbols-outlined text-[20px]">group</span>
+                </span>
+                <span class="text-xs font-semibold text-indigo-600">Access</span>
             </div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ total_users_count }}</div>
+            <div class="text-xs sm:text-sm font-semibold text-slate-700 mt-1">Users & Roles</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Manage permissions</div>
         </a>
+        {% endif %}
     </div>
 
-    <!-- Active Tab Content Area -->
-    <div class="card">
-        <!-- Tab 1: All Active Reports -->
+    <!-- Active Tab Content Container -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: ALL CIVIC REPORTS                   -->
+        <!-- ========================================== -->
         {% if active_tab == 'all_reports' %}
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
                 <div>
-                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--text-primary);">All Civic Reports ({{ all_reports|length }})</h2>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Review, fast-track verify, or remove any reported civic issue.</span>
+                    <h2 class="text-lg sm:text-xl font-bold text-slate-900">All Civic Reports ({{ all_reports|length }})</h2>
+                    <p class="text-xs sm:text-sm text-slate-500">Review, fast-track verify, or moderate any reported civic issue.</p>
                 </div>
             </div>
 
             {% if all_reports %}
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="space-y-3">
                     {% for r in all_reports %}
-                        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                            <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 280px;">
+                        <div class="p-4 rounded-xl border border-slate-200 hover:border-slate-300 bg-white transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <!-- Left: Thumbnail & Details -->
+                            <div class="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
                                 {% if r.photo_url %}
                                     {% if r.photo_url|is_video %}
-                                        <video src="{{ r.photo_url }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); flex-shrink: 0;" muted playsinline preload="metadata"></video>
+                                        <div class="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-900 shrink-0">
+                                            <video src="{{ r.photo_url }}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>
+                                            <span class="absolute inset-0 flex items-center justify-center bg-black/30 text-white">
+                                                <span class="material-symbols-outlined text-[20px]">play_circle</span>
+                                            </span>
+                                        </div>
                                     {% else %}
-                                        <img src="{{ r.photo_url }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); flex-shrink: 0;">
+                                        <img src="{{ r.photo_url }}" alt="{{ r.cat_label }}" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border border-slate-200 shrink-0">
                                     {% endif %}
                                 {% else %}
-                                    <div style="width: 70px; height: 70px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">📍</div>
+                                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                                        <span class="material-symbols-outlined text-slate-400 text-2xl">location_city</span>
+                                    </div>
                                 {% endif %}
-                                <div style="flex: 1;">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
-                                        <span style="font-weight: 700; color: var(--text-primary);">{{ r.cat_label }}</span>
-                                        <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
+
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                            {{ r.cat_label }}
+                                        </span>
+                                        <span class="status-pill status-{{ r.status|lower }}">
+                                            {{ r.status }}
+                                        </span>
                                         {% if r.is_flagged %}
-                                            <span class="badge badge-Removed">Flagged</span>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700">
+                                                <span class="material-symbols-outlined text-[13px]">flag</span> Flagged
+                                            </span>
                                         {% endif %}
                                     </div>
-                                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+
+                                    <p class="text-sm font-medium text-slate-800 line-clamp-2">
                                         {{ r.description }}
                                     </p>
-                                    <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.35rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                                        <span>📅 {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'Recent' }}</span>
-                                        <span>👍 {{ r.upvote_count }} / 10 Votes</span>
-                                        <span>📍 {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }}</span>
+
+                                    <div class="flex items-center gap-3 sm:gap-4 text-xs text-slate-400 mt-2 flex-wrap">
+                                        <span class="inline-flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                            {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'Recent' }}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                                            <span class="material-symbols-outlined text-[14px]">thumb_up</span>
+                                            {{ r.upvote_count }} / 10 Votes
+                                        </span>
+                                        <span class="inline-flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">location_on</span>
+                                            {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <a href="{{ url_for('reports.view', report_id=r._id) }}" class="btn btn-secondary btn-sm" target="_blank">
-                                    View Details
+                            <!-- Right: Actions -->
+                            <div class="flex items-center gap-2 flex-wrap shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                                <a href="{{ url_for('reports.view', report_id=r._id) }}" 
+                                   target="_blank"
+                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                    <span>View</span>
                                 </a>
-                                {% if r.status != 'Verified' and r.status != 'Complained' and r.status != 'Resolved' %}
-                                    <form method="POST" action="{{ url_for('admin.verify_report_instantly', report_id=r._id) }}" style="display: inline;">
-                                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Instantly verify this report and unlock complaint routing?');">
-                                            ⚡ Verify Now
+
+                                {% if r.status not in ['Verified', 'Complained', 'Resolved', 'Removed'] %}
+                                    <form method="POST" action="{{ url_for('admin.verify_report_instantly', report_id=r._id) }}" class="inline">
+                                        <button type="submit" 
+                                                onclick="return confirm('Instantly verify this report and unlock complaint routing?');"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors">
+                                            <span class="material-symbols-outlined text-[16px]">bolt</span>
+                                            <span>Verify Now</span>
                                         </button>
                                     </form>
                                 {% endif %}
-                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove this report from public feed?');">
-                                        🗑️ Remove
+
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" class="inline">
+                                    <button type="submit" 
+                                            onclick="return confirm('Are you sure you want to remove this report from public feed?');"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                        <span>Remove</span>
                                     </button>
                                 </form>
                             </div>
@@ -168,56 +247,93 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
-                    No civic reports in database.
+                <div class="text-center py-12 text-slate-400">
+                    <span class="material-symbols-outlined text-4xl mb-2 text-slate-300">inbox</span>
+                    <p class="text-sm">No civic reports found in database.</p>
                 </div>
             {% endif %}
 
-        <!-- Tab 2: Verified Reports -->
+        <!-- ========================================== -->
+        <!-- TAB 2: VERIFIED REPORTS                    -->
+        <!-- ========================================== -->
         {% elif active_tab == 'verified' %}
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
                 <div>
-                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--success);">Community & Admin Verified Reports ({{ verified_reports|length }})</h2>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Verified issues eligible for formal point-in-polygon complaint drafting.</span>
+                    <h2 class="text-lg sm:text-xl font-bold text-emerald-800">Verified Reports Ready for Routing ({{ verified_reports|length }})</h2>
+                    <p class="text-xs sm:text-sm text-slate-500">Community and fast-track verified issues ready for formal point-in-polygon municipal complaints.</p>
                 </div>
             </div>
 
             {% if verified_reports %}
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="space-y-3">
                     {% for r in verified_reports %}
-                        <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                            <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 280px;">
+                        <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 hover:border-emerald-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <!-- Left: Thumbnail & Details -->
+                            <div class="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
                                 {% if r.photo_url %}
                                     {% if r.photo_url|is_video %}
-                                        <video src="{{ r.photo_url }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); flex-shrink: 0;" muted playsinline preload="metadata"></video>
+                                        <div class="lazy-video-container relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-900 border border-emerald-200 shrink-0 cursor-pointer flex items-center justify-center group/vid select-none" data-video-src="{{ r.photo_url }}">
+                                            <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg group-hover/vid:scale-110 transition-transform">
+                                                <span class="material-symbols-outlined text-lg ml-0.5">play_arrow</span>
+                                            </div>
+                                        </div>
                                     {% else %}
-                                        <img src="{{ r.photo_url }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+                                        <img src="{{ r.photo_url }}" alt="{{ r.cat_label }}" class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border border-emerald-200 shrink-0" loading="lazy" decoding="async">
                                     {% endif %}
                                 {% else %}
-                                    <div style="width: 70px; height: 70px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">📍</div>
-                                {% endif %}
-                                <div style="flex: 1;">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                                        <span style="font-weight: 700;">{{ r.cat_label }}</span>
-                                        <span class="badge badge-Verified">Verified</span>
+                                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                                        <span class="material-symbols-outlined text-emerald-600 text-2xl">check_circle</span>
                                     </div>
-                                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">{{ r.description }}</p>
-                                    <div style="font-size: 0.78rem; color: #047857; margin-top: 0.35rem; display: flex; gap: 1rem;">
-                                        <span>👍 {{ r.upvote_count }} Verifications</span>
-                                        <span>📍 {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }}</span>
+                                {% endif %}
+
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                            {{ r.cat_label }}
+                                        </span>
+                                        <span class="status-pill status-verified">
+                                            Verified
+                                        </span>
+                                    </div>
+
+                                    <p class="text-sm font-medium text-slate-800 line-clamp-2">
+                                        {{ r.description }}
+                                    </p>
+
+                                    <div class="flex items-center gap-3 sm:gap-4 text-xs text-emerald-700 mt-2 flex-wrap">
+                                        <span class="inline-flex items-center gap-1 font-semibold">
+                                            <span class="material-symbols-outlined text-[14px]">thumb_up</span>
+                                            {{ r.upvote_count }} Verifications
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 text-slate-500">
+                                            <span class="material-symbols-outlined text-[14px]">location_on</span>
+                                            {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <a href="{{ url_for('reports.view', report_id=r._id) }}" class="btn btn-secondary btn-sm" target="_blank">
-                                    View
+
+                            <!-- Right: Actions -->
+                            <div class="flex items-center gap-2 flex-wrap shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                                <a href="{{ url_for('reports.view', report_id=r._id) }}" 
+                                   target="_blank"
+                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                    <span>View</span>
                                 </a>
-                                <a href="{{ url_for('complaints.draft_view', report_id=r._id) }}" class="btn btn-primary btn-sm">
-                                    🏛️ Draft Complaint
+
+                                <a href="{{ url_for('complaints.draft_view', report_id=r._id) }}" 
+                                   class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">account_balance</span>
+                                    <span>Draft Complaint</span>
                                 </a>
-                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove this verified report from feed?');">
-                                        🗑️ Remove
+
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" class="inline">
+                                    <button type="submit" 
+                                            onclick="return confirm('Remove this verified report from feed?');"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                        <span>Remove</span>
                                     </button>
                                 </form>
                             </div>
@@ -225,41 +341,61 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
-                    No verified reports currently awaiting complaint routing.
+                <div class="text-center py-12 text-slate-400">
+                    <span class="material-symbols-outlined text-4xl mb-2 text-emerald-400">task_alt</span>
+                    <p class="text-sm">No verified reports currently awaiting complaint routing.</p>
                 </div>
             {% endif %}
 
-        <!-- Tab 3: Complaints Filed -->
+        <!-- ========================================== -->
+        <!-- TAB 3: COMPLAINTS FILED                    -->
+        <!-- ========================================== -->
         {% elif active_tab == 'complaints' %}
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
                 <div>
-                    <h2 style="font-size: 1.25rem; margin: 0; color: #1e40af;">Official Complaints Filed ({{ complaints_reports|length }})</h2>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Issues that have been routed and formally emailed to municipal authorities.</span>
+                    <h2 class="text-lg sm:text-xl font-bold text-blue-900">Official Municipal Complaints Filed ({{ complaints_reports|length }})</h2>
+                    <p class="text-xs sm:text-sm text-slate-500">Issues that have been routed and formally emailed to municipal authorities.</p>
                 </div>
             </div>
 
             {% if complaints_reports %}
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="space-y-3">
                     {% for r in complaints_reports %}
-                        <div style="background: #ffffff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                            <div style="flex: 1; min-width: 280px;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                                    <span style="font-weight: 700;">{{ r.cat_label }}</span>
-                                    <span class="badge badge-Complained">Complained</span>
+                        <div class="p-4 rounded-xl border border-blue-200 bg-blue-50/20 hover:border-blue-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap mb-1">
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                        {{ r.cat_label }}
+                                    </span>
+                                    <span class="status-pill status-complained">
+                                        Complained
+                                    </span>
                                 </div>
-                                <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">{{ r.description }}</p>
-                                <div style="font-size: 0.78rem; color: #1e40af; margin-top: 0.35rem;">
-                                    Status Log: {{ r.status_log[-1].note if r.status_log else 'Formal complaint generated' }}
+
+                                <p class="text-sm font-medium text-slate-800 line-clamp-2">
+                                    {{ r.description }}
+                                </p>
+
+                                <div class="flex items-center gap-1.5 text-xs text-blue-800 mt-2 font-medium">
+                                    <span class="material-symbols-outlined text-[15px]">history_edu</span>
+                                    <span>Log: {{ r.status_log[-1].note if r.status_log else 'Formal complaint generated' }}</span>
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <a href="{{ url_for('reports.view', report_id=r._id) }}" class="btn btn-secondary btn-sm" target="_blank">
-                                    View
+
+                            <div class="flex items-center gap-2 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                                <a href="{{ url_for('reports.view', report_id=r._id) }}" 
+                                   target="_blank"
+                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                    <span>View</span>
                                 </a>
-                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove this complaint report?');">
-                                        🗑️ Remove
+
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" class="inline">
+                                    <button type="submit" 
+                                            onclick="return confirm('Remove this complaint report?');"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                        <span>Remove</span>
                                     </button>
                                 </form>
                             </div>
@@ -267,100 +403,128 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
-                    No complaints formally filed yet.
+                <div class="text-center py-12 text-slate-400">
+                    <span class="material-symbols-outlined text-4xl mb-2 text-blue-300">account_balance</span>
+                    <p class="text-sm">No municipal complaints formally filed yet.</p>
                 </div>
             {% endif %}
 
-        <!-- Tab 4: Registered Users Management -->
+        <!-- ========================================== -->
+        <!-- TAB 4: USERS MANAGEMENT (ADMIN ONLY)       -->
+        <!-- ========================================== -->
         {% elif active_tab == 'users' and current_user.is_admin %}
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
                 <div>
-                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--text-primary);">Registered User Management ({{ users_list|length }})</h2>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Assign moderator privileges, suspend/ban problematic accounts, or delete users.</span>
+                    <h2 class="text-lg sm:text-xl font-bold text-slate-900">Registered User Management ({{ users_list|length }})</h2>
+                    <p class="text-xs sm:text-sm text-slate-500">Assign moderator privileges, suspend/ban problematic accounts, or purge users.</p>
                 </div>
             </div>
 
             {% if users_list %}
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                        <thead>
-                            <tr style="border-bottom: 2px solid var(--border-color); background: #f8fafc;">
-                                <th style="padding: 0.75rem 1rem;">User / Email</th>
-                                <th style="padding: 0.75rem 1rem;">Role</th>
-                                <th style="padding: 0.75rem 1rem;">Status</th>
-                                <th style="padding: 0.75rem 1rem;">Reports</th>
-                                <th style="padding: 0.75rem 1rem;">Joined</th>
-                                <th style="padding: 0.75rem 1rem; text-align: right;">Admin Actions</th>
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                                <th class="py-3 px-4">Resident</th>
+                                <th class="py-3 px-4">Role</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4">Reports</th>
+                                <th class="py-3 px-4">Joined</th>
+                                <th class="py-3 px-4 text-right">Admin Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y divide-slate-100">
                             {% for u in users_list %}
-                                <tr class="user-row {% if u.is_banned %}row-banned{% endif %}">
-                                    <td style="padding: 0.85rem 1rem;">
-                                        <div style="font-weight: 600; color: var(--text-primary);">{{ u.name }}</div>
-                                        <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ u.email }}</div>
+                                <tr class="user-row {% if u.is_banned %}row-banned bg-rose-50/40{% endif %} hover:bg-slate-50/60 transition-colors">
+                                    <!-- User Name & Email -->
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs shrink-0">
+                                                {{ u.name[:2]|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="font-semibold text-slate-900">{{ u.name }}</div>
+                                                <div class="text-xs text-slate-400">{{ u.email }}</div>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td style="padding: 0.85rem 1rem;">
+
+                                    <!-- Role -->
+                                    <td class="py-3 px-4">
                                         {% if u.role == 'admin' %}
-                                            <span class="badge badge-admin">ADMIN</span>
+                                            <span class="badge badge-admin inline-flex items-center px-2 py-0.5 rounded text-xs font-extrabold bg-indigo-100 text-indigo-800">ADMIN</span>
                                         {% elif u.role == 'moderator' %}
-                                            <span class="badge badge-moderator">MODERATOR</span>
+                                            <span class="badge badge-moderator inline-flex items-center px-2 py-0.5 rounded text-xs font-extrabold bg-purple-100 text-purple-800">MODERATOR</span>
                                         {% else %}
-                                            <span class="badge badge-resident">RESIDENT</span>
+                                            <span class="badge badge-resident inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">RESIDENT</span>
                                         {% endif %}
                                     </td>
-                                    <td style="padding: 0.85rem 1rem;">
+
+                                    <!-- Status -->
+                                    <td class="py-3 px-4">
                                         {% if u.is_banned %}
-                                            <span class="badge badge-Removed">BANNED</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700">BANNED</span>
                                         {% else %}
-                                            <span class="badge badge-Verified">ACTIVE</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700">ACTIVE</span>
                                         {% endif %}
                                     </td>
-                                    <td style="padding: 0.85rem 1rem;">
-                                        <span style="font-weight: 600;">{{ u.report_count }}</span>
+
+                                    <!-- Reports Count -->
+                                    <td class="py-3 px-4 font-semibold text-slate-800">
+                                        {{ u.report_count }}
                                     </td>
-                                    <td style="padding: 0.85rem 1rem; font-size: 0.82rem; color: var(--text-secondary);">
+
+                                    <!-- Join Date -->
+                                    <td class="py-3 px-4 text-xs text-slate-400">
                                         {{ u.created_at.strftime('%d %b %Y') if u.created_at else '-' }}
                                     </td>
-                                    <td style="padding: 0.85rem 1rem; text-align: right;">
+
+                                    <!-- Actions -->
+                                    <td class="py-3 px-4 text-right">
                                         {% if u.role == 'admin' or u._id|string == current_user.id %}
-                                            <span style="font-size: 0.8rem; color: #94a3b8; font-style: italic;">Protected Admin</span>
-                                        {% elif current_user.is_admin %}
-                                            <div style="display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
-                                                <!-- Role Promotion / Demotion -->
+                                            <span class="text-xs font-semibold text-slate-400 italic">Protected</span>
+                                        {% else %}
+                                            <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                                                <!-- Role Toggle -->
                                                 {% if u.role == 'resident' %}
-                                                    <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" style="display: inline;">
+                                                    <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" class="inline">
                                                         <input type="hidden" name="role" value="moderator">
-                                                        <button type="submit" class="btn btn-secondary btn-sm" data-confirm-message="Promote {{ u.name }} to Moderator?" onclick="return confirm(this.dataset.confirmMessage);">
+                                                        <button type="submit" 
+                                                                onclick="return confirm('Promote {{ u.name }} to Moderator?');"
+                                                                class="px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors">
                                                             + Mod
                                                         </button>
                                                     </form>
                                                 {% elif u.role == 'moderator' %}
-                                                    <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" style="display: inline;">
+                                                    <form method="POST" action="{{ url_for('admin.change_user_role', user_id=u._id) }}" class="inline">
                                                         <input type="hidden" name="role" value="resident">
-                                                        <button type="submit" class="btn btn-secondary btn-sm" data-confirm-message="Revoke moderator privileges from {{ u.name }}?" onclick="return confirm(this.dataset.confirmMessage);">
+                                                        <button type="submit" 
+                                                                onclick="return confirm('Revoke moderator privileges from {{ u.name }}?');"
+                                                                class="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors">
                                                             - Demote
                                                         </button>
                                                     </form>
                                                 {% endif %}
 
-                                                <!-- Ban / Unban Toggle -->
-                                                <form method="POST" action="{{ url_for('admin.toggle_user_ban', user_id=u._id) }}" style="display: inline;">
-                                                    <button type="submit" class="btn {% if u.is_banned %}btn-success{% else %}btn-secondary{% endif %} btn-sm" data-confirm-message="{% if u.is_banned %}Unban and restore access for {{ u.name }}?{% else %}Suspend / Ban {{ u.name }} and invalidate their sessions?{% endif %}" onclick="return confirm(this.dataset.confirmMessage);">
-                                                        {% if u.is_banned %}Unban{% else %}🚫 Ban{% endif %}
+                                                <!-- Ban Toggle -->
+                                                <form method="POST" action="{{ url_for('admin.toggle_user_ban', user_id=u._id) }}" class="inline">
+                                                    <button type="submit" 
+                                                            onclick="return confirm('{% if u.is_banned %}Unban and restore access for {{ u.name }}?{% else %}Suspend and ban {{ u.name }}?{% endif %}');"
+                                                            class="px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors
+                                                                   {% if u.is_banned %}border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100{% else %}border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100{% endif %}">
+                                                        {% if u.is_banned %}Unban{% else %}Ban{% endif %}
                                                     </button>
                                                 </form>
 
-                                                <!-- Delete User -->
-                                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=u._id) }}" style="display: inline;">
-                                                    <button type="submit" class="btn btn-danger btn-sm" data-confirm-message="⚠️ Permanently delete {{ u.name }} and all their submitted reports/upvotes? This cannot be undone." onclick="return confirm(this.dataset.confirmMessage);">
-                                                        🗑️ Delete
+                                                <!-- Delete -->
+                                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=u._id) }}" class="inline">
+                                                    <button type="submit" 
+                                                            onclick="return confirm('⚠️ Permanently delete {{ u.name }} and all their submitted reports/upvotes? This cannot be undone.');"
+                                                            class="px-2 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors">
+                                                        <span class="material-symbols-outlined text-[15px] align-middle">delete</span>
                                                     </button>
                                                 </form>
                                             </div>
-                                        {% else %}
-                                            <span style="font-size: 0.8rem; color: #94a3b8;">Admin Only</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -369,56 +533,102 @@
                     </table>
                 </div>
             {% else %}
-                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
-                    No registered users found.
+                <div class="text-center py-12 text-slate-400">
+                    <span class="material-symbols-outlined text-4xl mb-2 text-slate-300">group_off</span>
+                    <p class="text-sm">No registered users found.</p>
                 </div>
             {% endif %}
 
-        <!-- Tab 5: Flagged Reports Queue -->
+        <!-- ========================================== -->
+        <!-- TAB 5: FLAGGED QUEUE                       -->
+        <!-- ========================================== -->
         {% elif active_tab == 'flagged' %}
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
                 <div>
-                    <h2 style="font-size: 1.25rem; margin: 0; color: var(--danger);">Citizen Flagged Reports Queue ({{ flagged_reports|length }})</h2>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Review citizen flags for spam, offensive imagery, or invalid locations.</span>
+                    <h2 class="text-lg sm:text-xl font-bold text-rose-800">Citizen Flagged Queue ({{ flagged_reports|length }})</h2>
+                    <p class="text-xs sm:text-sm text-slate-500">Review reports flagged by residents for spam, offensive imagery, or invalid locations.</p>
                 </div>
             </div>
 
             {% if flagged_reports %}
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="space-y-4">
                     {% for r in flagged_reports %}
-                        <div style="display: flex; gap: 1rem; border: 1px solid #fee2e2; background: #fffaf0; padding: 1rem; border-radius: 8px; align-items: center; flex-wrap: wrap;">
-                            {% if r.photo_url|is_video %}
-                                <video src="{{ r.photo_url }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #fee2e2; flex-shrink: 0;" muted playsinline preload="metadata"></video>
-                            {% else %}
-                                <img src="{{ r.photo_url }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
-                            {% endif %}
-                            <div style="flex: 1; min-width: 260px;">
-                                <div style="display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
-                                    <span style="font-weight: 700; color: #991b1b; font-size: 0.85rem;">
-                                        Flag Reason: {{ r.flag_reason or 'Citizen Flagged' }}
-                                    </span>
-                                    <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
-                                </div>
-                                <p style="font-size: 0.9rem; margin-top: 0.25rem; color: var(--text-primary);">{{ r.description }}</p>
-                                <div style="font-size: 0.78rem; color: #78350f; margin-top: 0.35rem;">
-                                    Coords: {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }} | Category: {{ r.cat_label }}
+                        <div class="p-4 sm:p-5 rounded-2xl border-2 border-rose-200 bg-rose-50/20 hover:border-rose-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <!-- Left Details -->
+                            <div class="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+                                {% if r.photo_url %}
+                                    {% if r.photo_url|is_video %}
+                                        <div class="lazy-video-container relative w-20 h-20 rounded-xl overflow-hidden bg-slate-900 border border-rose-200 shrink-0 cursor-pointer flex items-center justify-center group/vid select-none" data-video-src="{{ r.photo_url }}">
+                                            <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg group-hover/vid:scale-110 transition-transform">
+                                                <span class="material-symbols-outlined text-lg ml-0.5">play_arrow</span>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <img src="{{ r.photo_url }}" alt="{{ r.cat_label }}" class="w-20 h-20 rounded-xl object-cover border border-rose-200 shrink-0" loading="lazy" decoding="async">
+                                    {% endif %}
+                                {% else %}
+                                    <div class="w-20 h-20 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center shrink-0">
+                                        <span class="material-symbols-outlined text-rose-600 text-3xl">warning</span>
+                                    </div>
+                                {% endif %}
+
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 inline-flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[13px]">report</span>
+                                            Flag: {{ r.flag_reason or 'Citizen Flagged' }}
+                                        </span>
+                                        <span class="status-pill status-{{ r.status|lower }}">
+                                            {{ r.status }}
+                                        </span>
+                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                                            {{ r.cat_label }}
+                                        </span>
+                                    </div>
+
+                                    <p class="text-sm font-medium text-slate-900 mt-1">
+                                        {{ r.description }}
+                                    </p>
+
+                                    <div class="flex items-center gap-4 text-xs text-rose-700 mt-2 flex-wrap">
+                                        <span class="inline-flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">location_on</span>
+                                            {{ r.location.coordinates[1]|round(4) }}, {{ r.location.coordinates[0]|round(4) }}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                            {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'Recent' }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+
+                            <!-- Moderation Actions -->
+                            <div class="flex items-center gap-2 flex-wrap shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-rose-200">
                                 <form method="POST" action="{{ url_for('admin.moderate_report', report_id=r._id) }}">
                                     <input type="hidden" name="action" value="approve">
-                                    <button type="submit" class="btn btn-secondary btn-sm">
-                                        ✓ Approve & Unflag
+                                    <button type="submit" 
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]">done_all</span>
+                                        <span>Approve & Unflag</span>
                                     </button>
                                 </form>
+
                                 <form method="POST" action="{{ url_for('admin.verify_report_instantly', report_id=r._id) }}">
-                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Fast-track verify this flagged report?');">
-                                        ⚡ Verify
+                                    <button type="submit" 
+                                            onclick="return confirm('Fast-track verify this flagged report?');"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]">bolt</span>
+                                        <span>Verify</span>
                                     </button>
                                 </form>
-                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}" onsubmit="return confirm('Permanently remove this report from feed?');">
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        🗑️ Remove
+
+                                <form method="POST" action="{{ url_for('admin.remove_report', report_id=r._id) }}">
+                                    <button type="submit" 
+                                            onclick="return confirm('Permanently remove this report from public feed?');"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition-colors">
+                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                        <span>Remove</span>
                                     </button>
                                 </form>
                             </div>
@@ -426,11 +636,162 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary); font-size: 0.95rem;">
-                    ✓ Clean Queue: No civic reports currently flagged for moderation.
+                <div class="text-center py-12 bg-emerald-50/40 rounded-2xl border border-emerald-100">
+                    <span class="material-symbols-outlined text-4xl text-emerald-600 mb-2">task_alt</span>
+                    <h3 class="font-bold text-slate-800 text-base">Clean Moderation Queue</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">No civic reports are currently flagged for moderation.</p>
                 </div>
             {% endif %}
+
         {% endif %}
     </div>
+
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showAdminToast(msg, isSuccess = false) {
+        let toast = document.getElementById('admin-floating-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'admin-floating-toast';
+            toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-xl text-xs font-semibold shadow-xl transition-all duration-300 pointer-events-none transform translate-y-4 opacity-0';
+            document.body.appendChild(toast);
+        }
+        toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-xl text-xs font-semibold shadow-xl transition-all duration-300 pointer-events-none transform translate-y-0 opacity-100 ${
+            isSuccess ? 'bg-emerald-800 text-white' : 'bg-slate-900 text-white'
+        }`;
+        toast.textContent = msg;
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => {
+            toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-4 opacity-0');
+        }, 2800);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // AJAX Form Interceptor for Admin Actions (Verify, Remove, Moderate, Role, Ban, Delete)
+        document.addEventListener('submit', function (e) {
+            const form = e.target;
+            const actionUrl = form.action || '';
+            const isAction = actionUrl.includes('/verify') || 
+                             actionUrl.includes('/remove') || 
+                             actionUrl.includes('/moderate') || 
+                             actionUrl.includes('/role') || 
+                             actionUrl.includes('/ban') || 
+                             actionUrl.includes('/delete');
+
+            if (!isAction) return;
+
+            e.preventDefault();
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            const formData = new FormData(form);
+
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (submitBtn) submitBtn.disabled = false;
+                if (data.success) {
+                    showAdminToast(data.message, true);
+
+                    const reportCard = form.closest('.p-4, .sm\\:p-5, tr.user-row');
+
+                    if (actionUrl.includes('/verify')) {
+                        // Update status pill to Verified
+                        if (reportCard) {
+                            const pill = reportCard.querySelector('.status-pill');
+                            if (pill) {
+                                pill.className = 'status-pill status-verified';
+                                pill.textContent = 'Verified';
+                            }
+                        }
+                        form.remove();
+                    } else if (actionUrl.includes('/remove') || actionUrl.includes('/moderate') || actionUrl.includes('/delete')) {
+                        // Fade and collapse row
+                        if (reportCard) {
+                            reportCard.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+                            reportCard.style.opacity = '0';
+                            reportCard.style.transform = 'translateY(-10px)';
+                            setTimeout(() => reportCard.remove(), 300);
+                        }
+                    } else if (actionUrl.includes('/role')) {
+                        // Update role badge and toggle role button
+                        if (reportCard) {
+                            const badge = reportCard.querySelector('.badge');
+                            const roleInput = form.querySelector('input[name="role"]');
+                            if (data.new_role === 'moderator') {
+                                if (badge) {
+                                    badge.className = 'badge badge-moderator inline-flex items-center px-2 py-0.5 rounded text-xs font-extrabold bg-purple-100 text-purple-800';
+                                    badge.textContent = 'MODERATOR';
+                                }
+                                if (roleInput) roleInput.value = 'resident';
+                                if (submitBtn) {
+                                    submitBtn.textContent = '- Demote';
+                                    submitBtn.className = 'px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors';
+                                    submitBtn.onclick = () => confirm(`Revoke moderator privileges?`);
+                                }
+                            } else {
+                                if (badge) {
+                                    badge.className = 'badge badge-resident inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600';
+                                    badge.textContent = 'RESIDENT';
+                                }
+                                if (roleInput) roleInput.value = 'moderator';
+                                if (submitBtn) {
+                                    submitBtn.textContent = '+ Mod';
+                                    submitBtn.className = 'px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors';
+                                    submitBtn.onclick = () => confirm(`Promote user to Moderator?`);
+                                }
+                            }
+                        }
+                    } else if (actionUrl.includes('/ban')) {
+                        // Toggle ban status
+                        if (reportCard) {
+                            const statusCell = reportCard.cells ? reportCard.cells[2] : null;
+                            const badge = statusCell ? statusCell.querySelector('span') : null;
+                            if (data.is_banned) {
+                                if (badge) {
+                                    badge.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700';
+                                    badge.textContent = 'BANNED';
+                                }
+                                reportCard.classList.add('row-banned', 'bg-rose-50/40');
+                                if (submitBtn) {
+                                    submitBtn.textContent = 'Unban';
+                                    submitBtn.className = 'px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100';
+                                    submitBtn.onclick = () => confirm('Unban and restore access for user?');
+                                }
+                            } else {
+                                if (badge) {
+                                    badge.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700';
+                                    badge.textContent = 'ACTIVE';
+                                }
+                                reportCard.classList.remove('row-banned', 'bg-rose-50/40');
+                                if (submitBtn) {
+                                    submitBtn.textContent = 'Ban';
+                                    submitBtn.className = 'px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100';
+                                    submitBtn.onclick = () => confirm('Suspend and ban user?');
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    showAdminToast(data.message || 'Action failed.');
+                }
+            })
+            .catch(err => {
+                if (submitBtn) submitBtn.disabled = false;
+                showAdminToast('Network communication error.');
+            });
+        });
+    });
+</script>
 {% endblock %}

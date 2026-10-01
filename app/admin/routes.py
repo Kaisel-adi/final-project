@@ -108,11 +108,17 @@ def verify_report_instantly(report_id):
     db = get_db()
     rep_oid = ObjectId(report_id)
     report = db.reports.find_one({"_id": rep_oid})
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
+
     if not report:
+        if is_ajax:
+            return jsonify({"success": False, "message": "Report not found."}), 404
         flash("Report not found.", "warning")
         return redirect(request.referrer or url_for("admin.dashboard"))
 
     if report.get("status") in {"Verified", "Complained", "Resolved", "Removed"}:
+        if is_ajax:
+            return jsonify({"success": False, "message": "This report can no longer be verified."}), 400
         flash("This report can no longer be verified.", "warning")
         return redirect(request.referrer or url_for("admin.dashboard"))
 
@@ -134,6 +140,13 @@ def verify_report_instantly(report_id):
             }
         }
     )
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": "Report has been fast-track verified! Complaint routing is now unlocked.",
+            "status": "Verified",
+            "report_id": report_id
+        })
     flash("Report has been verified by admin. Complaint routing is now unlocked!", "success")
     return redirect(request.referrer or url_for("admin.dashboard", tab="verified"))
 
@@ -146,6 +159,8 @@ def remove_report(report_id):
     db = get_db()
     rep_oid = ObjectId(report_id)
     now = datetime.now(timezone.utc)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
+
     db.reports.update_one(
         {"_id": rep_oid},
         {
@@ -159,6 +174,13 @@ def remove_report(report_id):
             }
         }
     )
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": "Report has been removed from the public feed.",
+            "status": "Removed",
+            "report_id": report_id
+        })
     flash("Report has been removed from the public feed.", "info")
     return redirect(request.referrer or url_for("admin.dashboard"))
 
@@ -171,13 +193,17 @@ def moderate_report(report_id):
     action = request.form.get("action")  # "approve" (unflag) or "remove"
     db = get_db()
     rep_oid = ObjectId(report_id)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
 
     if action == "approve":
         db.reports.update_one(
             {"_id": rep_oid},
             {"$set": {"is_flagged": False, "flag_reason": None}}
         )
-        flash("Report approved and unflagged.", "success")
+        msg = "Report approved and unflagged."
+        if is_ajax:
+            return jsonify({"success": True, "message": msg, "action": "approve", "report_id": report_id})
+        flash(msg, "success")
     elif action == "remove":
         now = datetime.now(timezone.utc)
         db.reports.update_one(
@@ -193,7 +219,10 @@ def moderate_report(report_id):
                 }
             }
         )
-        flash("Report has been removed from public feed.", "info")
+        msg = "Report has been removed from public feed."
+        if is_ajax:
+            return jsonify({"success": True, "message": msg, "action": "remove", "report_id": report_id})
+        flash(msg, "info")
 
     return redirect(url_for("admin.dashboard", tab="flagged"))
 
@@ -203,28 +232,47 @@ def moderate_report(report_id):
 @admin_only_required
 def change_user_role(user_id):
     """Admin privilege: Assigns or revokes moderator privileges for users."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
+
     if str(user_id) == str(current_user.id):
+        if is_ajax:
+            return jsonify({"success": False, "message": "You cannot alter your own admin role."}), 400
         flash("You cannot alter your own admin role.", "warning")
         return redirect(url_for("admin.dashboard", tab="users"))
 
     db = get_db()
     new_role = request.form.get("role", "resident")
     if new_role not in ("resident", "moderator"):
+        if is_ajax:
+            return jsonify({"success": False, "message": "Invalid role assignment."}), 400
         flash("Invalid role assignment.", "danger")
         return redirect(url_for("admin.dashboard", tab="users"))
 
     target_user = db.users.find_one({"_id": ObjectId(user_id)})
     if not target_user:
+        if is_ajax:
+            return jsonify({"success": False, "message": "User not found."}), 404
         flash("User not found.", "warning")
         return redirect(url_for("admin.dashboard", tab="users"))
 
     if target_user.get("role") == "admin":
+        if is_ajax:
+            return jsonify({"success": False, "message": "Cannot modify the role of another administrator."}), 400
         flash("Cannot modify the role of another administrator.", "danger")
         return redirect(url_for("admin.dashboard", tab="users"))
 
     db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"role": new_role}})
     role_title = "Moderator" if new_role == "moderator" else "Resident"
-    flash(f"User '{target_user.get('name')}' ({target_user.get('email')}) updated to {role_title}.", "success")
+    msg = f"User '{target_user.get('name')}' ({target_user.get('email')}) updated to {role_title}."
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "user_id": str(user_id),
+            "new_role": new_role,
+            "role_title": role_title
+        })
+    flash(msg, "success")
     return redirect(url_for("admin.dashboard", tab="users"))
 
 
@@ -233,17 +281,25 @@ def change_user_role(user_id):
 @admin_only_required
 def toggle_user_ban(user_id):
     """Admin privilege: Suspends or reinstates a user account."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
+
     if str(user_id) == str(current_user.id):
+        if is_ajax:
+            return jsonify({"success": False, "message": "You cannot ban yourself."}), 400
         flash("You cannot ban yourself.", "warning")
         return redirect(url_for("admin.dashboard", tab="users"))
 
     db = get_db()
     target_user = db.users.find_one({"_id": ObjectId(user_id)})
     if not target_user:
+        if is_ajax:
+            return jsonify({"success": False, "message": "User not found."}), 404
         flash("User not found.", "warning")
         return redirect(url_for("admin.dashboard", tab="users"))
 
     if target_user.get("role") == "admin":
+        if is_ajax:
+            return jsonify({"success": False, "message": "Cannot ban another administrator account."}), 400
         flash("Cannot ban another administrator account.", "danger")
         return redirect(url_for("admin.dashboard", tab="users"))
 
@@ -251,7 +307,16 @@ def toggle_user_ban(user_id):
     new_ban = not current_ban
     db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_banned": new_ban}})
     action_str = "banned and logged out" if new_ban else "unbanned"
-    flash(f"User '{target_user.get('email')}' has been {action_str}.", "info")
+    msg = f"User '{target_user.get('email')}' has been {action_str}."
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "user_id": str(user_id),
+            "is_banned": new_ban,
+            "action_str": action_str
+        })
+    flash(msg, "info")
     return redirect(url_for("admin.dashboard", tab="users"))
 
 
@@ -260,7 +325,11 @@ def toggle_user_ban(user_id):
 @admin_only_required
 def delete_user(user_id):
     """Admin privilege: Permanently deletes a user account and associated personal data."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
+
     if str(user_id) == str(current_user.id):
+        if is_ajax:
+            return jsonify({"success": False, "message": "You cannot delete your own account from the admin dashboard."}), 400
         flash("You cannot delete your own account from the admin dashboard.", "warning")
         return redirect(url_for("admin.dashboard", tab="users"))
 
@@ -268,10 +337,14 @@ def delete_user(user_id):
     user_oid = ObjectId(user_id)
     target_user = db.users.find_one({"_id": user_oid})
     if not target_user:
+        if is_ajax:
+            return jsonify({"success": False, "message": "User not found."}), 404
         flash("User not found.", "warning")
         return redirect(url_for("admin.dashboard", tab="users"))
 
     if target_user.get("role") == "admin":
+        if is_ajax:
+            return jsonify({"success": False, "message": "Cannot delete an administrator account."}), 400
         flash("Cannot delete an administrator account.", "danger")
         return redirect(url_for("admin.dashboard", tab="users"))
 
@@ -289,7 +362,10 @@ def delete_user(user_id):
     db.reports.delete_many({"author_id": user_oid})
     db.users.delete_one({"_id": user_oid})
 
-    flash(f"User account '{target_user.get('email')}' and associated records permanently deleted.", "info")
+    msg = f"User account '{target_user.get('email')}' and associated records permanently deleted."
+    if is_ajax:
+        return jsonify({"success": True, "message": msg, "user_id": str(user_id)})
+    flash(msg, "info")
     return redirect(url_for("admin.dashboard", tab="users"))
 
 
