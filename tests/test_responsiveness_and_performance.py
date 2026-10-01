@@ -309,3 +309,169 @@ def test_db_indexes_comprehensive(mock_db):
     assert "idx_reports_created" in report_idx_names
     assert "idx_reports_cat_status" in report_idx_names
 
+
+def test_feed_radius_options_and_community_100km_default(client, mock_db):
+    author = User.create(name="Radius Citizen", email="radius@test.com", password="pwd", db=mock_db)
+    # Point at 28.6139, 77.2090
+    # Create report at 8km away: approx 0.07 deg lat
+    create_report(
+        author_id=author.id,
+        category="pothole",
+        description="Pothole at 8km away",
+        photo_url="/static/uploads/p1.jpg",
+        coordinates=[77.2090, 28.6859],
+        db=mock_db
+    )
+    # Create report at 40km away: approx 0.36 deg lat
+    create_report(
+        author_id=author.id,
+        category="garbage",
+        description="Garbage dump at 40km away",
+        photo_url="/static/uploads/p2.jpg",
+        coordinates=[77.2090, 28.9739],
+        db=mock_db
+    )
+
+    # 1. Home dashboard default 5km (neither report matches)
+    res_5km = client.get("/feed?lat=28.6139&lon=77.2090&view=dashboard")
+    assert res_5km.status_code == 200
+    html_5km = res_5km.get_data(as_text=True)
+    assert "No Active Civic Issues Nearby" in html_5km
+
+    # 2. Home dashboard set to 10km (8km report matches, 40km does not)
+    res_10km = client.get("/feed?lat=28.6139&lon=77.2090&view=dashboard&radius=10.0")
+    assert res_10km.status_code == 200
+    html_10km = res_10km.get_data(as_text=True)
+    assert "Pothole at 8km away" in html_10km
+    assert "Garbage dump at 40km away" not in html_10km
+
+    # 3. Community list view default (fixed 100km: both 8km and 40km reports match!)
+    res_comm = client.get("/feed?lat=28.6139&lon=77.2090&view=list")
+    assert res_comm.status_code == 200
+    html_comm = res_comm.get_data(as_text=True)
+    assert "Pothole at 8km away" in html_comm
+    assert "Garbage dump at 40km away" in html_comm
+    assert "100 km (Fixed Region)" in html_comm
+
+
+def test_feed_sorting_criteria(client, mock_db):
+    author = User.create(name="Sort Citizen", email="sort@test.com", password="pwd", db=mock_db)
+    
+    r1 = create_report(author.id, "pothole", "Low likes recent issue", "url1", [77.2100, 28.6140], db=mock_db)
+    r2 = create_report(author.id, "pothole", "High likes popular issue", "url2", [77.2110, 28.6150], db=mock_db)
+    r3 = create_report(author.id, "pothole", "Verified civic hazard", "url3", [77.2120, 28.6160], db=mock_db)
+
+    # Set upvotes and statuses
+    mock_db.reports.update_one({"_id": r1["_id"]}, {"$set": {"upvote_count": 2, "status": "Reported"}})
+    mock_db.reports.update_one({"_id": r2["_id"]}, {"$set": {"upvote_count": 25, "status": "Reported"}})
+    mock_db.reports.update_one({"_id": r3["_id"]}, {"$set": {"upvote_count": 5, "status": "Verified"}})
+
+    # 1. Sort by likes
+    res_likes = client.get("/feed?lat=28.6139&lon=77.2090&view=list&sort=likes")
+    assert res_likes.status_code == 200
+    html_likes = res_likes.get_data(as_text=True)
+    pos_high = html_likes.find("High likes popular issue")
+    pos_low = html_likes.find("Low likes recent issue")
+    assert pos_high != -1 and pos_low != -1
+    assert pos_high < pos_low
+
+    # 2. Sort by verified
+    res_ver = client.get("/feed?lat=28.6139&lon=77.2090&view=list&sort=verified")
+    assert res_ver.status_code == 200
+    html_ver = res_ver.get_data(as_text=True)
+    pos_ver = html_ver.find("Verified civic hazard")
+    pos_rep = html_ver.find("High likes popular issue")
+    assert pos_ver != -1 and pos_rep != -1
+    assert pos_ver < pos_rep
+
+
+def test_feed_chunk_infinite_scroll_api(client, mock_db):
+    author = User.create(name="Chunk Citizen", email="chunk@test.com", password="pwd", db=mock_db)
+    for i in range(16):
+        create_report(
+            author_id=author.id,
+            category="pothole",
+            description=f"Chunk test pothole #{i:02d}",
+            photo_url=f"/static/uploads/c_{i}.jpg",
+            coordinates=[77.2090 + (i * 0.0005), 28.6139 + (i * 0.0005)],
+            db=mock_db
+        )
+
+    # Initial view loads 10 reports
+    res_initial = client.get("/feed?lat=28.6139&lon=77.2090&view=list")
+    assert res_initial.status_code == 200
+    html_initial = res_initial.get_data(as_text=True)
+    assert 'data-has-more="true"' in html_initial
+    assert 'data-next-offset="10"' in html_initial
+
+    # Chunk API request 1: offset=10, limit=5 (subsequent scroll loads 5)
+    res_c1 = client.get("/feed/api/chunk?lat=28.6139&lon=77.2090&offset=10&limit=5&view=list")
+    assert res_c1.status_code == 200
+    data_c1 = res_c1.get_json()
+    assert data_c1["success"] is True
+    assert data_c1["count"] == 5
+    assert data_c1["next_offset"] == 15
+    assert data_c1["has_more"] is True
+    assert "issue-card" in data_c1["html"]
+
+    # Chunk API request 2: offset=15, limit=5 (remaining 1 report)
+    res_c2 = client.get("/feed/api/chunk?lat=28.6139&lon=77.2090&offset=15&limit=5&view=list")
+    assert res_c2.status_code == 200
+    data_c2 = res_c2.get_json()
+    assert data_c2["success"] is True
+    assert data_c2["count"] == 1
+    assert data_c2["next_offset"] == 16
+    assert data_c2["has_more"] is False
+
+
+def test_feed_chunk_filter_and_sorting_api(client, mock_db):
+    author = User.create(name="Sort Citizen", email="sort@test.com", password="pwd", db=mock_db)
+    
+    rep1 = create_report(
+        author_id=author.id,
+        category="streetlight",
+        description="Dark alley street light broken",
+        photo_url="/static/uploads/light.jpg",
+        coordinates=[77.2090, 28.6139],
+        db=mock_db
+    )
+    rep2 = create_report(
+        author_id=author.id,
+        category="pothole",
+        description="Big crater in avenue",
+        photo_url="/static/uploads/pothole.jpg",
+        coordinates=[77.2095, 28.6145],
+        db=mock_db
+    )
+    # Upvote rep2 to 15 likes and verify it
+    mock_db.reports.update_one({"_id": rep2["_id"]}, {"$set": {"upvote_count": 15, "status": "Verified"}})
+
+    # 1. Filter by category
+    res_cat = client.get("/feed/api/chunk?lat=28.6139&lon=77.2090&category=streetlight&view=list")
+    assert res_cat.status_code == 200
+    data_cat = res_cat.get_json()
+    assert data_cat["total"] == 1
+    assert "street light broken" in data_cat["html"]
+    assert "data-category=\"streetlight\"" in data_cat["html"]
+    assert "data-likes=\"0\"" in data_cat["html"]
+
+    # 2. Filter by status
+    res_stat = client.get("/feed/api/chunk?lat=28.6139&lon=77.2090&status=Verified&view=list")
+    assert res_stat.status_code == 200
+    data_stat = res_stat.get_json()
+    assert data_stat["total"] == 1
+    assert "Big crater" in data_stat["html"]
+    assert "data-status=\"Verified\"" in data_stat["html"]
+    assert "data-likes=\"15\"" in data_stat["html"]
+
+    # 3. Sort by likes
+    res_sort = client.get("/feed/api/chunk?lat=28.6139&lon=77.2090&sort=likes&view=list")
+    assert res_sort.status_code == 200
+    data_sort = res_sort.get_json()
+    assert data_sort["total"] == 2
+    pos_rep2 = data_sort["html"].find("Big crater")
+    pos_rep1 = data_sort["html"].find("Dark alley")
+    assert pos_rep2 < pos_rep1
+
+
+

@@ -6,7 +6,11 @@ from app.db import get_db
 
 CATEGORIES = [
     ("pothole", "Pothole / Road Damage"),
-    ("garbage", "Garbage / Waste Overflow"),
+    ("garbage", "Garbage / Dumped Rubbish"),
+    ("vandalism", "Graffiti or Vandalism"),
+    ("pedestrian_hazard", "Pedestrian Hazard"),
+    ("traffic_hazard", "Traffic Hazard"),
+    ("life_hazard", "Life Hazard"),
     ("water_leak", "Water Leak / Pipe Burst"),
     ("streetlight", "Broken Streetlight / Dark Spot"),
     ("parks", "Fallen Tree / Park Maintenance"),

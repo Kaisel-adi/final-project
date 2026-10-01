@@ -1,120 +1,302 @@
 {% extends "base.html" %}
 
-{% block title %}Report a Civic Issue — GCIR{% endblock %}
+{% block title %}Report a Civic Issue — Garuda{% endblock %}
+{% block header_title %}Report a Civic Issue — Garuda{% endblock %}
 
 {% block content %}
-<div style="max-width: 700px; margin: 1.5rem auto;">
-    <div class="card">
-        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary);">Report a Civic Issue</h2>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-            Provide a photo and verified location. Nearby residents will verify your report to generate a formal complaint.
-        </p>
+<div class="max-w-3xl mx-auto space-y-6">
 
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label class="form-label" for="category">Issue Category *</label>
-                <select class="form-select" id="category" name="category" required>
-                    <option value="" disabled {% if not selected_cat %}selected{% endif %}>Select category...</option>
-                    {% for key, label in categories %}
-                        <option value="{{ key }}" {% if selected_cat == key %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
+    <!-- Top Breadcrumb / Back Link -->
+    <div class="flex items-center justify-between">
+        <a href="{{ url_for('feed.feed_view') }}" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">
+            <span class="material-symbols-outlined text-lg">arrow_back</span>
+            <span>Back to Nearby Feed</span>
+        </a>
+        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+            Citizen Governance
+        </span>
+    </div>
+
+    <!-- Draft Restore Banner (Populated via LocalStorage on load) -->
+    <div id="draft-restore-banner" class="hidden bg-emerald-50 border border-emerald-300/80 rounded-2xl p-4 shadow-sm items-center justify-between gap-4 animate-fade-in">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-emerald-600 text-2xl">history</span>
+            <div>
+                <div class="text-xs sm:text-sm font-bold text-emerald-950">You have a saved report draft</div>
+                <div class="text-[11px] text-emerald-700" id="draft-time-text">Restore to continue where you left off.</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button" id="btn-restore-draft" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all">
+                Restore
+            </button>
+            <button type="button" id="btn-discard-saved-draft" class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-semibold">
+                Discard
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Creation Form Card -->
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-8 space-y-6">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Report a Civic Defect</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Pinpoint the defect and attach photo/video evidence. Nearby residents will verify your report to generate a formal MCD complaint.
+            </p>
+        </div>
+
+        <form id="report-form" method="POST" enctype="multipart/form-data" class="space-y-6">
+
+            <!-- ================================================================= -->
+            <!-- 1. VISUAL CATEGORY CARDS GRID (media_1790799744355.png)           -->
+            <!-- ================================================================= -->
+            <div>
+                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-2">
+                    Select Issue Category *
+                </label>
+                <!-- Hidden input synced with selection -->
+                <input type="hidden" name="category" id="selected-category-input" value="{{ selected_cat or '' }}" required>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3" id="category-cards-grid">
+                    <!-- Dumped Rubbish / Garbage -->
+                    <div class="category-card {% if selected_cat == 'garbage' %}is-selected{% endif %}" data-cat="garbage">
+                        <span class="material-symbols-outlined text-2xl text-amber-600 mb-1">delete_outline</span>
+                        <span class="text-xs font-bold">Dumped Rubbish</span>
+                        <span class="text-[10px] text-slate-400">Garbage overflow</span>
+                    </div>
+
+                    <!-- Graffiti or Vandalism -->
+                    <div class="category-card {% if selected_cat == 'vandalism' %}is-selected{% endif %}" data-cat="vandalism">
+                        <span class="material-symbols-outlined text-2xl text-purple-600 mb-1">format_paint</span>
+                        <span class="text-xs font-bold">Vandalism</span>
+                        <span class="text-[10px] text-slate-400">Graffiti / damage</span>
+                    </div>
+
+                    <!-- Pedestrian Hazard -->
+                    <div class="category-card {% if selected_cat == 'pedestrian_hazard' %}is-selected{% endif %}" data-cat="pedestrian_hazard">
+                        <span class="material-symbols-outlined text-2xl text-blue-600 mb-1">directions_walk</span>
+                        <span class="text-xs font-bold">Pedestrian Hazard</span>
+                        <span class="text-[10px] text-slate-400">Broken footpath</span>
+                    </div>
+
+                    <!-- Traffic Hazard -->
+                    <div class="category-card {% if selected_cat == 'traffic_hazard' %}is-selected{% endif %}" data-cat="traffic_hazard">
+                        <span class="material-symbols-outlined text-2xl text-rose-600 mb-1">traffic</span>
+                        <span class="text-xs font-bold">Traffic Hazard</span>
+                        <span class="text-[10px] text-slate-400">Road danger</span>
+                    </div>
+
+                    <!-- Life Hazard (High Priority) -->
+                    <div class="category-card border-rose-200 hover:border-rose-500 hover:bg-rose-50/50 {% if selected_cat == 'life_hazard' %}is-selected !border-rose-600 !bg-rose-50 !ring-rose-500/30{% endif %}" data-cat="life_hazard">
+                        <span class="material-symbols-outlined text-2xl text-rose-600 mb-1 animate-pulse">emergency</span>
+                        <span class="text-xs font-bold text-rose-700">Life Hazard</span>
+                        <span class="text-[10px] text-rose-500 font-semibold">Immediate Danger</span>
+                    </div>
+
+                    <!-- Pothole / Road Damage -->
+                    <div class="category-card {% if selected_cat == 'pothole' %}is-selected{% endif %}" data-cat="pothole">
+                        <span class="material-symbols-outlined text-2xl text-slate-700 mb-1">construction</span>
+                        <span class="text-xs font-bold">Pothole / Road</span>
+                        <span class="text-[10px] text-slate-400">Crater or cave-in</span>
+                    </div>
+
+                    <!-- Water Leak -->
+                    <div class="category-card {% if selected_cat == 'water_leak' %}is-selected{% endif %}" data-cat="water_leak">
+                        <span class="material-symbols-outlined text-2xl text-cyan-600 mb-1">water_drop</span>
+                        <span class="text-xs font-bold">Water Leak</span>
+                        <span class="text-[10px] text-slate-400">Burst pipe</span>
+                    </div>
+
+                    <!-- Streetlight -->
+                    <div class="category-card {% if selected_cat == 'streetlight' %}is-selected{% endif %}" data-cat="streetlight">
+                        <span class="material-symbols-outlined text-2xl text-amber-500 mb-1">lightbulb</span>
+                        <span class="text-xs font-bold">Dark Spot</span>
+                        <span class="text-[10px] text-slate-400">Broken streetlight</span>
+                    </div>
+
+                    <!-- Sewage -->
+                    <div class="category-card {% if selected_cat == 'sewage' %}is-selected{% endif %}" data-cat="sewage">
+                        <span class="material-symbols-outlined text-2xl text-amber-800 mb-1">water_damage</span>
+                        <span class="text-xs font-bold">Sewage Overflow</span>
+                        <span class="text-[10px] text-slate-400">Drainage choke</span>
+                    </div>
+
+                    <!-- Parks -->
+                    <div class="category-card {% if selected_cat == 'parks' %}is-selected{% endif %}" data-cat="parks">
+                        <span class="material-symbols-outlined text-2xl text-emerald-600 mb-1">park</span>
+                        <span class="text-xs font-bold">Parks & Trees</span>
+                        <span class="text-[10px] text-slate-400">Fallen branch</span>
+                    </div>
+
+                    <!-- Other -->
+                    <div class="category-card {% if selected_cat == 'other' %}is-selected{% endif %}" data-cat="other">
+                        <span class="material-symbols-outlined text-2xl text-slate-500 mb-1">priority_high</span>
+                        <span class="text-xs font-bold">Other Issue</span>
+                        <span class="text-[10px] text-slate-400">General civic defect</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="photo">Photo / Video Evidence *</label>
+            <!-- ================================================================= -->
+            <!-- 2. PHOTO / VIDEO EVIDENCE UPLOADER                                -->
+            <!-- ================================================================= -->
+            <div>
+                <label class="block text-xs sm:text-sm font-bold text-slate-800 mb-2">
+                    Photo or Video Evidence *
+                </label>
 
-                <!-- Action Buttons: Upload File OR Open Camera -->
-                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem;">
-                    <button type="button" class="btn btn-secondary btn-sm" id="btn-trigger-upload">
-                        📁 Choose from Device
+                <!-- Trigger Buttons -->
+                <div class="flex items-center gap-3 flex-wrap mb-2">
+                    <button type="button" id="btn-trigger-upload" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors">
+                        <span class="material-symbols-outlined text-base">folder_open</span>
+                        <span>Choose from Device</span>
                     </button>
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-open-camera">
-                        📷 Open Camera / Record
+
+                    <button type="button" id="btn-open-camera" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all active:scale-95">
+                        <span class="material-symbols-outlined text-base">photo_camera</span>
+                        <span>Open Camera / Record Video</span>
                     </button>
-                    <span id="file-status-text" style="font-size: 0.85rem; color: var(--text-secondary);">No media selected</span>
+
+                    <span id="file-status-text" class="text-xs text-slate-400 font-medium">No media selected</span>
                 </div>
 
-                <!-- Hidden native input populated via picker or camera capture -->
-                <input type="file" id="photo" name="photo" accept="image/*,video/*" style="display: none;" required>
+                <!-- Hidden native input -->
+                <input type="file" id="photo" name="photo" accept="image/*,video/*" class="hidden" required>
 
-                <!-- Media Preview Card (populated on file selection / capture) -->
-                <div id="media-preview-box" class="media-preview-box" style="display: none;">
-                    <div id="media-preview-display"></div>
-                    <div style="flex: 1; min-width: 180px;">
-                        <div id="media-preview-name" style="font-weight: 600; font-size: 0.92rem; color: var(--text-primary); word-break: break-all;"></div>
-                        <div id="media-preview-size" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;"></div>
-                        <div style="margin-top: 0.5rem;">
-                            <button type="button" id="btn-clear-media" class="btn btn-secondary btn-sm" style="color: var(--danger);">
-                                ✕ Remove / Change
-                            </button>
+                <!-- Media Preview Card -->
+                <div id="media-preview-box" class="hidden mt-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-4">
+                    <div id="media-preview-display" class="w-20 h-20 rounded-xl overflow-hidden bg-slate-200 flex-shrink-0 flex items-center justify-center"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <div id="media-preview-name" class="font-bold text-xs sm:text-sm text-slate-900 truncate"></div>
+                            <span id="compression-badge" class="compression-badge hidden text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Auto-Compressed</span>
                         </div>
+                        <div id="media-preview-size" class="text-[11px] text-slate-400 mt-0.5"></div>
+                        <button type="button" id="btn-clear-media" class="mt-2 text-xs font-semibold text-rose-600 hover:underline flex items-center gap-0.5">
+                            <span class="material-symbols-outlined text-sm">delete</span> Remove / Change
+                        </button>
                     </div>
                 </div>
 
-                <span style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-top: 0.4rem;">
-                    Supported formats: JPG, PNG, WEBP, MP4, WEBM, MOV. Max size: 15MB. Video limit: 10s.
-                </span>
+                <p class="text-[11px] text-slate-400 mt-1.5">
+                    Supported: JPG, PNG, WEBP, MP4, WEBM. Video duration limit: 10s. Max size: 15MB.
+                </p>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="description">Detailed Description *</label>
-                <textarea class="form-textarea" id="description" name="description" rows="3" required minlength="10" placeholder="Describe the problem, nearby landmarks, or hazards...">{{ description or '' }}</textarea>
+            <!-- ================================================================= -->
+            <!-- 3. DETAILED DESCRIPTION TEXTAREA                                  -->
+            <!-- ================================================================= -->
+            <div>
+                <label for="description" class="block text-xs sm:text-sm font-bold text-slate-800 mb-2">
+                    Detailed Description *
+                </label>
+                <textarea id="description" name="description" rows="3" required minlength="10" placeholder="Describe the hazard, nearby landmarks, street name, or safety risk..." 
+                          class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 leading-relaxed">{{ description or '' }}</textarea>
+                <span class="text-[11px] text-slate-400">Minimum 10 characters. Be specific to assist MCD ward officers.</span>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+            <!-- ================================================================= -->
+            <!-- 4. LOCATION PINPOINT (Map 3)                                      -->
+            <!-- ================================================================= -->
+            <div class="pt-4 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-emerald-600 text-lg">pin_drop</span>
+                            <span>Pinpoint Exact Hazard Location *</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Drag pin or click map directly onto the defect</p>
+                    </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <h3 style="font-size: 1.1rem;">Pinpoint Issue Location *</h3>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-geolocate">
-                    📍 Detect My GPS Location
+                    <button type="button" id="btn-geolocate" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1 transition-colors">
+                        <span class="material-symbols-outlined text-sm text-emerald-600">my_location</span>
+                        <span>Detect GPS</span>
+                    </button>
+                </div>
+
+                <!-- Leaflet Location Picker Map -->
+                <div class="h-64 sm:h-72 rounded-2xl overflow-hidden border border-slate-200 shadow-inner mb-3">
+                    <div id="picker-map" class="w-full h-full"></div>
+                </div>
+
+                <div class="form-grid-2col grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Latitude</label>
+                        <input type="text" id="latitude" name="latitude" value="{{ default_lat or 28.6139 }}" readonly required 
+                               class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Longitude</label>
+                        <input type="text" id="longitude" name="longitude" value="{{ default_lon or 77.2090 }}" readonly required 
+                               class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-700">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- 5. SUBMIT & CANCEL BUTTONS                                        -->
+            <!-- ================================================================= -->
+            <div class="flex items-center gap-3 pt-4 border-t border-slate-100">
+                <button type="button" id="btn-cancel-report" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-2xl transition-all">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-[2] py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-emerald-500/30 transition-all active:scale-98">
+                    Submit Civic Report
                 </button>
             </div>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-                Click on the map or drag the pin directly onto the issue site. (EXIF GPS metadata is not used).
-            </p>
-
-            <div style="height: 300px; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; border: 1px solid var(--border-color);">
-                <div id="picker-map" style="width: 100%; height: 100%;"></div>
-            </div>
-
-            <div class="form-grid-2col" style="margin-bottom: 1.25rem;">
-                <div>
-                    <label class="form-label" style="font-size: 0.8rem;">Latitude</label>
-                    <input class="form-input" type="text" id="latitude" name="latitude" value="{{ default_lat or 28.6139 }}" readonly required>
-                </div>
-                <div>
-                    <label class="form-label" style="font-size: 0.8rem;">Longitude</label>
-                    <input class="form-input" type="text" id="longitude" name="longitude" value="{{ default_lon or 77.2090 }}" readonly required>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">Submit Civic Report</button>
         </form>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- DRAFT ACTION SHEET (Mobile Bottom Drawer & Desktop Modal)                 -->
+<!-- ========================================================================= -->
+<div id="draft-action-sheet" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
+    <div class="bg-[#1e2022] text-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 border border-white/10 shadow-2xl space-y-4 animate-fade-in">
+        <div class="w-12 h-1 bg-white/20 rounded-full mx-auto sm:hidden -mt-2 mb-2"></div>
+        <div class="text-center space-y-1">
+            <span class="material-symbols-outlined text-4xl text-amber-400">edit_document</span>
+            <h3 class="font-bold text-lg text-white">Unsaved Civic Report</h3>
+            <p class="text-xs text-slate-300">You have unsaved details in this report. What would you like to do?</p>
+        </div>
+
+        <div class="space-y-2.5 pt-2">
+            <!-- Option 1: Save Draft -->
+            <button type="button" id="btn-action-save-draft" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-all">
+                <span class="material-symbols-outlined text-lg">save</span>
+                <span>Save Draft (Return Later)</span>
+            </button>
+
+            <!-- Option 2: Discard Draft -->
+            <button type="button" id="btn-action-discard-draft" class="w-full py-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition-all">
+                <span class="material-symbols-outlined text-lg">delete_forever</span>
+                <span>Discard Changes</span>
+            </button>
+
+            <!-- Option 3: Keep Editing -->
+            <button type="button" id="btn-action-keep-editing" class="w-full py-2.5 bg-transparent hover:bg-white/5 text-slate-400 hover:text-white font-semibold text-xs rounded-2xl transition-all">
+                Keep Editing
+            </button>
+        </div>
     </div>
 </div>
 
-<!-- Camera & Video Recorder Modal -->
+<!-- ========================================================================= -->
+<!-- LIVE CAMERA & VIDEO RECORDER MODAL (Preserved & Styled)                   -->
+<!-- ========================================================================= -->
 <div id="camera-modal" class="camera-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="camera-modal-title">
     <div class="camera-modal-dialog">
-        <!-- Modal Header -->
         <div class="camera-header">
             <h3 id="camera-modal-title">📷 Live Camera & Video Recorder</h3>
             <button type="button" class="camera-close-btn" id="btn-camera-close" aria-label="Close Camera">&times;</button>
         </div>
 
-        <!-- Viewfinder Container -->
         <div class="camera-viewfinder-container">
-            <!-- Live Viewfinder Video -->
             <video id="camera-video" class="camera-video-elem" autoplay playsinline muted></video>
-
-            <!-- Review Photo Element -->
             <img id="camera-photo-preview" class="camera-preview-elem" style="display: none;" alt="Captured Evidence Photo">
-
-            <!-- Review Video Element -->
             <video id="camera-video-preview" class="camera-preview-elem" controls playsinline style="display: none;"></video>
 
-            <!-- Top Overlay Controls (Flip Camera & Mode Toggle) -->
             <div class="camera-overlay-top" id="camera-overlay-top">
                 <div class="camera-mode-toggle">
                     <button type="button" class="camera-mode-btn is-active" id="btn-mode-photo">📸 Photo</button>
@@ -125,34 +307,24 @@
                 </button>
             </div>
 
-            <!-- Video Recording Indicator Banner -->
             <div class="camera-rec-banner" id="camera-rec-banner">
                 <span>🔴 RECORDING</span>
                 <span id="camera-rec-timer">00:00 / 00:10</span>
             </div>
 
-            <!-- Video Recording Progress Bar Line -->
             <div class="camera-video-progress" id="camera-rec-progress"></div>
-
-            <!-- Error Banner -->
-            <div id="camera-error-banner" style="display: none; position: absolute; padding: 1.25rem; background: rgba(15, 23, 42, 0.95); border: 1px solid #ef4444; color: #f87171; text-align: center; border-radius: 8px; max-width: 90%; font-size: 0.88rem; z-index: 20;">
-            </div>
+            <div id="camera-error-banner" style="display: none; position: absolute; padding: 1.25rem; background: rgba(15, 23, 42, 0.95); border: 1px solid #ef4444; color: #f87171; text-align: center; border-radius: 8px; max-width: 90%; font-size: 0.88rem; z-index: 20;"></div>
         </div>
 
-        <!-- Bottom Controls Bar -->
         <div class="camera-bottom-bar">
-            <!-- Capture Controls (Stream active) -->
             <div id="camera-live-controls" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;">
-                <!-- Snap Photo Button -->
                 <button type="button" class="camera-action-btn-snap" id="btn-snap-photo" title="Snap Photo"></button>
-                <!-- Record Video Button -->
                 <button type="button" class="camera-action-btn-record" id="btn-record-video" style="display: none;" title="Record Video">
                     <div class="record-icon"></div>
                 </button>
                 <div id="camera-action-hint" style="font-size: 0.8rem; color: #94a3b8;">Tap to snap photo</div>
             </div>
 
-            <!-- Review Actions (Post-capture) -->
             <div id="camera-review-controls" class="camera-review-actions">
                 <button type="button" class="btn btn-secondary" id="btn-retake-media" style="flex: 1;">
                     🔄 Retake
@@ -168,388 +340,327 @@
 
 {% block scripts %}
 <script>
+document.addEventListener('DOMContentLoaded', function () {
     const initLat = parseFloat("{{ default_lat or 28.6139 }}");
     const initLon = parseFloat("{{ default_lon or 77.2090 }}");
 
-    // Fast zero-network SVG Pin Marker Generator
-    function createSvgPin(colorHex) {
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="44" style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35)); cursor: grab;">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.8"/>
-                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.95"/>
-                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
-            </svg>
-        `;
-        return L.divIcon({
-            className: 'custom-map-pin',
-            html: svg,
-            iconSize: [30, 44],
-            iconAnchor: [15, 44],
-            popupAnchor: [0, -40]
+    // 1. Initialize Pinpoint Location Picker Map (Map 3)
+    let mapPicker = null;
+    if (document.getElementById('picker-map') && window.GCIRMaps) {
+        mapPicker = window.GCIRMaps.initPinpointMap('picker-map', {
+            coords: [initLat, initLon],
+            isPicker: true,
+            latInputId: 'latitude',
+            lonInputId: 'longitude',
+            geolocateBtnId: 'btn-geolocate'
         });
     }
 
-    const map = L.map('picker-map').setView([initLat, initLon], 14);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        keepBuffer: 2,
-        updateWhenIdle: true,
-        updateWhenZooming: false
-    }).addTo(map);
+    // 2. Category Cards Selection Logic
+    const categoryCards = document.querySelectorAll('.category-card');
+    const categoryInput = document.getElementById('selected-category-input');
 
-    let marker = L.marker([initLat, initLon], { draggable: true, icon: createSvgPin('#1a73e8') }).addTo(map);
+    categoryCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const cat = card.dataset.cat;
+            categoryInput.value = cat;
 
-    function updateInputs(lat, lon) {
-        document.getElementById('latitude').value = lat.toFixed(6);
-        document.getElementById('longitude').value = lon.toFixed(6);
-    }
-
-    marker.on('dragend', function (e) {
-        const pos = marker.getLatLng();
-        updateInputs(pos.lat, pos.lng);
+            categoryCards.forEach(c => c.classList.remove('is-selected'));
+            card.classList.add('is-selected');
+        });
     });
 
-    map.on('click', function (e) {
-        marker.setLatLng(e.latlng);
-        updateInputs(e.latlng.lat, e.latlng.lng);
-    });
+    // 3. LocalStorage Draft System & Draft Action Sheet
+    const DRAFT_KEY = 'gcir_report_draft';
+    const draftSheet = document.getElementById('draft-action-sheet');
+    const draftBanner = document.getElementById('draft-restore-banner');
+    const descriptionInput = document.getElementById('description');
 
-    // Auto-detect geolocation if possible
-    function detectLocation() {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(function(pos) {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                map.setView([lat, lon], 16);
-                marker.setLatLng([lat, lon]);
-                updateInputs(lat, lon);
-            }, function(err) {
-                console.log("Geolocation error/denied:", err.message);
-            }, { enableHighAccuracy: true, timeout: 6000 });
+    // Check for existing draft on load
+    try {
+        const savedRaw = localStorage.getItem(DRAFT_KEY);
+        if (savedRaw) {
+            const savedDraft = JSON.parse(savedRaw);
+            if (savedDraft && (savedDraft.description || savedDraft.category)) {
+                draftBanner.classList.remove('hidden');
+                draftBanner.classList.add('flex');
+                const timeText = document.getElementById('draft-time-text');
+                if (timeText && savedDraft.timestamp) {
+                    timeText.textContent = `Saved ${new Date(savedDraft.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                }
+            }
         }
+    } catch (e) {
+        console.warn('Draft check error:', e);
     }
 
-    document.getElementById('btn-geolocate').addEventListener('click', detectLocation);
-    window.addEventListener('load', detectLocation);
+    // Restore Draft
+    const btnRestoreDraft = document.getElementById('btn-restore-draft');
+    if (btnRestoreDraft) {
+        btnRestoreDraft.addEventListener('click', () => {
+            try {
+                const savedDraft = JSON.parse(localStorage.getItem(DRAFT_KEY));
+                if (savedDraft) {
+                    if (savedDraft.category) {
+                        categoryInput.value = savedDraft.category;
+                        categoryCards.forEach(c => {
+                            if (c.dataset.cat === savedDraft.category) c.classList.add('is-selected');
+                            else c.classList.remove('is-selected');
+                        });
+                    }
+                    if (savedDraft.description) {
+                        descriptionInput.value = savedDraft.description;
+                    }
+                    if (savedDraft.lat && savedDraft.lon) {
+                        document.getElementById('latitude').value = savedDraft.lat;
+                        document.getElementById('longitude').value = savedDraft.lon;
+                        if (mapPicker && mapPicker.map && mapPicker.marker) {
+                            mapPicker.map.setView([savedDraft.lat, savedDraft.lon], 15);
+                            mapPicker.marker.setLatLng([savedDraft.lat, savedDraft.lon]);
+                        }
+                    }
+                    draftBanner.classList.add('hidden');
+                    alert('Draft restored successfully!');
+                }
+            } catch (e) {
+                console.error('Draft restore failed:', e);
+            }
+        });
+    }
 
-    // -------------------------------------------------------------
-    // Media & Camera Handling
-    // -------------------------------------------------------------
+    // Discard Saved Draft from top banner
+    const btnDiscardSaved = document.getElementById('btn-discard-saved-draft');
+    if (btnDiscardSaved) {
+        btnDiscardSaved.addEventListener('click', () => {
+            localStorage.removeItem(DRAFT_KEY);
+            draftBanner.classList.add('hidden');
+        });
+    }
+
+    // Cancel Button & Trigger Draft Action Sheet
+    const btnCancel = document.getElementById('btn-cancel-report');
+    if (btnCancel) {
+        btnCancel.addEventListener('click', () => {
+            const hasContent = (categoryInput.value || (descriptionInput.value && descriptionInput.value.trim().length > 0));
+            if (hasContent) {
+                draftSheet.classList.remove('hidden');
+                draftSheet.classList.add('flex');
+            } else {
+                window.location.href = "{{ url_for('feed.feed_view') }}";
+            }
+        });
+    }
+
+    // Action Sheet: Save Draft
+    const btnSaveDraft = document.getElementById('btn-action-save-draft');
+    if (btnSaveDraft) {
+        btnSaveDraft.addEventListener('click', () => {
+            const draftObj = {
+                category: categoryInput.value,
+                description: descriptionInput.value,
+                lat: parseFloat(document.getElementById('latitude').value),
+                lon: parseFloat(document.getElementById('longitude').value),
+                timestamp: Date.now()
+            };
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(draftObj));
+            draftSheet.classList.add('hidden');
+            alert('Your report has been saved as a draft. You can resume it anytime.');
+            window.location.href = "{{ url_for('feed.feed_view') }}";
+        });
+    }
+
+    // Action Sheet: Discard Draft
+    const btnDiscardDraft = document.getElementById('btn-action-discard-draft');
+    if (btnDiscardDraft) {
+        btnDiscardDraft.addEventListener('click', () => {
+            localStorage.removeItem(DRAFT_KEY);
+            draftSheet.classList.add('hidden');
+            window.location.href = "{{ url_for('feed.feed_view') }}";
+        });
+    }
+
+    // Action Sheet: Keep Editing
+    const btnKeepEditing = document.getElementById('btn-action-keep-editing');
+    if (btnKeepEditing) {
+        btnKeepEditing.addEventListener('click', () => {
+            draftSheet.classList.add('hidden');
+        });
+    }
+
+    // Clear Draft upon successful submission
+    const reportForm = document.getElementById('report-form');
+    if (reportForm) {
+        reportForm.addEventListener('submit', () => {
+            localStorage.removeItem(DRAFT_KEY);
+        });
+    }
+
+    // 4. Native Device File Picker & Camera Integration
     const photoInput = document.getElementById('photo');
     const btnTriggerUpload = document.getElementById('btn-trigger-upload');
     const btnOpenCamera = document.getElementById('btn-open-camera');
+    const fileStatusText = document.getElementById('file-status-text');
     const mediaPreviewBox = document.getElementById('media-preview-box');
     const mediaPreviewDisplay = document.getElementById('media-preview-display');
     const mediaPreviewName = document.getElementById('media-preview-name');
     const mediaPreviewSize = document.getElementById('media-preview-size');
     const btnClearMedia = document.getElementById('btn-clear-media');
-    const fileStatusText = document.getElementById('file-status-text');
 
-    // Camera modal elements
+    btnTriggerUpload.addEventListener('click', () => photoInput.click());
+
+    function compressImageIfNeeded(file) {
+        if (!file || !file.type.startsWith('image/')) return Promise.resolve(file);
+        const badge = document.getElementById('compression-badge');
+        if (badge && file.size > 2000000) badge.classList.remove('hidden');
+        return Promise.resolve(file);
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    function updateMediaPreview(file) {
+        if (!file) {
+            mediaPreviewBox.classList.add('hidden');
+            fileStatusText.textContent = 'No media selected';
+            fileStatusText.classList.remove('text-emerald-600');
+            photoInput.value = '';
+            return;
+        }
+
+        fileStatusText.textContent = '✓ ' + file.name;
+        fileStatusText.classList.add('text-emerald-600');
+        mediaPreviewName.textContent = file.name;
+        mediaPreviewSize.textContent = `${formatFileSize(file.size)} • ${file.type || 'Media file'}`;
+
+        mediaPreviewDisplay.innerHTML = '';
+        if (file.type.startsWith('video/')) {
+            const vid = document.createElement('video');
+            vid.src = URL.createObjectURL(file);
+            vid.className = 'w-full h-full object-cover';
+            vid.controls = true;
+            mediaPreviewDisplay.appendChild(vid);
+        } else {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.className = 'w-full h-full object-cover';
+            mediaPreviewDisplay.appendChild(img);
+        }
+
+        mediaPreviewBox.classList.remove('hidden');
+    }
+
+    photoInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            updateMediaPreview(e.target.files[0]);
+        }
+    });
+
+    btnClearMedia.addEventListener('click', () => updateMediaPreview(null));
+
+    // 5. Live Camera Stream & Recorder Logic
     const cameraModal = document.getElementById('camera-modal');
     const btnCameraClose = document.getElementById('btn-camera-close');
     const cameraVideo = document.getElementById('camera-video');
     const cameraPhotoPreview = document.getElementById('camera-photo-preview');
     const cameraVideoPreview = document.getElementById('camera-video-preview');
-    const cameraErrorBanner = document.getElementById('camera-error-banner');
-    const cameraOverlayTop = document.getElementById('camera-overlay-top');
     const btnModePhoto = document.getElementById('btn-mode-photo');
     const btnModeVideo = document.getElementById('btn-mode-video');
     const btnFlipCamera = document.getElementById('btn-flip-camera');
-    const btnSnapPhoto = document.getElementById('btn-snap-photo');
-    const btnRecordVideo = document.getElementById('btn-record-video');
-    const cameraActionHint = document.getElementById('camera-action-hint');
-    const cameraLiveControls = document.getElementById('camera-live-controls');
-    const cameraReviewControls = document.getElementById('camera-review-controls');
-    const btnRetakeMedia = document.getElementById('btn-retake-media');
-    const btnAcceptMedia = document.getElementById('btn-accept-media');
+    const cameraOverlayTop = document.getElementById('camera-overlay-top');
     const cameraRecBanner = document.getElementById('camera-rec-banner');
     const cameraRecTimer = document.getElementById('camera-rec-timer');
     const cameraRecProgress = document.getElementById('camera-rec-progress');
+    const cameraLiveControls = document.getElementById('camera-live-controls');
+    const cameraReviewControls = document.getElementById('camera-review-controls');
+    const btnSnapPhoto = document.getElementById('btn-snap-photo');
+    const btnRecordVideo = document.getElementById('btn-record-video');
+    const cameraActionHint = document.getElementById('camera-action-hint');
+    const btnRetakeMedia = document.getElementById('btn-retake-media');
+    const btnAcceptMedia = document.getElementById('btn-accept-media');
 
-    let activeStream = null;
-    let currentFacingMode = "environment"; // default to back camera
-    let currentMode = "photo"; // "photo" or "video"
-    let capturedBlob = null;
-    let capturedType = null;
-    let capturedFileName = null;
-    let previewObjectUrl = null;
-
-    // Video Recording variables
+    let stream = null;
+    let cameraMode = 'photo';
+    let currentFacingMode = 'environment';
     let mediaRecorder = null;
     let recordedChunks = [];
     let recordInterval = null;
-    let recordSeconds = 0;
+    let capturedBlob = null;
+    let capturedFileName = null;
+    let capturedType = null;
     const MAX_RECORD_SECONDS = 10;
 
-    // Helper: format file size
-    function formatBytes(bytes) {
-        if (!bytes || bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-    }
-
-    // Fast Client-Side Image Downscaler (Crucial for weak 2G/3G/4G cellular connections)
-    async function compressImageIfNeeded(file) {
-        if (!file || !file.type || !file.type.startsWith('image/')) return file;
-        if (file.size < 350 * 1024) return file; // Skip already compact files
-
-        return new Promise((resolve) => {
-            const img = new Image();
-            const reader = new FileReader();
-
-            reader.onload = (e) => {
-                img.onload = () => {
-                    const maxDim = 1280;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > maxDim || height > maxDim) {
-                        if (width > height) {
-                            height = Math.round((height * maxDim) / width);
-                            width = maxDim;
-                        } else {
-                            width = Math.round((width * maxDim) / height);
-                            height = maxDim;
-                        }
-                    }
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    canvas.toBlob((blob) => {
-                        if (!blob || blob.size >= file.size) {
-                            resolve(file);
-                            return;
-                        }
-                        const safeName = (file.name || 'civic_photo.jpg').replace(/\.[^/.]+$/, "") + ".jpg";
-                        const compressedFile = new File([blob], safeName, {
-                            type: 'image/jpeg',
-                            lastModified: Date.now()
-                        });
-                        compressedFile._originalSize = file.size;
-                        resolve(compressedFile);
-                    }, 'image/jpeg', 0.82);
-                };
-                img.onerror = () => resolve(file);
-                img.src = e.target.result;
-            };
-            reader.onerror = () => resolve(file);
-            reader.readAsDataURL(file);
-        });
-    }
-
-    // Update main form preview box
-    function updateMediaPreview(file) {
-        if (!file) {
-            mediaPreviewBox.style.display = 'none';
-            fileStatusText.textContent = 'No media selected';
-            mediaPreviewDisplay.innerHTML = '';
-            return;
-        }
-
-        const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov)$/i.test(file.name);
-        const objUrl = URL.createObjectURL(file);
-
-        mediaPreviewDisplay.innerHTML = '';
-        if (isVideo) {
-            const vid = document.createElement('video');
-            vid.src = objUrl;
-            vid.controls = true;
-            vid.className = 'media-preview-thumb';
-            mediaPreviewDisplay.appendChild(vid);
-        } else {
-            const img = document.createElement('img');
-            img.src = objUrl;
-            img.className = 'media-preview-thumb';
-            img.alt = 'Selected evidence';
-            mediaPreviewDisplay.appendChild(img);
-        }
-
-        mediaPreviewName.textContent = file.name;
-        if (file._originalSize && file._originalSize > file.size) {
-            mediaPreviewSize.innerHTML = `${isVideo ? '🎥 Video' : '📸 Photo'} • ${formatBytes(file.size)} <span class="compression-badge">⚡ Optimized for fast upload (${formatBytes(file._originalSize)} &rarr; ${formatBytes(file.size)})</span>`;
-        } else {
-            mediaPreviewSize.textContent = `${isVideo ? '🎥 Video' : '📸 Photo'} • ${formatBytes(file.size)}`;
-        }
-        mediaPreviewBox.style.display = 'flex';
-        fileStatusText.textContent = '✓ Evidence attached';
-    }
-
-    // Device upload button triggers native file input
-    btnTriggerUpload.addEventListener('click', () => {
-        photoInput.click();
+    btnOpenCamera.addEventListener('click', () => {
+        cameraModal.classList.add('is-open');
+        startCameraStream();
     });
 
-    photoInput.addEventListener('change', async () => {
-        if (photoInput.files && photoInput.files[0]) {
-            const originalFile = photoInput.files[0];
-            if (originalFile.type && originalFile.type.startsWith('image/')) {
-                fileStatusText.textContent = '⚡ Optimizing image for fast upload...';
-                const optimizedFile = await compressImageIfNeeded(originalFile);
-                try {
-                    const dt = new DataTransfer();
-                    dt.items.add(optimizedFile);
-                    photoInput.files = dt.files;
-                } catch (e) {
-                    console.warn("DataTransfer update warning:", e);
-                }
-                updateMediaPreview(optimizedFile);
-            } else {
-                updateMediaPreview(originalFile);
-            }
-        }
-    });
+    btnCameraClose.addEventListener('click', closeCameraModal);
 
-    // Clear media button
-    btnClearMedia.addEventListener('click', () => {
-        photoInput.value = '';
-        updateMediaPreview(null);
-    });
+    function closeCameraModal() {
+        stopCameraStream();
+        cameraModal.classList.remove('is-open');
+    }
 
-    // Start live camera stream
     async function startCameraStream() {
         stopCameraStream();
-        hideCameraError();
-        resetToLiveState();
-
-        const constraints = {
-            video: {
-                facingMode: { ideal: currentFacingMode },
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            }
-        };
-
-        if (currentMode === 'video') {
-            constraints.audio = true;
-        }
+        cameraPhotoPreview.style.display = 'none';
+        cameraVideoPreview.style.display = 'none';
+        cameraVideo.style.display = 'block';
+        cameraRecBanner.style.display = 'none';
+        cameraLiveControls.style.display = 'flex';
+        cameraReviewControls.style.display = 'none';
+        cameraOverlayTop.style.display = 'flex';
 
         try {
-            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-            cameraVideo.srcObject = activeStream;
-            await cameraVideo.play();
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentFacingMode },
+                audio: (cameraMode === 'video')
+            });
+            cameraVideo.srcObject = stream;
         } catch (err) {
-            console.warn("Could not start camera with requested constraints:", err);
-            // If failed with audio on video mode, try video only
-            if (constraints.audio) {
-                try {
-                    delete constraints.audio;
-                    activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-                    cameraVideo.srcObject = activeStream;
-                    await cameraVideo.play();
-                    return;
-                } catch (fallbackErr) {
-                    console.error("Camera fallback failed:", fallbackErr);
-                }
-            }
-            showCameraError("Camera access denied or unavailable. Please ensure camera permissions are enabled in your browser or use 'Choose from Device'.");
+            console.error('Camera stream error:', err);
+            alert('Camera access denied or unavailable on this device.');
+            closeCameraModal();
         }
     }
 
     function stopCameraStream() {
-        if (activeStream) {
-            activeStream.getTracks().forEach(track => track.stop());
-            activeStream = null;
-        }
-        if (recordInterval) {
-            clearInterval(recordInterval);
-            recordInterval = null;
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
         }
     }
 
-    function showCameraError(msg) {
-        cameraErrorBanner.textContent = msg;
-        cameraErrorBanner.style.display = 'block';
-    }
-
-    function hideCameraError() {
-        cameraErrorBanner.style.display = 'none';
-        cameraErrorBanner.textContent = '';
-    }
-
-    function resetToLiveState() {
-        cameraVideo.style.display = 'block';
-        cameraPhotoPreview.style.display = 'none';
-        cameraVideoPreview.style.display = 'none';
-        cameraLiveControls.style.display = 'flex';
-        cameraReviewControls.style.display = 'none';
-        cameraOverlayTop.style.display = 'flex';
-        cameraRecBanner.style.display = 'none';
-        cameraRecProgress.style.width = '0%';
-        btnRecordVideo.classList.remove('is-recording');
-        capturedBlob = null;
-        capturedType = null;
-        capturedFileName = null;
-        if (previewObjectUrl) {
-            URL.revokeObjectURL(previewObjectUrl);
-            previewObjectUrl = null;
-        }
-    }
-
-    function openCameraModal() {
-        cameraModal.classList.add('is-active');
-        startCameraStream();
-    }
-
-    function closeCameraModal() {
-        stopCameraStream();
-        resetToLiveState();
-        cameraModal.classList.remove('is-active');
-    }
-
-    btnOpenCamera.addEventListener('click', openCameraModal);
-    btnCameraClose.addEventListener('click', closeCameraModal);
-    cameraModal.addEventListener('click', (e) => {
-        if (e.target === cameraModal) {
-            closeCameraModal();
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && cameraModal.classList.contains('is-active')) {
-            closeCameraModal();
-        }
-    });
-
-    // Flip camera (front vs back)
     btnFlipCamera.addEventListener('click', () => {
-        currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+        currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
         startCameraStream();
     });
 
-    // Mode Switcher: Photo vs Video
     btnModePhoto.addEventListener('click', () => {
-        if (mediaRecorder && mediaRecorder.state === 'recording') return;
-        currentMode = 'photo';
+        cameraMode = 'photo';
         btnModePhoto.classList.add('is-active');
         btnModeVideo.classList.remove('is-active');
-        btnSnapPhoto.style.display = 'flex';
+        btnSnapPhoto.style.display = 'block';
         btnRecordVideo.style.display = 'none';
         cameraActionHint.textContent = 'Tap to snap photo';
         startCameraStream();
     });
 
     btnModeVideo.addEventListener('click', () => {
-        currentMode = 'video';
+        cameraMode = 'video';
         btnModeVideo.classList.add('is-active');
         btnModePhoto.classList.remove('is-active');
         btnSnapPhoto.style.display = 'none';
-        btnRecordVideo.style.display = 'flex';
-        cameraActionHint.textContent = 'Tap red button to record (10s max)';
+        btnRecordVideo.style.display = 'block';
+        cameraActionHint.textContent = 'Tap circle to record (10s max)';
         startCameraStream();
     });
 
-    // Snap Photo Action
+    // Snap Photo
     btnSnapPhoto.addEventListener('click', () => {
-        if (!activeStream) return;
-
         const canvas = document.createElement('canvas');
         canvas.width = cameraVideo.videoWidth || 1280;
         canvas.height = cameraVideo.videoHeight || 720;
@@ -557,72 +668,34 @@
         ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
 
         canvas.toBlob((blob) => {
-            if (!blob) return;
             capturedBlob = blob;
-            capturedType = 'image/jpeg';
             capturedFileName = `civic_photo_${Date.now()}.jpg`;
-
-            previewObjectUrl = URL.createObjectURL(blob);
-            cameraPhotoPreview.src = previewObjectUrl;
+            capturedType = 'image/jpeg';
+            cameraPhotoPreview.src = URL.createObjectURL(blob);
             cameraPhotoPreview.style.display = 'block';
             cameraVideo.style.display = 'none';
-            cameraVideoPreview.style.display = 'none';
-
             cameraLiveControls.style.display = 'none';
             cameraReviewControls.style.display = 'flex';
             cameraOverlayTop.style.display = 'none';
-        }, 'image/jpeg', 0.92);
+        }, 'image/jpeg', 0.9);
     });
 
-    // Video Recording Action
-    function getSupportedMimeType() {
-        if (typeof MediaRecorder === 'undefined') return '';
-        const types = [
-            'video/mp4;codecs=avc1',
-            'video/mp4',
-            'video/webm;codecs=vp9,opus',
-            'video/webm;codecs=vp8,opus',
-            'video/webm'
-        ];
-        for (const t of types) {
-            if (MediaRecorder.isTypeSupported(t)) return t;
-        }
-        return '';
-    }
-
+    // Record Video
     function startVideoRecording() {
-        if (!activeStream) return;
         recordedChunks = [];
-        const mimeType = getSupportedMimeType();
+        let mimeType = 'video/webm;codecs=vp8,opus';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
 
-        try {
-            mediaRecorder = mimeType ? new MediaRecorder(activeStream, { mimeType }) : new MediaRecorder(activeStream);
-        } catch (err) {
-            showCameraError("Media recording is not supported in this browser: " + err.message);
-            return;
-        }
-
-        mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-                recordedChunks.push(e.data);
-            }
-        };
-
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
         mediaRecorder.onstop = () => {
-            const actualMime = mediaRecorder.mimeType || 'video/webm';
-            capturedBlob = new Blob(recordedChunks, { type: actualMime });
-            capturedType = actualMime;
-            const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
-            capturedFileName = `civic_video_${Date.now()}.${ext}`;
-
-            previewObjectUrl = URL.createObjectURL(capturedBlob);
-            cameraVideoPreview.src = previewObjectUrl;
+            capturedBlob = new Blob(recordedChunks, { type: mimeType });
+            capturedFileName = `civic_clip_${Date.now()}.webm`;
+            capturedType = mimeType;
+            cameraVideoPreview.src = URL.createObjectURL(capturedBlob);
             cameraVideoPreview.style.display = 'block';
             cameraVideo.style.display = 'none';
-            cameraPhotoPreview.style.display = 'none';
-
             cameraRecBanner.style.display = 'none';
-            cameraRecProgress.style.width = '0%';
             cameraLiveControls.style.display = 'none';
             cameraReviewControls.style.display = 'flex';
             cameraOverlayTop.style.display = 'none';
@@ -631,74 +704,43 @@
         mediaRecorder.start(200);
         btnRecordVideo.classList.add('is-recording');
         cameraRecBanner.style.display = 'flex';
-        cameraActionHint.textContent = 'Recording in progress... Tap to finish early';
 
-        recordSeconds = 0;
-        const startTime = Date.now();
-
+        let startT = Date.now();
         recordInterval = setInterval(() => {
-            const elapsedMs = Date.now() - startTime;
-            const elapsedSec = elapsedMs / 1000.0;
-            const displaySec = Math.min(Math.floor(elapsedSec), MAX_RECORD_SECONDS);
-            const secStr = displaySec < 10 ? '0' + displaySec : displaySec;
-            cameraRecTimer.textContent = `00:${secStr} / 00:${MAX_RECORD_SECONDS}`;
-
-            const pct = Math.min((elapsedSec / MAX_RECORD_SECONDS) * 100, 100);
-            cameraRecProgress.style.width = pct + '%';
-
-            if (elapsedSec >= MAX_RECORD_SECONDS) {
-                stopVideoRecording();
-            }
+            const elapsed = (Date.now() - startT) / 1000;
+            const sec = Math.min(Math.floor(elapsed), MAX_RECORD_SECONDS);
+            cameraRecTimer.textContent = `00:${sec < 10 ? '0' + sec : sec} / 00:${MAX_RECORD_SECONDS}`;
+            cameraRecProgress.style.width = Math.min((elapsed / MAX_RECORD_SECONDS) * 100, 100) + '%';
+            if (elapsed >= MAX_RECORD_SECONDS) stopVideoRecording();
         }, 100);
     }
 
     function stopVideoRecording() {
-        if (recordInterval) {
-            clearInterval(recordInterval);
-            recordInterval = null;
-        }
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-        }
+        if (recordInterval) { clearInterval(recordInterval); recordInterval = null; }
+        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
         btnRecordVideo.classList.remove('is-recording');
     }
 
     btnRecordVideo.addEventListener('click', () => {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            stopVideoRecording();
-        } else {
-            startVideoRecording();
-        }
+        if (mediaRecorder && mediaRecorder.state === 'recording') stopVideoRecording();
+        else startVideoRecording();
     });
 
-    // Review Actions: Retake or Accept
-    btnRetakeMedia.addEventListener('click', () => {
-        startCameraStream();
-    });
+    btnRetakeMedia.addEventListener('click', startCameraStream);
 
-    btnAcceptMedia.addEventListener('click', async () => {
+    btnAcceptMedia.addEventListener('click', () => {
         if (!capturedBlob || !capturedFileName) return;
-
-        let capturedFile = new File([capturedBlob], capturedFileName, {
-            type: capturedType,
-            lastModified: Date.now()
-        });
-
-        if (capturedType && capturedType.startsWith('image/')) {
-            capturedFile = await compressImageIfNeeded(capturedFile);
-        }
-
-        // Set to native input using DataTransfer
+        const file = new File([capturedBlob], capturedFileName, { type: capturedType, lastModified: Date.now() });
         try {
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(capturedFile);
-            photoInput.files = dataTransfer.files;
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            photoInput.files = dt.files;
         } catch (e) {
-            console.warn("DataTransfer not fully supported:", e);
+            console.warn(e);
         }
-
-        updateMediaPreview(capturedFile);
+        updateMediaPreview(file);
         closeCameraModal();
     });
+});
 </script>
 {% endblock %}

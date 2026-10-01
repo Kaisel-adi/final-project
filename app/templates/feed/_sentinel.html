@@ -1,0 +1,35 @@
+<!-- Infinite Scroll Sentinel & Chunk Loader -->
+<div id="feed-scroll-sentinel" class="py-6 flex flex-col items-center justify-center text-center max-w-full"
+     data-has-more="{{ 'true' if total_reports_count > reports|length else 'false' }}"
+     data-next-offset="{{ reports|length }}"
+     data-total="{{ total_reports_count }}"
+     data-chunk-url="{{ url_for('feed.api_feed_chunk') }}"
+     data-view="{{ active_view or 'dashboard' }}"
+     data-lat="{{ center_lat }}"
+     data-lon="{{ center_lon }}"
+     data-radius="{{ radius_km }}"
+     data-category="{{ category_filter or '' }}"
+     data-status="{{ status_filter or '' }}"
+     data-sort="{{ sort_by or 'distance' }}"
+     data-q="{{ search_query or '' }}">
+    
+    <!-- Loading Spinner (Shown dynamically during background chunk fetch) -->
+    <div id="feed-chunk-spinner" class="hidden flex items-center justify-center gap-2.5 py-3 px-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-xs font-semibold text-slate-700">
+        <span class="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></span>
+        <span>Loading 5 more issues...</span>
+    </div>
+
+    <!-- Smooth Load 5 More Fallback Button -->
+    {% if total_reports_count > reports|length %}
+    <button type="button" id="btn-load-more-fallback" class="px-5 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-sm transition-all flex items-center gap-1.5 active:scale-95">
+        <span class="material-symbols-outlined text-base text-emerald-600">expand_more</span>
+        <span>Load 5 More Issues</span>
+    </button>
+    {% endif %}
+
+    <!-- All Caught Up Message -->
+    <div id="feed-all-caught-up" class="{% if total_reports_count <= reports|length %}flex{% else %}hidden{% endif %} py-4 text-xs font-medium text-slate-400 items-center justify-center gap-1.5">
+        <span class="material-symbols-outlined text-base text-emerald-500">check_circle</span>
+        <span>You're all caught up! Showing all <strong class="text-slate-600">{{ total_reports_count }}</strong> issues.</span>
+    </div>
+</div>

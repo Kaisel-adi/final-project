@@ -1,4 +1,5 @@
 import math
+from datetime import datetime, timezone
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
@@ -7,6 +8,28 @@ from app.services.storage import save_image
 from app.db import get_db
 
 reports_bp = Blueprint("reports", __name__, url_prefix="/reports")
+
+
+def get_relative_time(dt):
+    if not dt:
+        return "Recent"
+    now = datetime.now(timezone.utc)
+    if getattr(dt, "tzinfo", None) is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    diff = now - dt
+    seconds = int(diff.total_seconds())
+    if seconds < 60:
+        return "Just now"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes}m ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours}h ago"
+    days = hours // 24
+    if days < 30:
+        return f"{days}d ago"
+    return dt.strftime("%d %b %Y")
 
 
 @reports_bp.route("/create", methods=["GET", "POST"])
@@ -129,6 +152,22 @@ def view(report_id):
     # Category display name
     cat_dict = dict(CATEGORIES)
     category_label = cat_dict.get(report.get("category"), report.get("category"))
+    report["relative_time"] = get_relative_time(report.get("created_at"))
+
+    # Load comments
+    comments = list(db.comments.find({"report_id": rep_oid}).sort("created_at", 1))
+    for c in comments:
+        c["relative_time"] = get_relative_time(c.get("created_at"))
+
+    # Load post-resolution ratings
+    all_ratings = list(db.ratings.find({"report_id": rep_oid}))
+    rating_count = len(all_ratings)
+    avg_rating = round(sum(r.get("rating", 0) for r in all_ratings) / rating_count, 1) if rating_count > 0 else 0.0
+    user_rating = None
+    if current_user.is_authenticated:
+        ur = db.ratings.find_one({"report_id": rep_oid, "user_id": ObjectId(current_user.id)})
+        if ur:
+            user_rating = ur.get("rating")
 
     return render_template(
         "reports/view.html",
@@ -138,15 +177,125 @@ def view(report_id):
         has_upvoted=has_upvoted,
         is_author=is_author,
         corroborating_count=len(nearby_reports),
-        nearby_reports=nearby_reports
+        nearby_reports=nearby_reports,
+        comments=comments,
+        rating_count=rating_count,
+        avg_rating=avg_rating,
+        user_rating=user_rating
     )
+
+
+@reports_bp.route("/<report_id>/rate", methods=["POST"])
+@login_required
+def rate(report_id):
+    """Post-resolution star rating (1.0 to 5.0, with half-star hold support)."""
+    db = get_db()
+    try:
+        rep_oid = ObjectId(report_id)
+        report = db.reports.find_one({"_id": rep_oid})
+        if not report:
+            return jsonify({"success": False, "error": "Report not found"}), 404
+
+        if report.get("status") != "Resolved":
+            return jsonify({"success": False, "error": "Ratings are only available once an issue is Resolved"}), 400
+
+        data = request.get_json(silent=True) or request.form
+        rating_val = float(data.get("rating", 0))
+        if not (1.0 <= rating_val <= 5.0):
+            return jsonify({"success": False, "error": "Rating must be between 1 and 5 stars"}), 400
+
+        # Upsert rating
+        now = datetime.now(timezone.utc)
+        db.ratings.update_one(
+            {"report_id": rep_oid, "user_id": ObjectId(current_user.id)},
+            {"$set": {"rating": rating_val, "updated_at": now}, "$setOnInsert": {"created_at": now}},
+            upsert=True
+        )
+
+        all_ratings = list(db.ratings.find({"report_id": rep_oid}))
+        rating_count = len(all_ratings)
+        avg_rating = round(sum(r.get("rating", 0) for r in all_ratings) / rating_count, 1)
+
+        # Update report cache
+        db.reports.update_one(
+            {"_id": rep_oid},
+            {"$set": {"avg_rating": avg_rating, "rating_count": rating_count}}
+        )
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+            return jsonify({"success": True, "avg_rating": avg_rating, "rating_count": rating_count, "user_rating": rating_val})
+
+        flash(f"Thank you for rating municipal resolution: {rating_val} stars!", "success")
+    except Exception as e:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+            return jsonify({"success": False, "error": str(e)}), 400
+        flash(f"Error submitting rating: {str(e)}", "danger")
+
+    return redirect(url_for("reports.view", report_id=report_id))
+
+
+@reports_bp.route("/<report_id>/comments", methods=["POST"])
+@login_required
+def add_comment(report_id):
+    """Down-scroll community comment submission on report details."""
+    db = get_db()
+    is_ajax = (request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json or request.accept_mimetypes.accept_json)
+    try:
+        rep_oid = ObjectId(report_id)
+        json_data = request.get_json(silent=True) if request.is_json else None
+        comment_text = (json_data.get("comment") if json_data else request.form.get("comment", "")).strip()
+        if not comment_text or len(comment_text) < 2:
+            if is_ajax:
+                return jsonify({"success": False, "error": "Comment cannot be empty."}), 400
+            flash("Comment cannot be empty.", "warning")
+            return redirect(url_for("reports.view", report_id=report_id))
+
+        now = datetime.now(timezone.utc)
+        names = current_user.name.split() if current_user.name else ["Citizen"]
+        initials = (names[0][0] + (names[-1][0] if len(names) > 1 else "")).upper()
+
+        comment_doc = {
+            "report_id": rep_oid,
+            "user_id": ObjectId(current_user.id),
+            "user_name": current_user.name,
+            "user_initials": initials,
+            "is_moderator": getattr(current_user, "is_moderator", False),
+            "comment": comment_text,
+            "created_at": now
+        }
+        res = db.comments.insert_one(comment_doc)
+        total_comments = db.comments.count_documents({"report_id": rep_oid})
+
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "comment": {
+                    "id": str(res.inserted_id),
+                    "user_name": current_user.name,
+                    "user_initials": initials,
+                    "is_moderator": getattr(current_user, "is_moderator", False),
+                    "comment": comment_text,
+                    "relative_time": "Just now",
+                    "created_at_str": now.strftime("%d %b %Y, %I:%M %p")
+                },
+                "comments_count": total_comments
+            })
+
+        flash("Comment added to community timeline.", "success")
+    except Exception as e:
+        if is_ajax:
+            return jsonify({"success": False, "error": str(e)}), 400
+        flash(f"Failed to post comment: {str(e)}", "danger")
+
+    return redirect(url_for("reports.view", report_id=report_id))
 
 
 @reports_bp.route("/<report_id>/upvote", methods=["POST"])
 @login_required
 def upvote(report_id):
-    user_lat = request.form.get("user_lat")
-    user_lon = request.form.get("user_lon")
+    json_data = request.get_json(silent=True) if request.is_json else None
+    user_lat = (json_data.get("user_lat") if json_data else request.form.get("user_lat"))
+    user_lon = (json_data.get("user_lon") if json_data else request.form.get("user_lon"))
     user_coords = None
     if user_lat and user_lon:
         try:
@@ -154,16 +303,22 @@ def upvote(report_id):
         except ValueError:
             pass
 
+    is_ajax = (request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json or request.accept_mimetypes.accept_json)
+
     try:
         result = upvote_report(report_id, current_user, user_coords=user_coords)
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+        if is_ajax:
             return jsonify(result)
         
         flash("Upvote recorded! Thank you for verifying this issue.", "success")
     except ValueError as e:
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+        if is_ajax:
             return jsonify({"success": False, "error": str(e)}), 400
         flash(str(e), "warning")
+    except Exception as e:
+        if is_ajax:
+            return jsonify({"success": False, "error": str(e)}), 500
+        flash("Error processing upvote.", "danger")
 
     return redirect(url_for("reports.view", report_id=report_id))
 

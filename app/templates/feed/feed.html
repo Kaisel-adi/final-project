@@ -1,236 +1,1041 @@
 {% extends "base.html" %}
 
-{% block title %}Nearby Civic Issues — GCIR{% endblock %}
+{% block title %}
+{% if active_view == 'map' %}Interactive Civic Map — Garuda Delhi-NCR
+{% elif active_view == 'list' %}Community Issues Feed — Garuda
+{% else %}Community Dashboard — Garuda &bull; See the change. Be the change!{% endif %}
+{% endblock %}
+
+{% block header_title %}
+{% if active_view == 'map' %}Interactive Map
+{% elif active_view == 'list' %}Community Issues Feed
+{% else %}Community Dashboard{% endif %}
+{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 1.25rem;">
-    <!-- Filter bar -->
-    <form method="GET" action="{{ url_for('feed.feed_view') }}" class="card" style="padding: 0.85rem 1rem; margin-bottom: 1rem;">
-        <input type="hidden" name="lat" id="filter_lat" value="{{ center_lat }}">
-        <input type="hidden" name="lon" id="filter_lon" value="{{ center_lon }}">
-        
-        <div class="feed-filter-bar">
-            <div class="feed-filter-controls">
-                <div>
-                    <select name="category" class="form-select" onchange="this.form.submit()" style="padding: 0.45rem 0.8rem; font-size: 0.88rem;">
-                        <option value="">All Categories</option>
-                        {% for key, label in categories %}
-                            <option value="{{ key }}" {% if category_filter == key %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+<div class="space-y-6">
 
-                <div>
-                    <select name="status" class="form-select" onchange="this.form.submit()" style="padding: 0.45rem 0.8rem; font-size: 0.88rem;">
-                        <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>All Statuses</option>
-                        <option value="Reported" {% if status_filter == 'Reported' %}selected{% endif %}>Reported (Needs Verification)</option>
-                        <option value="Verified" {% if status_filter == 'Verified' %}selected{% endif %}>Verified</option>
-                        <option value="Complained" {% if status_filter == 'Complained' %}selected{% endif %}>Complained</option>
-                        <option value="Resolved" {% if status_filter == 'Resolved' %}selected{% endif %}>Resolved</option>
-                    </select>
+    <!-- ========================================================================= -->
+    <!-- COMMUNITY HEADER & 4-METRIC GRID (media_1790803461381.png)                -->
+    <!-- ========================================================================= -->
+    <div class="bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden">
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-2xl text-emerald-300 flex-shrink-0">location_city</span>
+                    <h2 class="text-lg sm:text-2xl font-bold tracking-tight truncate">Community Issues</h2>
                 </div>
-
-                <div>
-                    <select name="radius" class="form-select" onchange="this.form.submit()" style="padding: 0.45rem 0.8rem; font-size: 0.88rem;">
-                        <option value="1.0" {% if radius_km == 1.0 %}selected{% endif %}>Within 1 km</option>
-                        <option value="3.0" {% if radius_km == 3.0 %}selected{% endif %}>Within 3 km</option>
-                        <option value="5.0" {% if radius_km == 5.0 %}selected{% endif %}>Within 5 km</option>
-                        <option value="10.0" {% if radius_km == 10.0 %}selected{% endif %}>Within 10 km</option>
-                        <option value="25.0" {% if radius_km == 25.0 %}selected{% endif %}>Within 25 km</option>
-                    </select>
-                </div>
+                <p class="text-teal-100 text-xs sm:text-sm mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span class="material-symbols-outlined text-sm flex-shrink-0">explore</span>
+                    <span>Monitoring within <strong>{{ radius_km }} km</strong> &bull; Found <strong>{{ total_reports_count }}</strong> issues nearby</span>
+                </p>
             </div>
 
-            <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">
-                Found <strong>{{ total_reports_count if total_reports_count is defined else reports|length }}</strong> issue{% if (total_reports_count if total_reports_count is defined else reports|length) != 1 %}s{% endif %} nearby
+            <!-- View Switcher Tabs -->
+            <div class="feed-view-toggle-bar grid grid-cols-3 sm:inline-flex p-1 bg-[#042f2e]/85 backdrop-blur-md rounded-xl sm:rounded-2xl border border-white/15 w-full sm:w-auto shadow-inner">
+                <a href="{{ url_for('feed.feed_view', radius=radius_km) }}" 
+                   class="flex items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 rounded-lg sm:rounded-xl text-xs font-semibold transition-all {% if active_view == 'dashboard' or not active_view %}bg-white text-emerald-950 font-bold shadow-md{% else %}text-emerald-100 hover:text-white hover:bg-white/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">dashboard</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('feed.feed_view', view='list', radius=radius_km) }}" 
+                   id="btn-view-list" class="btn-view-list flex items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 rounded-lg sm:rounded-xl text-xs font-semibold transition-all {% if active_view == 'list' %}bg-white text-emerald-950 font-bold shadow-md{% else %}text-emerald-100 hover:text-white hover:bg-white/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">format_list_bulleted</span>
+                    <span>List</span>
+                </a>
+                <a href="{{ url_for('feed.feed_view', view='map', radius=radius_km) }}" 
+                   id="btn-view-map" class="btn-view-map flex items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 rounded-lg sm:rounded-xl text-xs font-semibold transition-all {% if active_view == 'map' %}bg-white text-emerald-950 font-bold shadow-md{% else %}text-emerald-100 hover:text-white hover:bg-white/10{% endif %}">
+                    <span class="material-symbols-outlined text-base">map</span>
+                    <span>Map</span>
+                </a>
             </div>
         </div>
-    </form>
 
-    <!-- Mobile View Switcher (Visible only on screens <= 900px) -->
-    <div class="feed-view-toggle-bar" role="tablist">
-        <button type="button" class="view-toggle-btn is-active" id="btn-view-list" onclick="setFeedMobileView('list')">
-            📋 List View ({{ total_reports_count if total_reports_count is defined else reports|length }})
-        </button>
-        <button type="button" class="view-toggle-btn" id="btn-view-map" onclick="setFeedMobileView('map')">
-            🗺️ Interactive Map
-        </button>
+        <!-- 4 Metric Cards Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-4 sm:mt-6">
+            <!-- Active Issues -->
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-white/20 flex items-center justify-between text-slate-800 min-w-0">
+                <div class="min-w-0 mr-1">
+                    <div class="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Active Issues</div>
+                    <div class="text-lg sm:text-2xl font-bold text-slate-900 mt-0.5">{{ community_metrics.active_issues if community_metrics else reports|length }}</div>
+                </div>
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-lg sm:text-xl">notifications_active</span>
+                </div>
+            </div>
+
+            <!-- In Progress -->
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-white/20 flex items-center justify-between text-slate-800 min-w-0">
+                <div class="min-w-0 mr-1">
+                    <div class="text-[11px] sm:text-xs font-medium text-slate-500 truncate">In Progress</div>
+                    <div class="text-lg sm:text-2xl font-bold text-slate-900 mt-0.5">{{ community_metrics.in_progress if community_metrics else 0 }}</div>
+                </div>
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-lg sm:text-xl">hourglass_top</span>
+                </div>
+            </div>
+
+            <!-- Resolved -->
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-white/20 flex items-center justify-between text-slate-800 min-w-0">
+                <div class="min-w-0 mr-1">
+                    <div class="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Resolved Today</div>
+                    <div class="text-lg sm:text-2xl font-bold text-slate-900 mt-0.5">{{ community_metrics.resolved_today if community_metrics else 0 }}</div>
+                </div>
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-lg sm:text-xl">task_alt</span>
+                </div>
+            </div>
+
+            <!-- High Priority -->
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-white/20 flex items-center justify-between text-slate-800 min-w-0">
+                <div class="min-w-0 mr-1">
+                    <div class="text-[11px] sm:text-xs font-medium text-slate-500 truncate">High Priority</div>
+                    <div class="text-lg sm:text-2xl font-bold text-slate-900 mt-0.5">{{ community_metrics.high_priority if community_metrics else 0 }}</div>
+                </div>
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-lg sm:text-xl">bolt</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Feed Layout: List on left, map on right on desktop; switched via tabs on mobile -->
-    <div class="feed-layout show-list" id="feed-layout-container">
-        <!-- Feed List -->
-        <div class="feed-sidebar" id="feed-sidebar">
-            {% if reports %}
-                {% for r in reports %}
-                    <a href="{{ url_for('reports.view', report_id=r._id) }}" class="issue-card">
-                        {% if r.photo_url|is_video %}
-                            <video src="{{ r.photo_url }}" class="issue-thumb" muted playsinline preload="none"></video>
-                        {% else %}
-                            <img src="{{ r.photo_url }}" alt="Issue evidence" class="issue-thumb" loading="lazy" decoding="async">
-                        {% endif %}
-                        <div class="issue-content">
-                            <div>
-                                <div class="issue-meta">
-                                    <span style="font-weight: 600; color: var(--primary);">{{ r.category_label }}</span>
-                                    <span>{{ r._dist_km }} km away</span>
-                                </div>
-                                <div class="issue-desc">{{ r.description }}</div>
-                            </div>
-                            <div class="issue-footer">
-                                <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
-                                <span style="font-weight: 600; color: #475569;">
-                                    👍 {{ r.upvote_count }} / 10
-                                </span>
-                            </div>
-                        </div>
-                    </a>
-                {% endfor %}
-
-                {% if total_pages and total_pages > 1 %}
-                    <div style="display: flex; justify-content: center; align-items: center; gap: 0.75rem; margin-top: 1rem; padding: 0.75rem; background: #ffffff; border-radius: 8px; border: 1px solid var(--border-color);">
-                        {% if page > 1 %}
-                            <a href="{{ url_for('feed.feed_view', lat=center_lat, lon=center_lon, radius=radius_km, category=category_filter, status=status_filter, page=page-1) }}" class="btn btn-secondary btn-sm">&larr; Previous</a>
-                        {% endif %}
-                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Page {{ page }} of {{ total_pages }}</span>
-                        {% if page < total_pages %}
-                            <a href="{{ url_for('feed.feed_view', lat=center_lat, lon=center_lon, radius=radius_km, category=category_filter, status=status_filter, page=page+1) }}" class="btn btn-secondary btn-sm">Next &rarr;</a>
-                        {% endif %}
+    <!-- ========================================================================= -->
+    <!-- VIEW MODE 1: DASHBOARD VIEW (Default)                                     -->
+    <!-- ========================================================================= -->
+    {% if active_view == 'dashboard' or not active_view %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left 2 Cols: Locality Map Snippet (Map 1) & Recent Issues -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Locality Map Widget Card (Map 1) -->
+            <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                            <span class="material-symbols-outlined text-emerald-500">location_on</span>
+                            <span>Neighborhood Jurisdiction Snippet</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Live radius boundary & active issue locations</p>
                     </div>
-                {% endif %}
-            {% else %}
-                <div class="card" style="text-align: center; padding: 3rem 1.5rem;">
-                    <span style="font-size: 2.5rem;">🎉</span>
-                    <h3 style="margin-top: 0.5rem; font-size: 1.1rem;">No Issues Found Nearby</h3>
-                    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.25rem;">
-                        No open civic issues reported within {{ radius_km }} km of your location.
-                    </p>
-                    <a href="{{ url_for('reports.create') }}" class="btn btn-primary" style="margin-top: 1rem;">
-                        Report a New Issue
+                    <a href="{{ url_for('feed.feed_view', view='map') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5">
+                        <span>Full Map</span>
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
                     </a>
+                </div>
+                <!-- Leaflet Locality Map Container -->
+                <div id="locality-map-widget" class="h-64 sm:h-72 w-full"></div>
+            </div>
+
+            <!-- Recent Community Issues Section -->
+            <div class="space-y-4">
+                <!-- Section Header with Radius Selector (5km, 10km, 15km, 20km, 25km, 30km) & Sort Dropdown -->
+                <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span>Near you</span>
+                            <span id="home-total-count" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                                {{ total_reports_count }} total
+                            </span>
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Issues reported in your customizable neighborhood boundary</p>
+                    </div>
+
+                    <!-- Radius and Sort Controls -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Radius Selector: 5km, 10km, 15km, 20km, 25km, 30km -->
+                        <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700">
+                            <span class="material-symbols-outlined text-[15px] text-emerald-600">radar</span>
+                            <label for="home-radius-select" class="sr-only">Radius</label>
+                            <select id="home-radius-select" class="bg-transparent font-semibold focus:outline-none cursor-pointer text-xs">
+                                <option value="5.0" {% if radius_km == 5.0 %}selected{% endif %}>5 km</option>
+                                <option value="10.0" {% if radius_km == 10.0 %}selected{% endif %}>10 km</option>
+                                <option value="15.0" {% if radius_km == 15.0 %}selected{% endif %}>15 km</option>
+                                <option value="20.0" {% if radius_km == 20.0 %}selected{% endif %}>20 km</option>
+                                <option value="25.0" {% if radius_km == 25.0 %}selected{% endif %}>25 km</option>
+                                <option value="30.0" {% if radius_km == 30.0 %}selected{% endif %}>30 km</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort Selector -->
+                        <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700">
+                            <span class="material-symbols-outlined text-[15px] text-slate-500">sort</span>
+                            <label for="home-sort-select" class="sr-only">Sort by</label>
+                            <select id="home-sort-select" class="bg-transparent font-semibold focus:outline-none cursor-pointer text-xs">
+                                <option value="distance" {% if sort_by == 'distance' or not sort_by %}selected{% endif %}>Closest first</option>
+                                <option value="likes" {% if sort_by == 'likes' %}selected{% endif %}>Most likes</option>
+                                <option value="date" {% if sort_by == 'date' %}selected{% endif %}>Date posted</option>
+                                <option value="pending" {% if sort_by in ['pending', 'reported'] %}selected{% endif %}>Pending / Reported</option>
+                                <option value="verified" {% if sort_by == 'verified' %}selected{% endif %}>Verified first</option>
+                            </select>
+                        </div>
+
+                        <a href="{{ url_for('feed.feed_view', view='list') }}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-0.5 ml-1">
+                            <span>Community</span>
+                            <span class="material-symbols-outlined text-sm">chevron_right</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="feed-cards-container" class="space-y-4">
+                    {% if reports %}
+                        {% include "feed/_cards.html" %}
+                    {% else %}
+                        <div class="bg-white rounded-2xl p-8 text-center border border-dashed border-slate-300">
+                            <span class="material-symbols-outlined text-4xl text-slate-300">check_circle</span>
+                            <h4 class="font-bold text-slate-800 text-sm mt-2">No Active Civic Issues Nearby</h4>
+                            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Your neighborhood looks clean and hazard-free within {{ radius_km|int if radius_km == radius_km|int else radius_km }} km. See something amiss? Report it now.</p>
+                            <a href="{{ url_for('reports.create') }}" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-semibold hover:bg-emerald-600">
+                                <span class="material-symbols-outlined text-base">add</span>
+                                <span>+ Report Issue</span>
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                {% include "feed/_sentinel.html" %}
+            </div>
+        </div>
+
+        <!-- Right 1 Col: My Complaints Summary (media_1790803349535.png) & Quick Actions -->
+        <div class="space-y-6">
+            {% if current_user.is_authenticated and user_summary %}
+            <!-- My Complaints Summary Card -->
+            <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-sm space-y-5">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-emerald-600 text-xl">insert_chart</span>
+                    <h3 class="font-bold text-slate-900 text-base">My Complaints Summary</h3>
+                </div>
+
+                <!-- 2 Top Summary Tiles -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3.5 text-center">
+                        <div class="flex items-center justify-center text-blue-600 mb-1">
+                            <span class="material-symbols-outlined text-xl">trending_up</span>
+                        </div>
+                        <div class="text-2xl font-bold text-blue-900">{{ user_summary.total_issues }}</div>
+                        <div class="text-[11px] font-semibold text-blue-600 mt-0.5">Total Issues</div>
+                    </div>
+
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-3.5 text-center">
+                        <div class="flex items-center justify-center text-emerald-600 mb-1">
+                            <span class="material-symbols-outlined text-xl">check_circle</span>
+                        </div>
+                        <div class="text-2xl font-bold text-emerald-900">{{ user_summary.resolved }}</div>
+                        <div class="text-[11px] font-semibold text-emerald-600 mt-0.5">Resolved</div>
+                    </div>
+                </div>
+
+                <!-- Progress Bars Section -->
+                <div class="space-y-3 pt-2 text-xs">
+                    <!-- Pending -->
+                    <div>
+                        <div class="flex justify-between font-semibold mb-1">
+                            <span class="text-slate-600">Pending</span>
+                            <span class="text-rose-600">{{ user_summary.pending }}</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-rose-500 rounded-full" style="width: {{ (user_summary.pending / user_summary.total_issues * 100) if user_summary.total_issues > 0 else 0 }}%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- In Progress -->
+                    <div>
+                        <div class="flex justify-between font-semibold mb-1">
+                            <span class="text-slate-600">In Progress</span>
+                            <span class="text-amber-600">{{ user_summary.in_progress }}</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-amber-500 rounded-full" style="width: {{ (user_summary.in_progress / user_summary.total_issues * 100) if user_summary.total_issues > 0 else 0 }}%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Avg Response Time -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 font-semibold text-slate-600">
+                        <span>Avg. Response Time</span>
+                        <span class="text-blue-600 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">schedule</span>
+                            <span>{{ user_summary.avg_response_time }}</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- View All Button -->
+                <a href="{{ url_for('auth.profile') }}" class="block w-full text-center py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold transition-all shadow-sm active:scale-98">
+                    View All My Complaints
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Quick Action Shortcuts -->
+            <div class="bg-gradient-to-br from-[#181a1b] to-[#242729] rounded-3xl p-5 text-white shadow-md">
+                <h4 class="font-bold text-sm text-emerald-400 flex items-center gap-1.5 mb-2">
+                    <span class="material-symbols-outlined text-lg">campaign</span>
+                    <span>Community Action</span>
+                </h4>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                    Spot a civic defect? Take a photo, verify your location, and gather 10 neighbor upvotes to dispatch a verified MCD complaint letter.
+                </p>
+                <a href="{{ url_for('reports.create') }}" class="flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+                    <span class="material-symbols-outlined text-base">add_circle</span>
+                    <span>+ Report Civic Hazard</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- ========================================================================= -->
+    <!-- VIEW MODE 2: COMMUNITY FEED LIST VIEW                                     -->
+    <!-- ========================================================================= -->
+    {% if active_view == 'list' %}
+    <div class="space-y-4 max-w-full overflow-hidden">
+        <!-- Search & Filter Bar -->
+        <form id="community-filter-form" method="GET" action="{{ url_for('feed.feed_view') }}" class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm space-y-3 max-w-full overflow-hidden">
+            <input type="hidden" name="view" value="list">
+            <input type="hidden" name="lat" value="{{ center_lat }}">
+            <input type="hidden" name="lon" value="{{ center_lon }}">
+
+            <!-- Search Input Row -->
+            <div class="flex items-center gap-2 w-full min-w-0">
+                <div class="relative flex-1 min-w-0">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg flex-shrink-0">search</span>
+                    <input type="text" id="community-search-input" name="q" value="{{ search_query or '' }}" placeholder="Search issues, road names, landmarks..." 
+                           class="w-full min-w-0 pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 truncate">
+                </div>
+                <button type="submit" class="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-sm flex-shrink-0 transition-transform active:scale-95 cursor-pointer">
+                    Search
+                </button>
+            </div>
+
+            <!-- Horizontal Category Chips -->
+            <div id="category-chips-bar" class="w-full max-w-full overflow-x-auto pb-1 text-xs select-none no-scrollbar flex items-center gap-1.5 sm:gap-2 overscroll-x-contain">
+                <button type="button" data-category="" 
+                   class="btn-category-chip px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-colors flex-shrink-0 text-[11px] sm:text-xs cursor-pointer {% if not category_filter %}bg-emerald-500 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                    All Issues (<span class="category-total-count">{{ total_reports_count }}</span>)
+                </button>
+                {% for key, label in categories %}
+                <button type="button" data-category="{{ key }}" 
+                   class="btn-category-chip px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-colors flex-shrink-0 text-[11px] sm:text-xs cursor-pointer {% if category_filter == key %}bg-emerald-500 text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                    {{ label.split('/')[0].strip() }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <!-- Dropdown Filters Row (Mobile Stacked / Desktop Inline) -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 border-t border-slate-100 text-xs">
+                <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                    <!-- Status Filter -->
+                    <div class="flex-1 sm:flex-initial min-w-0">
+                        <select id="community-status-select" name="status" class="w-full sm:w-auto bg-slate-50 sm:bg-transparent px-2.5 py-1.5 sm:p-0 rounded-lg sm:rounded-none border border-slate-200 sm:border-0 font-semibold text-slate-700 focus:outline-none text-[11px] sm:text-xs truncate cursor-pointer">
+                            <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>All Statuses</option>
+                            <option value="Reported" {% if status_filter == 'Reported' %}selected{% endif %}>Reported</option>
+                            <option value="Verified" {% if status_filter == 'Verified' %}selected{% endif %}>Verified</option>
+                            <option value="Complained" {% if status_filter == 'Complained' %}selected{% endif %}>Complained</option>
+                            <option value="Resolved" {% if status_filter == 'Resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                    </div>
+
+                    <!-- Sort Options -->
+                    <div class="flex-1 sm:flex-initial min-w-0">
+                        <select id="community-sort-select" name="sort" class="w-full sm:w-auto bg-slate-50 sm:bg-transparent px-2.5 py-1.5 sm:p-0 rounded-lg sm:rounded-none border border-slate-200 sm:border-0 font-semibold text-slate-700 focus:outline-none text-[11px] sm:text-xs truncate cursor-pointer">
+                            <option value="distance" {% if sort_by == 'distance' or not sort_by %}selected{% endif %}>Closest first</option>
+                            <option value="likes" {% if sort_by == 'likes' %}selected{% endif %}>Most likes</option>
+                            <option value="date" {% if sort_by == 'date' %}selected{% endif %}>Date posted</option>
+                            <option value="pending" {% if sort_by in ['pending', 'reported'] %}selected{% endif %}>Pending / Reported</option>
+                            <option value="verified" {% if sort_by == 'verified' %}selected{% endif %}>Verified first</option>
+                        </select>
+                    </div>
+
+                    <!-- Fixed 100km Scope Indicator -->
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200/80 text-teal-800 text-[11px] font-semibold">
+                        <span class="material-symbols-outlined text-sm text-teal-600">travel_explore</span>
+                        <span>Scope: 100 km (Fixed Region)</span>
+                    </div>
+                    <input type="hidden" name="radius" value="{{ radius_km }}">
+                </div>
+
+                <div class="text-slate-400 font-medium text-[11px] sm:text-xs flex items-center justify-between sm:justify-end gap-1">
+                    <span id="community-found-count">Found <strong id="community-total-number">{{ total_reports_count }}</strong> issues nearby</span>
+                    <a href="{{ url_for('feed.feed_view', view='list') }}" id="btn-feed-reset-filters" class="text-emerald-600 font-bold hover:underline ml-2 {% if not (category_filter or status_filter or search_query or (sort_by and sort_by != 'distance')) %}hidden{% endif %}">Reset</a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Issues Feed Grid -->
+        <div id="feed-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 max-w-full">
+            {% if reports %}
+                {% include "feed/_cards.html" %}
+            {% else %}
+                <div class="col-span-full bg-white rounded-3xl p-10 text-center border border-dashed border-slate-300">
+                    <span class="material-symbols-outlined text-5xl text-slate-300">search_off</span>
+                    <h4 class="font-bold text-slate-800 text-base mt-2">No Matching Reports Found</h4>
+                    <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Try clearing your filters or search keywords within the 100 km region.</p>
+                    <button type="button" class="btn-feed-reset-trigger mt-4 inline-block px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer">
+                        Reset Filters
+                    </button>
                 </div>
             {% endif %}
         </div>
 
-        <!-- Interactive Map -->
-        <div class="feed-map-container" id="feed-map-container">
-            <div id="feed-map"></div>
+        {% include "feed/_sentinel.html" %}
+
+        <!-- Backward-compatible Pagination Bar for multi-page requests -->
+        {% if total_pages and total_pages > 1 %}
+        <div id="feed-pagination-container" class="flex justify-center items-center gap-2 sm:gap-3 pt-4 sm:pt-6 pb-2 text-xs">
+            {% if page > 1 %}
+                <a href="{{ url_for('feed.feed_view', view='list', q=search_query, category=category_filter, status=status_filter, radius=radius_km, sort=sort_by, per_page=per_page, page=page-1) }}" 
+                   class="px-3 sm:px-4 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">&larr; Previous</a>
+            {% endif %}
+            <span class="font-semibold text-slate-500 px-1 sm:px-2">Page {{ page }} of {{ total_pages }}</span>
+            {% if page < total_pages %}
+                <a href="{{ url_for('feed.feed_view', view='list', q=search_query, category=category_filter, status=status_filter, radius=radius_km, sort=sort_by, per_page=per_page, page=page+1) }}" 
+                   class="px-3 sm:px-4 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">Next &rarr;</a>
+            {% endif %}
         </div>
+        {% endif %}
     </div>
+    {% endif %}
+
+
+    <!-- ========================================================================= -->
+    <!-- VIEW MODE 3: FULL INTERACTIVE MAP VIEW (Map 2)                            -->
+    <!-- ========================================================================= -->
+    {% if active_view == 'map' %}
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden relative">
+        <!-- Floating Filter Chips in Map View -->
+        <div class="absolute top-3 inset-x-16 z-[400] overflow-x-auto flex items-center gap-1.5 no-scrollbar px-2 pointer-events-auto">
+            <a href="{{ url_for('feed.feed_view', view='map', radius=radius_km) }}" 
+               class="px-3 py-1 bg-white/95 backdrop-blur-sm shadow-md border border-slate-200/80 rounded-full text-xs font-semibold text-slate-800 whitespace-nowrap {% if not category_filter %}border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/20{% endif %}">
+                All
+            </a>
+            {% for key, label in categories %}
+            <a href="{{ url_for('feed.feed_view', view='map', category=key, radius=radius_km) }}" 
+               class="px-3 py-1 bg-white/95 backdrop-blur-sm shadow-md border border-slate-200/80 rounded-full text-xs font-semibold text-slate-800 whitespace-nowrap {% if category_filter == key %}border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/20{% endif %}">
+                {{ label.split('/')[0].strip() }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Full-Bleed Map Canvas -->
+        <div id="overview-map-canvas" class="w-full h-[70vh] sm:h-[75vh]"></div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const centerLat = {{ center_lat }};
-    const centerLon = {{ center_lon }};
-    const radiusKm = {{ radius_km }};
-
-    // Fast zero-network SVG Pin Marker Generator
-    function createSvgPin(colorHex, isUser = false) {
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="42" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.5"/>
-                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="${isUser ? '0.95' : '0.85'}"/>
-                ${isUser ? `<circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>` : ''}
-            </svg>
-        `;
-        return L.divIcon({
-            className: 'custom-map-pin',
-            html: svg,
-            iconSize: [28, 42],
-            iconAnchor: [14, 42],
-            popupAnchor: [0, -38]
-        });
+    function setFeedMobileView(view) {
+        window.location.href = "{{ url_for('feed.feed_view') }}?view=" + view + "&radius={{ radius_km }}";
     }
 
-    // Initialize Map with performance optimizations for weak networks
-    const map = L.map('feed-map').setView([centerLat, centerLon], 13);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        keepBuffer: 2,
-        updateWhenIdle: true,
-        updateWhenZooming: false
-    }).addTo(map);
+    function createSvgPin(colorHex) {
+        if (window.GCIRMaps && window.GCIRMaps.createSvgPin) {
+            return window.GCIRMaps.createSvgPin(colorHex);
+        }
+        return L.divIcon({ className: 'custom-map-pin' });
+    }
 
-    // Draw user center circle
-    L.circle([centerLat, centerLon], {
-        radius: radiusKm * 1000,
-        color: '#1a73e8',
-        fillColor: '#1a73e8',
-        fillOpacity: 0.08,
-        weight: 1.5
-    }).addTo(map);
+    document.addEventListener('DOMContentLoaded', function () {
+        const centerCoords = [{{ center_lat }}, {{ center_lon }}];
+        const radius = {{ radius_km }};
 
-    // Marker for user's location (instant SVG icon)
-    L.marker([centerLat, centerLon], {
-        title: "Your Location",
-        icon: createSvgPin('#1a73e8', true)
-    }).addTo(map).bindPopup("<strong>📍 You are here</strong>");
+        // 1. Initialize Dashboard Locality Map (Map 1) if container exists
+        let localityMapObj = null;
+        if (document.getElementById('locality-map-widget') && window.GCIRMaps) {
+            const rawIssues = {{ map_issues|tojson|safe }};
+            localityMapObj = window.GCIRMaps.initLocalityMap('locality-map-widget', {
+                center: centerCoords,
+                radiusKm: radius,
+                issues: rawIssues
+            });
+        }
 
-    // Fetch dynamic GeoJSON markers
-    const apiQuery = new URLSearchParams({
-        lat: centerLat,
-        lon: centerLon,
-        radius: radiusKm,
-        category: "{{ category_filter }}",
-        status: "{{ status_filter }}"
-    });
+        // 2. Initialize Interactive Overview Map (Map 2) if container exists
+        if (document.getElementById('overview-map-canvas') && window.GCIRMaps) {
+            window.GCIRMaps.initOverviewMap('overview-map-canvas', {
+                center: centerCoords,
+                radiusKm: radius,
+                category: "{{ category_filter or '' }}",
+                status: "{{ status_filter or '' }}"
+            });
+        }
 
-    fetch(`{{ url_for('feed.api_reports') }}?${apiQuery.toString()}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.features) {
-                data.features.forEach(feat => {
-                    const coords = feat.geometry.coordinates;
-                    const props = feat.properties;
-                    
-                    const markerColor = props.status === 'Verified' ? '#1e8e3e' : (props.status === 'Complained' ? '#7c3aed' : '#f59e0b');
-                    const markerIcon = createSvgPin(markerColor, false);
+        // 3. Floating Toast Helper
+        function showFeedToast(msg, isSuccess = false) {
+            let toast = document.getElementById('feed-floating-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'feed-floating-toast';
+                toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg transition-all duration-300 pointer-events-none transform translate-y-4 opacity-0';
+                document.body.appendChild(toast);
+            }
+            toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg transition-all duration-300 pointer-events-none transform translate-y-0 opacity-100 ${
+                isSuccess ? 'bg-emerald-800 text-white' : 'bg-slate-900 text-white'
+            }`;
+            toast.textContent = msg;
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-4 opacity-0');
+            }, 2800);
+        }
 
-                    const popupContent = `
-                        <div style="max-width: 210px;">
-                            ${props.photo_url && (props.photo_url.toLowerCase().endsWith('.mp4') || props.photo_url.toLowerCase().endsWith('.webm') || props.photo_url.toLowerCase().endsWith('.mov') || props.photo_url.includes('/video/upload/'))
-                                ? `<video src="${props.photo_url}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px;" muted playsinline preload="none"></video>`
-                                : `<img src="${props.photo_url}" loading="lazy" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px;"/>`}
-                            <div style="font-weight: bold; margin-top: 4px; font-size: 0.9rem;">${props.category_label}</div>
-                            <div style="font-size: 0.8rem; color: #555; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${props.description}</div>
-                            <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-                                <span class="badge badge-${props.status}" style="font-size: 0.68rem; padding: 2px 6px;">${props.status}</span>
-                                <span style="font-size: 0.78rem; font-weight: bold; color: #475569;">👍 ${props.upvote_count}/10</span>
-                            </div>
-                            <a href="/reports/${props.id}" style="display: block; margin-top: 8px; font-size: 0.82rem; text-align: center; color: #1a73e8; font-weight: bold; text-decoration: none;">View Details &rarr;</a>
-                        </div>
-                    `;
+        // 4. Instant Feed Likes & Share (Instagram-style AJAX without reload)
+        const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+        const loginUrl = "{{ url_for('auth.login') }}";
 
-                    L.marker([coords[1], coords[0]], { icon: markerIcon })
-                        .addTo(map)
-                        .bindPopup(popupContent);
+        document.addEventListener('click', function(e) {
+            const likeBtn = e.target.closest('.btn-feed-like');
+            if (likeBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (!isAuthenticated) {
+                    window.location.href = loginUrl;
+                    return;
+                }
+
+                if (likeBtn.dataset.busy === 'true') return;
+                likeBtn.dataset.busy = 'true';
+
+                const reportId = likeBtn.dataset.reportId;
+                const countEl = likeBtn.querySelector('.like-count');
+                const heartIcon = likeBtn.querySelector('.material-symbols-outlined');
+                const prevCount = parseInt(countEl ? countEl.textContent : '0', 10) || 0;
+
+                // Optimistic visual pop
+                if (countEl) countEl.textContent = prevCount + 1;
+                if (heartIcon) heartIcon.classList.add('scale-125');
+
+                fetch(`/reports/${reportId}/upvote`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    likeBtn.dataset.busy = 'false';
+                    if (heartIcon) heartIcon.classList.remove('scale-125');
+                    if (data.success) {
+                        if (countEl && typeof data.upvote_count !== 'undefined') {
+                            countEl.textContent = data.upvote_count;
+                        }
+                        showFeedToast('✓ Upvoted! Thank you for verifying.', true);
+                    } else {
+                        if (countEl) countEl.textContent = prevCount;
+                        showFeedToast(data.error || 'Could not record upvote.');
+                    }
+                })
+                .catch(err => {
+                    likeBtn.dataset.busy = 'false';
+                    if (heartIcon) heartIcon.classList.remove('scale-125');
+                    if (countEl) countEl.textContent = prevCount;
+                    showFeedToast('Network issue while upvoting.');
                 });
+                return;
+            }
+
+            const shareBtn = e.target.closest('.btn-feed-share');
+            if (shareBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof window.openShareSheet === 'function') {
+                    window.openShareSheet({
+                        url: shareBtn.dataset.url || window.location.href,
+                        title: shareBtn.dataset.title || 'Civic Issue Report',
+                        landmark: shareBtn.dataset.landmark || 'Delhi-NCR',
+                        category: shareBtn.dataset.category || 'Civic Issue'
+                    });
+                }
+                return;
             }
         });
 
-    // Mobile View Switcher Logic
-    function setFeedMobileView(view) {
-        const container = document.getElementById('feed-layout-container');
-        const btnList = document.getElementById('btn-view-list');
-        const btnMap = document.getElementById('btn-view-map');
+        // 5. Chunked Infinite Scroll Loader & Filtering System
+        const sentinel = document.getElementById('feed-scroll-sentinel');
+        const cardsContainer = document.getElementById('feed-cards-container');
+        const spinner = document.getElementById('feed-chunk-spinner');
+        const fallbackBtn = document.getElementById('btn-load-more-fallback');
+        const caughtUp = document.getElementById('feed-all-caught-up');
 
-        if (view === 'map') {
-            container.classList.remove('show-list');
-            container.classList.add('show-map');
-            btnMap.classList.add('is-active');
-            btnList.classList.remove('is-active');
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 60);
-        } else {
-            container.classList.remove('show-map');
-            container.classList.add('show-list');
-            btnList.classList.add('is-active');
-            btnMap.classList.remove('is-active');
+        const SKELETON_CARD_HTML = `
+        <div class="feed-skeleton-card block p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm animate-pulse space-y-3.5 select-none pointer-events-none">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-9 h-9 rounded-full bg-slate-200"></div>
+                    <div class="space-y-1.5">
+                        <div class="w-24 h-3.5 bg-slate-200 rounded-md"></div>
+                        <div class="w-32 h-2.5 bg-slate-100 rounded"></div>
+                    </div>
+                </div>
+                <div class="w-20 h-5 bg-slate-200/80 rounded-full"></div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-24 h-4 bg-emerald-100/60 rounded-full"></div>
+                <div class="w-28 h-4 bg-slate-100 rounded-full"></div>
+            </div>
+            <div class="space-y-2 pt-1">
+                <div class="w-3/4 h-4 bg-slate-200 rounded-md"></div>
+                <div class="w-full h-3 bg-slate-100 rounded"></div>
+            </div>
+            <div class="w-full h-44 sm:h-52 bg-slate-200/80 rounded-xl flex items-center justify-center">
+                <span class="material-symbols-outlined text-3xl text-slate-300">image</span>
+            </div>
+            <div class="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-4 bg-slate-100 rounded-md"></div>
+                    <div class="w-10 h-4 bg-slate-100 rounded-md"></div>
+                </div>
+                <div class="w-16 h-6 bg-slate-100 rounded-lg"></div>
+            </div>
+        </div>
+        `;
+
+        function loadMoreFeedChunk() {
+            if (!sentinel || !cardsContainer) return;
+            if (sentinel.dataset.loading === 'true') return;
+            if (sentinel.dataset.hasMore !== 'true') return;
+
+            sentinel.dataset.loading = 'true';
+            if (spinner) {
+                spinner.classList.remove('hidden');
+                spinner.classList.add('flex');
+            }
+            if (fallbackBtn) fallbackBtn.classList.add('hidden');
+
+            // Render shimmering skeleton placeholders at the bottom of the feed
+            const chunkSkeletonContainer = document.createElement('div');
+            chunkSkeletonContainer.id = 'feed-chunk-skeletons';
+            chunkSkeletonContainer.className = 'contents';
+            chunkSkeletonContainer.innerHTML = SKELETON_CARD_HTML + SKELETON_CARD_HTML;
+            cardsContainer.appendChild(chunkSkeletonContainer);
+
+            const chunkUrl = sentinel.dataset.chunkUrl;
+            const params = new URLSearchParams();
+            params.set('offset', sentinel.dataset.nextOffset || '10');
+            params.set('limit', '5');
+            params.set('lat', sentinel.dataset.lat || '28.6139');
+            params.set('lon', sentinel.dataset.lon || '77.2090');
+            params.set('radius', sentinel.dataset.radius || '5.0');
+            params.set('sort', sentinel.dataset.sort || 'distance');
+            params.set('view', sentinel.dataset.view || 'dashboard');
+            if (sentinel.dataset.category) params.set('category', sentinel.dataset.category);
+            if (sentinel.dataset.status && sentinel.dataset.status !== 'all') params.set('status', sentinel.dataset.status);
+            if (sentinel.dataset.q) params.set('q', sentinel.dataset.q);
+
+            fetch(`${chunkUrl}?${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                sentinel.dataset.loading = 'false';
+                if (spinner) {
+                    spinner.classList.add('hidden');
+                    spinner.classList.remove('flex');
+                }
+                const skels = document.getElementById('feed-chunk-skeletons');
+                if (skels) skels.remove();
+
+                if (data.success && data.html) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = data.html;
+                    const newCards = Array.from(temp.children);
+                    newCards.forEach(card => {
+                        card.classList.add('animate-fade-in');
+                        cardsContainer.appendChild(card);
+                    });
+
+                    sentinel.dataset.nextOffset = data.next_offset;
+                    sentinel.dataset.hasMore = data.has_more ? 'true' : 'false';
+
+                    if (!data.has_more) {
+                        if (fallbackBtn) fallbackBtn.classList.add('hidden');
+                        if (caughtUp) {
+                            caughtUp.classList.remove('hidden');
+                            caughtUp.classList.add('flex');
+                        }
+                        if (window._feedObserver) window._feedObserver.disconnect();
+                    } else {
+                        if (fallbackBtn) fallbackBtn.classList.remove('hidden');
+                    }
+                } else {
+                    sentinel.dataset.hasMore = 'false';
+                    if (fallbackBtn) fallbackBtn.classList.add('hidden');
+                    if (caughtUp) {
+                        caughtUp.classList.remove('hidden');
+                        caughtUp.classList.add('flex');
+                    }
+                    if (window._feedObserver) window._feedObserver.disconnect();
+                }
+            })
+            .catch(err => {
+                sentinel.dataset.loading = 'false';
+                if (spinner) {
+                    spinner.classList.add('hidden');
+                    spinner.classList.remove('flex');
+                }
+                const skels = document.getElementById('feed-chunk-skeletons');
+                if (skels) skels.remove();
+                if (fallbackBtn) fallbackBtn.classList.remove('hidden');
+                showFeedToast('Could not load more issues. Try again.');
+            });
         }
-    }
+
+        if (fallbackBtn) {
+            fallbackBtn.addEventListener('click', loadMoreFeedChunk);
+        }
+
+        if (sentinel && 'IntersectionObserver' in window) {
+            window._feedObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && sentinel.dataset.hasMore === 'true') {
+                        loadMoreFeedChunk();
+                    }
+                });
+            }, {
+                rootMargin: '250px 0px 250px 0px',
+                threshold: 0.05
+            });
+            window._feedObserver.observe(sentinel);
+        }
+
+        // 6. Seamless AJAX & In-Memory Filter/Sort Engine (Zero Page Reloads)
+        function buildFeedUrl(params) {
+            const url = new URL(window.location.href);
+            if (params.view) url.searchParams.set('view', params.view);
+            if (params.radius) url.searchParams.set('radius', params.radius);
+            if (params.sort) {
+                if (params.sort === 'distance') url.searchParams.delete('sort');
+                else url.searchParams.set('sort', params.sort);
+            }
+            if (params.category !== undefined) {
+                if (!params.category) url.searchParams.delete('category');
+                else url.searchParams.set('category', params.category);
+            }
+            if (params.status !== undefined) {
+                if (!params.status || params.status === 'all') url.searchParams.delete('status');
+                else url.searchParams.set('status', params.status);
+            }
+            if (params.q !== undefined) {
+                if (!params.q) url.searchParams.delete('q');
+                else url.searchParams.set('q', params.q);
+            }
+            url.searchParams.delete('page');
+            return url.toString();
+        }
+
+        function updateTotalCountLabels(total) {
+            const homeCount = document.getElementById('home-total-count');
+            if (homeCount) homeCount.textContent = `${total} total`;
+            const commTotal = document.getElementById('community-total-number');
+            if (commTotal) commTotal.textContent = total;
+            const allCatCount = document.querySelector('.category-total-count');
+            if (allCatCount) allCatCount.textContent = total;
+        }
+
+        function updateCategoryChipsUI(activeCategory) {
+            document.querySelectorAll('.btn-category-chip').forEach(btn => {
+                const cat = btn.dataset.category || '';
+                if (cat === (activeCategory || '')) {
+                    btn.className = 'btn-category-chip px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-colors flex-shrink-0 text-[11px] sm:text-xs cursor-pointer bg-emerald-500 text-white';
+                } else {
+                    btn.className = 'btn-category-chip px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-colors flex-shrink-0 text-[11px] sm:text-xs cursor-pointer bg-slate-100 text-slate-700 hover:bg-slate-200';
+                }
+            });
+        }
+
+        function updateResetFilterVisibility(params) {
+            const resetBtn = document.getElementById('btn-feed-reset-filters');
+            if (!resetBtn) return;
+            const hasFilter = Boolean(
+                params.category || 
+                (params.status && params.status !== 'all') || 
+                params.q || 
+                (params.sort && params.sort !== 'distance')
+            );
+            if (hasFilter) {
+                resetBtn.classList.remove('hidden');
+            } else {
+                resetBtn.classList.add('hidden');
+            }
+        }
+
+        function applyFeedFilters(overrides = {}, pushHistory = true) {
+            if (!sentinel || !cardsContainer) return;
+
+            let view = sentinel.dataset.view || 'dashboard';
+            let lat = sentinel.dataset.lat || '28.6139';
+            let lon = sentinel.dataset.lon || '77.2090';
+            let radius = sentinel.dataset.radius || '5.0';
+            let sort = sentinel.dataset.sort || 'distance';
+            let category = sentinel.dataset.category || '';
+            let status = sentinel.dataset.status || '';
+            let q = sentinel.dataset.q || '';
+
+            const homeRadiusSelect = document.getElementById('home-radius-select');
+            const homeSortSelect = document.getElementById('home-sort-select');
+            const commStatusSelect = document.getElementById('community-status-select');
+            const commSortSelect = document.getElementById('community-sort-select');
+            const commSearchInput = document.getElementById('community-search-input');
+
+            if (homeRadiusSelect) radius = homeRadiusSelect.value;
+            if (homeSortSelect) sort = homeSortSelect.value;
+            if (commStatusSelect) status = commStatusSelect.value;
+            if (commSortSelect) sort = commSortSelect.value;
+            if (commSearchInput) q = commSearchInput.value.trim();
+
+            if (overrides.radius !== undefined) radius = overrides.radius;
+            if (overrides.sort !== undefined) sort = overrides.sort;
+            if (overrides.category !== undefined) category = overrides.category;
+            if (overrides.status !== undefined) status = overrides.status;
+            if (overrides.q !== undefined) q = overrides.q;
+            if (overrides.view !== undefined) view = overrides.view;
+
+            // Sync controls
+            if (homeRadiusSelect && overrides.radius !== undefined) homeRadiusSelect.value = radius;
+            if (homeSortSelect && overrides.sort !== undefined) homeSortSelect.value = sort;
+            if (commStatusSelect && overrides.status !== undefined) commStatusSelect.value = status;
+            if (commSortSelect && overrides.sort !== undefined) commSortSelect.value = sort;
+            if (commSearchInput && overrides.q !== undefined) commSearchInput.value = q;
+
+            const prevSort = sentinel.dataset.sort || 'distance';
+            const prevCategory = sentinel.dataset.category || '';
+            const prevStatus = sentinel.dataset.status || '';
+            const prevRadius = sentinel.dataset.radius || '5.0';
+            const prevQ = sentinel.dataset.q || '';
+            const totalReports = parseInt(sentinel.dataset.total || '0', 10);
+            const existingCards = Array.from(cardsContainer.querySelectorAll('.issue-card'));
+
+            // Check if only sort changed and dataset is small (<= 10 reports and all loaded in DOM)
+            const onlySortChanged = (sort !== prevSort &&
+                                     category === prevCategory &&
+                                     status === prevStatus &&
+                                     radius === prevRadius &&
+                                     q === prevQ);
+            const isSmallDataset = (totalReports <= 10 && existingCards.length === totalReports);
+
+            if (onlySortChanged && isSmallDataset && existingCards.length > 1) {
+                // Instantaneous in-memory DOM sort
+                existingCards.sort((a, b) => {
+                    if (sort === 'likes') {
+                        const likesA = parseInt(a.dataset.likes || '0', 10);
+                        const likesB = parseInt(b.dataset.likes || '0', 10);
+                        if (likesB !== likesA) return likesB - likesA;
+                        return parseFloat(a.dataset.distance || '0') - parseFloat(b.dataset.distance || '0');
+                    } else if (sort === 'date') {
+                        const dateA = a.dataset.createdAt || '';
+                        const dateB = b.dataset.createdAt || '';
+                        return dateB.localeCompare(dateA);
+                    } else if (sort === 'pending' || sort === 'reported') {
+                        const isRepA = (a.dataset.status === 'Reported') ? 0 : 1;
+                        const isRepB = (b.dataset.status === 'Reported') ? 0 : 1;
+                        if (isRepA !== isRepB) return isRepA - isRepB;
+                        return (b.dataset.createdAt || '').localeCompare(a.dataset.createdAt || '');
+                    } else if (sort === 'verified') {
+                        const isVerA = (a.dataset.status === 'Verified') ? 0 : 1;
+                        const isVerB = (b.dataset.status === 'Verified') ? 0 : 1;
+                        if (isVerA !== isVerB) return isVerA - isVerB;
+                        return parseInt(b.dataset.likes || '0', 10) - parseInt(a.dataset.likes || '0', 10);
+                    } else { // distance
+                        return parseFloat(a.dataset.distance || '0') - parseFloat(b.dataset.distance || '0');
+                    }
+                });
+
+                cardsContainer.style.transition = 'opacity 0.15s ease';
+                cardsContainer.style.opacity = '0.5';
+                setTimeout(() => {
+                    existingCards.forEach(card => cardsContainer.appendChild(card));
+                    cardsContainer.style.opacity = '1';
+                }, 100);
+
+                sentinel.dataset.sort = sort;
+                updateResetFilterVisibility({ category, status, q, sort });
+
+                if (pushHistory) {
+                    const newUrl = buildFeedUrl({ view, radius, sort, category, status, q, lat, lon });
+                    window.history.pushState({ view, radius, sort, category, status, q }, '', newUrl);
+                }
+                return;
+            }
+
+            // For larger datasets or when filters (category/status/radius/search) change: query API chunk
+            cardsContainer.innerHTML = SKELETON_CARD_HTML + SKELETON_CARD_HTML;
+            cardsContainer.style.pointerEvents = 'none';
+
+            const chunkUrl = sentinel.dataset.chunkUrl;
+            const params = new URLSearchParams();
+            params.set('offset', '0');
+            params.set('limit', '10');
+            params.set('lat', lat);
+            params.set('lon', lon);
+            params.set('radius', radius);
+            params.set('sort', sort);
+            params.set('view', view);
+            if (category) params.set('category', category);
+            if (status && status !== 'all') params.set('status', status);
+            if (q) params.set('q', q);
+
+            fetch(`${chunkUrl}?${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                cardsContainer.style.opacity = '1';
+                cardsContainer.style.pointerEvents = 'auto';
+
+                if (data.success) {
+                    sentinel.dataset.radius = radius;
+                    sentinel.dataset.sort = sort;
+                    sentinel.dataset.category = category;
+                    sentinel.dataset.status = status;
+                    sentinel.dataset.q = q;
+                    sentinel.dataset.nextOffset = data.next_offset;
+                    sentinel.dataset.hasMore = data.has_more ? 'true' : 'false';
+                    sentinel.dataset.total = data.total;
+
+                    // Update locality map widget circle if in dashboard
+                    if (localityMapObj && localityMapObj.circle && overrides.radius !== undefined) {
+                        localityMapObj.circle.setRadius(parseFloat(radius) * 1000);
+                        if (localityMapObj.map) {
+                            localityMapObj.map.fitBounds(localityMapObj.circle.getBounds(), { padding: [20, 20], maxZoom: 15 });
+                        }
+                    }
+
+                    // Render cards or clean empty state
+                    if (data.count > 0 && data.html && data.html.trim().length > 0) {
+                        cardsContainer.innerHTML = data.html;
+                    } else {
+                        if (view === 'list') {
+                            cardsContainer.innerHTML = `
+                                <div class="col-span-full bg-white rounded-3xl p-10 text-center border border-dashed border-slate-300">
+                                    <span class="material-symbols-outlined text-5xl text-slate-300">search_off</span>
+                                    <h4 class="font-bold text-slate-800 text-base mt-2">No Matching Reports Found</h4>
+                                    <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Try clearing your filters or search keywords within the 100 km region.</p>
+                                    <button type="button" class="btn-feed-reset-trigger mt-4 inline-block px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer">
+                                        Reset Filters
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            cardsContainer.innerHTML = `
+                                <div class="bg-white rounded-2xl p-8 text-center border border-dashed border-slate-300">
+                                    <span class="material-symbols-outlined text-4xl text-slate-300">check_circle</span>
+                                    <h4 class="font-bold text-slate-800 text-sm mt-2">No Active Civic Issues Nearby</h4>
+                                    <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Your neighborhood looks clean and hazard-free within ${radius} km. See something amiss? Report it now.</p>
+                                    <a href="/reports/new" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-semibold hover:bg-emerald-600">
+                                        <span class="material-symbols-outlined text-base">add</span>
+                                        <span>+ Report Issue</span>
+                                    </a>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    // Update UI labels and chips
+                    updateTotalCountLabels(data.total);
+                    updateCategoryChipsUI(category);
+                    updateResetFilterVisibility({ category, status, q, sort });
+
+                    // Sentinel button / caught-up indicators
+                    if (!data.has_more) {
+                        if (fallbackBtn) fallbackBtn.classList.add('hidden');
+                        if (caughtUp) {
+                            caughtUp.classList.remove('hidden');
+                            caughtUp.classList.add('flex');
+                            const caughtUpStrong = caughtUp.querySelector('strong');
+                            if (caughtUpStrong) caughtUpStrong.textContent = data.total;
+                        }
+                        if (window._feedObserver) window._feedObserver.disconnect();
+                    } else {
+                        if (fallbackBtn) fallbackBtn.classList.remove('hidden');
+                        if (caughtUp) {
+                            caughtUp.classList.add('hidden');
+                            caughtUp.classList.remove('flex');
+                        }
+                        if (window._feedObserver && sentinel) {
+                            window._feedObserver.observe(sentinel);
+                        }
+                    }
+
+                    // Push URL to history
+                    if (pushHistory) {
+                        const newUrl = buildFeedUrl({ view, radius, sort, category, status, q, lat, lon });
+                        window.history.pushState({ view, radius, sort, category, status, q }, '', newUrl);
+                    }
+                }
+            })
+            .catch(err => {
+                cardsContainer.style.opacity = '1';
+                cardsContainer.style.pointerEvents = 'auto';
+                showFeedToast('Could not load filtered reports. Please try again.');
+            });
+        }
+
+        // Filter event listeners
+        const homeRadiusSelect = document.getElementById('home-radius-select');
+        if (homeRadiusSelect) {
+            homeRadiusSelect.addEventListener('change', function () {
+                applyFeedFilters({ radius: this.value });
+            });
+        }
+
+        const homeSortSelect = document.getElementById('home-sort-select');
+        if (homeSortSelect) {
+            homeSortSelect.addEventListener('change', function () {
+                applyFeedFilters({ sort: this.value });
+            });
+        }
+
+        const commStatusSelect = document.getElementById('community-status-select');
+        if (commStatusSelect) {
+            commStatusSelect.addEventListener('change', function () {
+                applyFeedFilters({ status: this.value });
+            });
+        }
+
+        const commSortSelect = document.getElementById('community-sort-select');
+        if (commSortSelect) {
+            commSortSelect.addEventListener('change', function () {
+                applyFeedFilters({ sort: this.value });
+            });
+        }
+
+        const commFilterForm = document.getElementById('community-filter-form');
+        if (commFilterForm) {
+            commFilterForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const commSearchInput = document.getElementById('community-search-input');
+                applyFeedFilters({ q: commSearchInput ? commSearchInput.value.trim() : '' });
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            const chip = e.target.closest('.btn-category-chip');
+            if (chip) {
+                e.preventDefault();
+                applyFeedFilters({ category: chip.dataset.category || '' });
+                return;
+            }
+
+            const resetBtn = e.target.closest('#btn-feed-reset-filters, .btn-feed-reset-trigger');
+            if (resetBtn) {
+                e.preventDefault();
+                const commSearchInput = document.getElementById('community-search-input');
+                if (commSearchInput) commSearchInput.value = '';
+                if (commStatusSelect) commStatusSelect.value = 'all';
+                if (commSortSelect) commSortSelect.value = 'distance';
+                applyFeedFilters({ category: '', status: 'all', sort: 'distance', q: '' });
+                return;
+            }
+        });
+
+        // Browser back/forward navigation
+        window.addEventListener('popstate', function (e) {
+            if (e.state) {
+                applyFeedFilters(e.state, false);
+            }
+        });
+    });
 </script>
 {% endblock %}

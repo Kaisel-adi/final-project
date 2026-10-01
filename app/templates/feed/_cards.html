@@ -1,0 +1,109 @@
+{% for r in reports %}
+<a href="{{ url_for('reports.view', report_id=r._id) }}" 
+   class="issue-card block group p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md transition-all"
+   data-report-id="{{ r._id }}"
+   data-category="{{ r.category or '' }}"
+   data-status="{{ r.status or 'Reported' }}"
+   data-likes="{{ r.upvote_count or 0 }}"
+   data-distance="{{ r._dist_km or 0.0 }}"
+   data-created-at="{{ r.created_at.isoformat() if (r.created_at and r.created_at.isoformat is defined) else (r.created_at or '') }}">
+    <!-- Top Meta Row -->
+    <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                {{ r.author_initials or 'CR' }}
+            </div>
+            <div class="min-w-0">
+                <div class="text-sm font-bold text-slate-900 truncate">{{ r.author_name or 'Resident' }}</div>
+                <div class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
+                    <span class="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
+                    <span>{{ r.relative_time }}</span>
+                    <span>•</span>
+                    <span>{{ r._dist_km }} km</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Badge -->
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+            <span class="w-2 h-2 rounded-full {% if r.status == 'Resolved' %}bg-emerald-500{% elif r.status in ['Verified', 'Complained'] %}bg-amber-500{% else %}bg-red-500{% endif %}"></span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold text-white {% if r.status == 'Resolved' %}bg-emerald-500{% elif r.status in ['Verified', 'Complained'] %}bg-amber-500{% else %}bg-red-500{% endif %}">
+                {% if r.status == 'Reported' %}pending{% elif r.status == 'Complained' %}in-progress{% else %}{{ (r.status or 'Reported')|lower }}{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Sub-header: Category & Landmark -->
+    <div class="flex items-center gap-2 flex-wrap text-xs mt-1">
+        <span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/60 font-medium text-xs">
+            {{ r.category_label }}
+        </span>
+        <span class="text-slate-500 flex items-center gap-1 text-xs min-w-0">
+            <span class="material-symbols-outlined text-sm text-slate-400">location_on</span>
+            <span class="truncate">{{ r.landmark or 'Delhi-NCR' }}</span>
+        </span>
+    </div>
+
+    <!-- Title & Description -->
+    <h4 class="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors text-sm sm:text-base leading-snug">
+        {{ r.card_title }}
+    </h4>
+    <p class="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2">
+        {{ r.card_snippet }}
+    </p>
+
+    <!-- Media Preview Thumbnail if attached -->
+    {% if r.photo_url %}
+    <div class="rounded-xl overflow-hidden bg-slate-100 border border-slate-200/60 w-full mt-1">
+        {% if r.photo_url|is_video %}
+            <!-- Absolute Lazy Video: zero network payload until user taps play -->
+            <div class="lazy-video-container relative w-full h-44 sm:h-52 bg-slate-950 flex items-center justify-center cursor-pointer group/vid select-none" data-video-src="{{ r.photo_url }}">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30 flex flex-col justify-between p-3 pointer-events-none">
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 text-white text-[11px] font-semibold backdrop-blur-md border border-white/10">
+                            <span class="material-symbols-outlined text-[13px] text-rose-500">videocam</span>
+                            <span>Video Evidence</span>
+                        </span>
+                        <span class="text-[10px] text-slate-300 font-medium bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10">
+                            Tap to stream
+                        </span>
+                    </div>
+                    <div class="self-center">
+                        <button type="button" class="btn-play-lazy-video w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-xl ring-4 ring-emerald-500/25 transition-transform group-hover/vid:scale-110 active:scale-95 cursor-pointer">
+                            <span class="material-symbols-outlined text-3xl ml-0.5">play_arrow</span>
+                        </button>
+                    </div>
+                    <div class="text-[11px] text-slate-300 flex items-center gap-1 truncate">
+                        <span class="material-symbols-outlined text-xs text-emerald-400">touch_app</span>
+                        <span>Click to load & play recording</span>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <img src="{{ r.photo_url }}" alt="Evidence" class="w-full h-44 sm:h-52 object-cover group-hover:scale-101 transition-transform" loading="lazy" decoding="async">
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Footer Interaction Bar -->
+    <div class="flex items-center justify-between pt-2.5 border-t border-slate-100 text-xs text-slate-500 font-medium mt-1">
+        <div class="flex items-center gap-4">
+            <button type="button" class="btn-feed-like flex items-center gap-1.5 text-slate-500 hover:text-rose-600 font-medium transition-colors cursor-pointer" data-report-id="{{ r._id }}" title="Upvote / Like this issue">
+                <span class="material-symbols-outlined text-base transition-transform">favorite_border</span>
+                <span class="like-count font-medium">{{ r.upvote_count }}</span>
+            </button>
+            <span class="flex items-center gap-1.5 hover:text-slate-700">
+                <span class="material-symbols-outlined text-base">chat_bubble_outline</span>
+                <span class="font-medium">{{ r.comments_count or 0 }}</span>
+            </span>
+            <button type="button" class="btn-feed-share flex items-center gap-1.5 hover:text-slate-700 cursor-pointer" data-url="{{ url_for('reports.view', report_id=r._id, _external=True) }}" data-title="{{ r.card_title }}" data-landmark="{{ r.landmark or 'Delhi-NCR' }}" data-category="{{ r.category_label }}" title="Share issue">
+                <span class="material-symbols-outlined text-base">share</span>
+                <span class="font-medium hidden xs:inline">Share</span>
+            </button>
+        </div>
+        <span class="px-3.5 py-1 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50 font-semibold text-xs transition-colors flex items-center gap-1">
+            <span>Details</span>
+        </span>
+    </div>
+</a>
+{% endfor %}

@@ -1,210 +1,596 @@
 {% extends "base.html" %}
 
-{% block title %}{{ category_label }} — GCIR{% endblock %}
+{% block title %}{{ category_label }} — Incident Details — Garuda{% endblock %}
+{% block header_title %}Report Details — #{{ report._id|string|truncate(8, True, '') }}{% endblock %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 1.5rem auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <a href="{{ url_for('feed.feed_view') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">
-            &larr; Back to Nearby Feed
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Top Action Navigation -->
+    <div class="flex items-center justify-between gap-4">
+        <a href="{{ url_for('feed.feed_view') }}" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">
+            <span class="material-symbols-outlined text-lg">arrow_back</span>
+            <span>Back to Community Feed</span>
         </a>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <span class="badge badge-{{ report.status }}">{{ report.status }}</span>
+
+        <div class="flex items-center gap-2">
+            <!-- Status Pill -->
+            <span class="status-pill status-pill-{{ (report.status or 'Reported')|lower }} text-xs py-1 px-3">
+                <span class="status-pill-dot"></span>
+                <span>{{ report.status }}</span>
+            </span>
+
             {% if report.is_flagged %}
-                <span class="badge badge-danger">Flagged for Review</span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                Flagged for Review
+            </span>
             {% endif %}
         </div>
     </div>
 
-    <div class="card" style="padding: 0; overflow: hidden;">
-        <div class="report-detail-layout">
-            <!-- Left: Photo/Video Evidence -->
-            <div class="report-detail-media">
+    <!-- Main Detail Card -->
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="report-detail-layout grid grid-cols-1 md:grid-cols-2">
+            <!-- Left: High-Res Photo / Video Evidence -->
+            <div class="report-detail-media bg-slate-950 flex items-center justify-center relative min-h-[300px] md:min-h-[420px] overflow-hidden">
                 {% if report.photo_url|is_video %}
-                    <video src="{{ report.photo_url }}" controls playsinline style="max-width: 100%; max-height: 480px; width: 100%; background: #000;"></video>
-                    <span style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
-                        🎥 Video Evidence
+                    <video src="{{ report.photo_url }}" controls playsinline preload="none" class="w-full h-full max-h-[480px] object-contain">
+                        Your browser does not support HTML5 video.
+                    </video>
+                    <span class="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-rose-500">videocam</span> Video Evidence
                     </span>
                 {% else %}
-                    <img src="{{ report.photo_url }}" alt="Evidence Photo" loading="lazy" decoding="async" style="max-width: 100%; max-height: 480px; object-fit: contain;">
-                    <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">
-                        Verified Photo
+                    <img src="{{ report.photo_url }}" alt="Verified Issue Evidence" class="w-full h-full max-h-[480px] object-contain" loading="lazy" decoding="async">
+                    <span class="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">photo_camera</span> Photo Evidence
                     </span>
                 {% endif %}
             </div>
 
-            <!-- Right: Details, Upvotes, & Actions -->
-            <div class="report-detail-content">
+            <!-- Right: Metadata, Verification & Social Actions -->
+            <div class="report-detail-content p-6 flex flex-col justify-between space-y-6">
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div>
-                            <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">
-                                {{ category_label }}
-                            </span>
-                            <h1 style="font-size: 1.4rem; margin-top: 0.2rem; color: var(--text-primary);">
-                                Incident #{{ report._id|string|truncate(10, True, '') }}
-                            </h1>
-                        </div>
+                    <!-- Category Badge & Landmark -->
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/60 font-bold text-xs">
+                            {{ category_label }}
+                        </span>
+                        <span class="text-xs font-medium text-slate-500 flex items-center gap-0.5">
+                            <span class="material-symbols-outlined text-sm text-slate-400">pin_drop</span>
+                            <span>{{ report.landmark or 'Delhi-NCR Locality' }}</span>
+                        </span>
                     </div>
 
-                    <p style="margin-top: 1rem; font-size: 0.95rem; color: #334155; line-height: 1.6;">
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">
+                        {{ report.description.split('\n')[0][:75] }}
+                    </h1>
+
+                    <p class="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
                         {{ report.description }}
                     </p>
 
-                    <div style="margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-secondary);">
-                        <div>Reported by: <strong>{{ author_name }}</strong></div>
-                        <div>Date: {{ report.created_at.strftime('%d %b %Y, %I:%M %p') if report.created_at else 'Recent' }}</div>
-                        <div>Coordinates: {{ report.location.coordinates[1]|round(5) }}, {{ report.location.coordinates[0]|round(5) }}</div>
-                    </div>
-
-                    <!-- Upvote & Verification Progress -->
-                    <div style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <span style="font-weight: 600; font-size: 0.9rem;">Community Verification</span>
-                            <span style="font-weight: 700; color: var(--primary);">{{ report.upvote_count }} / 10 Upvotes</span>
+                    <div class="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-sm text-slate-400">person</span>
+                            <span>Reported by: <strong>{{ author_name }}</strong></span>
                         </div>
-                        
-                        <!-- Progress bar -->
+                        <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-sm text-slate-400">calendar_today</span>
+                            <span>Date: {{ report.created_at.strftime('%d %b %Y, %I:%M %p') if report.created_at else 'Recent' }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-sm text-slate-400">my_location</span>
+                            <span>GPS: {{ report.location.coordinates[1]|round(5) }}, {{ report.location.coordinates[0]|round(5) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upvote Verification Bar OR Post-Resolution Star Rating Widget -->
+                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+                    {% if report.status != 'Resolved' %}
+                        <!-- Standard Community Verification Flow -->
+                        <div class="flex justify-between items-center mb-2 text-xs">
+                            <span class="font-bold text-slate-700 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm text-emerald-600">verified</span>
+                                <span>Community Verification</span>
+                            </span>
+                            <span id="upvote-count-text" class="font-bold text-emerald-600">{{ report.upvote_count }} / 10 Upvotes</span>
+                        </div>
+
                         {% set progress = (report.upvote_count / 10.0 * 100)|int if report.upvote_count < 10 else 100 %}
-                        <div class="progress-bar-track">
-                            <div class="progress-bar-fill {% if report.upvote_count >= 10 %}fill-success{% else %}fill-primary{% endif %}" style="width: {{ progress }}%;"></div>
+                        <div class="progress-bar-track w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-3">
+                            <div class="progress-bar-fill {% if report.upvote_count >= 10 %}fill-success bg-emerald-500{% else %}fill-primary bg-emerald-500{% endif %} h-full rounded-full transition-all duration-300" style="width: {{ progress }}%;"></div>
                         </div>
 
                         {% if current_user.is_authenticated %}
                             {% if is_author %}
-                                <div style="font-size: 0.82rem; color: var(--text-secondary); text-align: center;">
-                                    ℹ️ You reported this issue. Community members will verify it.
+                                <div class="text-center py-2 text-xs text-slate-500 font-medium">
+                                    ℹ️ You reported this issue. Community neighbors will verify it.
                                 </div>
                             {% elif has_upvoted %}
-                                <div style="font-size: 0.85rem; color: var(--success); font-weight: 600; text-align: center;">
-                                    ✓ You have verified this issue.
+                                <div class="text-center py-2 text-xs font-bold text-emerald-700 bg-emerald-100/60 rounded-xl">
+                                    ✓ You have verified this civic issue in your neighborhood.
                                 </div>
                             {% else %}
-                                <form method="POST" action="{{ url_for('reports.upvote', report_id=report._id) }}">
+                                <form id="form-upvote-detail" method="POST" action="{{ url_for('reports.upvote', report_id=report._id) }}">
                                     <input type="hidden" name="user_lat" id="vote_user_lat">
                                     <input type="hidden" name="user_lon" id="vote_user_lon">
-                                    <button type="submit" class="btn btn-primary" style="width: 100%;">
-                                        👍 Upvote & Verify Issue
+                                    <button type="submit" id="btn-upvote-submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5">
+                                        <span class="material-symbols-outlined text-base">thumb_up</span>
+                                        <span>Upvote & Verify Incident</span>
                                     </button>
                                 </form>
                             {% endif %}
                         {% else %}
-                            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem;">
+                            <a href="{{ url_for('auth.login') }}" class="block w-full text-center py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl shadow-sm">
                                 Log in to verify this issue
                             </a>
                         {% endif %}
-                    </div>
+
+                    {% else %}
+                        <!-- POST-RESOLUTION STAR RATING WIDGET (Confirmed in UI.md) -->
+                        <div class="text-center space-y-2.5">
+                            <div class="flex items-center justify-center gap-1 text-xs font-bold text-emerald-800">
+                                <span class="material-symbols-outlined text-base text-emerald-600">task_alt</span>
+                                <span>Issue Marked Resolved</span>
+                            </div>
+                            <p class="text-xs text-slate-500">Rate the quality of the municipal resolution:</p>
+
+                            <!-- Star Rating Controls -->
+                            <div class="star-rating-container flex items-center justify-center gap-1" id="star-rating-widget">
+                                {% for i in range(1, 6) %}
+                                <button type="button" class="star-btn p-1 text-2xl transition-transform active:scale-125 focus:outline-none" data-value="{{ i }}" aria-label="Rate {{ i }} stars">
+                                    <span class="material-symbols-outlined text-3xl {% if user_rating and user_rating >= i %}text-amber-400{% else %}text-slate-300 hover:text-amber-400{% endif %}">star</span>
+                                </button>
+                                {% endfor %}
+                            </div>
+
+                            <div class="text-[11px] text-slate-500" id="rating-score-display">
+                                {% if rating_count > 0 %}
+                                    Average: <strong class="text-slate-800 text-xs">★ {{ avg_rating }} / 5.0</strong> ({{ rating_count }} community rating{% if rating_count != 1 %}s{% endif %})
+                                {% else %}
+                                    Tap a star to rate (or hold for half-star)
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
 
                 <!-- Complaint Unlock Banner -->
-                <div style="margin-top: 1.5rem;">
-                    {% if report.status in ['Verified', 'Complained', 'Resolved'] %}
-                        <a href="{{ url_for('complaints.draft_view', report_id=report._id) }}" class="btn btn-success" style="width: 100%; font-size: 1rem; padding: 0.75rem;">
-                            📋 View & Send Complaint Draft &rarr;
+                {% if report.status in ['Verified', 'Complained', 'Resolved'] %}
+                <a href="{{ url_for('complaints.draft_view', report_id=report._id) }}" class="flex items-center justify-center gap-2 w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all active:scale-98">
+                    <span class="material-symbols-outlined text-lg">description</span>
+                    <span>View & Dispatch MCD Formal Complaint Letter &rarr;</span>
+                </a>
+                {% endif %}
+
+                <!-- Social Sharing & Flagging Row -->
+                <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium text-slate-400">Share:</span>
+                        <!-- WhatsApp -->
+                        <a href="https://api.whatsapp.com/send?text={{ ('Civic Issue Reported: ' + report.description[:60] + '... View on Garuda: ' + request.url)|urlencode }}" 
+                           target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors" title="Share via WhatsApp">
+                            <span class="material-symbols-outlined text-sm">chat</span>
                         </a>
-                        <p style="font-size: 0.78rem; color: var(--success); text-align: center; margin-top: 0.35rem; font-weight: 600;">
-                            ✓ Verified by community. Ready for official submission!
-                        </p>
-                    {% else %}
-                        <div style="background: #f1f5f9; padding: 0.75rem; border-radius: 6px; text-align: center; font-size: 0.85rem; color: var(--text-secondary);">
-                            🔒 Complaint drafting unlocks after <strong>10 verified community upvotes</strong>.
-                        </div>
+                        <!-- Twitter / X -->
+                        <a href="https://twitter.com/intent/tweet?text={{ ('Civic Issue Reported: ' + report.description[:60] + '... View on Garuda:')|urlencode }}&url={{ request.url|urlencode }}" 
+                           target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors" title="Share on X">
+                            <span class="material-symbols-outlined text-sm">share</span>
+                        </a>
+                        <!-- Copy Link -->
+                        <button type="button" onclick="navigator.clipboard.writeText(window.location.href); alert('Link copied to clipboard!');" 
+                                class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors" title="Copy Link">
+                            <span class="material-symbols-outlined text-sm">link</span>
+                        </button>
+                    </div>
+
+                    {% if current_user.is_authenticated and not report.is_flagged %}
+                    <form method="POST" action="{{ url_for('reports.flag', report_id=report._id) }}" onsubmit="return confirm('Flag this report for moderator review?');" class="inline">
+                        <input type="hidden" name="reason" value="Citizen report flagged for moderation">
+                        <button type="submit" class="text-slate-400 hover:text-rose-500 flex items-center gap-0.5 font-medium transition-colors">
+                            <span class="material-symbols-outlined text-xs">flag</span>
+                            <span>Flag</span>
+                        </button>
+                    </form>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Mini Map & Nearby Corroboration -->
-    <div class="report-detail-grid-bottom">
-        <div class="card" style="margin-bottom: 0;">
-            <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">Location on Map</h3>
-            <div style="height: 220px; border-radius: 8px; overflow: hidden;">
-                <div id="detail-map"></div>
+    <!-- Map & Corroborating Reports Grid (Map 3) -->
+    <div class="report-detail-grid-bottom grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Focused Location Pinpoint Map (Map 3) -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-emerald-500 text-base">map</span>
+                    <span>Issue Location Pinpoint</span>
+                </h3>
+                <span class="text-xs text-slate-400 font-medium">{{ report.location.coordinates[1]|round(4) }}, {{ report.location.coordinates[0]|round(4) }}</span>
             </div>
+            <!-- Leaflet Container -->
+            <div id="detail-map-canvas" class="h-56 rounded-2xl overflow-hidden border border-slate-100"></div>
         </div>
 
-        <div class="card" style="margin-bottom: 0;">
-            <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">
-                Corroborating Reports (within 200m): {{ corroborating_count }}
+        <!-- Corroborating Nearby Reports -->
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm space-y-3">
+            <h3 class="font-bold text-slate-900 text-sm flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-teal-600 text-base">near_me</span>
+                    <span>Nearby Corroboration (within 200m)</span>
+                </span>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">{{ corroborating_count }}</span>
             </h3>
-            {% if nearby_reports %}
-                <ul style="list-style: none; font-size: 0.85rem;">
-                    {% for nr in nearby_reports %}
-                        <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);">
-                            <a href="{{ url_for('reports.view', report_id=nr._id) }}" style="color: var(--primary); text-decoration: none; font-weight: 500;">
-                                {{ nr.category|title }}: {{ nr.description[:60] }}...
-                            </a>
-                            <span class="badge badge-{{ nr.status }}" style="font-size: 0.7rem; float: right;">{{ nr.status }}</span>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 1rem;">
-                    No other civic issues recorded within 200 meters.
-                </p>
-            {% endif %}
 
-            {% if current_user.is_authenticated and not report.is_flagged %}
-                <div style="margin-top: 1.5rem; text-align: right;">
-                    <form method="POST" action="{{ url_for('reports.flag', report_id=report._id) }}" onsubmit="return confirm('Flag this post for moderator review?');" style="display: inline;">
-                        <input type="hidden" name="reason" value="Citizen report flagged for moderation">
-                        <button type="submit" style="background: none; border: none; color: #94a3b8; font-size: 0.78rem; cursor: pointer; text-decoration: underline;">
-                            🚩 Report / Flag Content
-                        </button>
-                    </form>
+            {% if nearby_reports %}
+            <div class="divide-y divide-slate-100 text-xs space-y-2">
+                {% for nr in nearby_reports %}
+                <div class="pt-2 flex items-center justify-between">
+                    <a href="{{ url_for('reports.view', report_id=nr._id) }}" class="font-semibold text-slate-800 hover:text-emerald-600 truncate max-w-[220px]">
+                        {{ nr.category|title }}: {{ nr.description[:45] }}...
+                    </a>
+                    <span class="status-pill status-pill-{{ nr.status|lower }} text-[10px]">
+                        {{ nr.status }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-xs text-slate-400 pt-3 text-center">
+                No other civic issues recorded within 200 meters of this pin.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- DOWN-SCROLL COMMUNITY COMMENTS STREAM (Confirmed in UI.md)               -->
+    <!-- ========================================================================= -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                <span class="material-symbols-outlined text-teal-600">chat_bubble</span>
+                <span>Community Discussion & Updates</span>
+            </h3>
+            <span id="comments-count-badge" class="text-xs font-semibold text-slate-500">{{ comments|length if comments else 0 }} Comments</span>
+        </div>
+
+        <!-- Comment Input Box -->
+        {% if current_user.is_authenticated %}
+        <form id="form-comment-detail" method="POST" action="{{ url_for('reports.add_comment', report_id=report._id) }}" class="space-y-3">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-full bg-teal-100 text-teal-700 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {{ current_user.name[:2]|upper }}
+                </div>
+                <div class="flex-1">
+                    <textarea id="comment-input" name="comment" rows="2" required placeholder="Add a neighborhood update or clarification on this issue..." 
+                              class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" id="btn-submit-comment" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95">
+                    Post Comment
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="bg-slate-50 p-4 rounded-2xl text-center text-xs text-slate-600">
+            <a href="{{ url_for('auth.login') }}" class="font-bold text-emerald-600 hover:underline">Log in</a> to join the community discussion.
+        </div>
+        {% endif %}
+
+        <!-- Comments Stream -->
+        <div id="comments-stream-container" class="space-y-4 pt-2">
+            {% if comments %}
+                {% for c in comments %}
+                <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                        {{ c.user_initials or 'CR' }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold text-slate-900">{{ c.user_name }}</span>
+                            {% if c.is_moderator %}
+                            <span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">🛡️ Moderator</span>
+                            {% endif %}
+                            <span class="text-[11px] text-slate-400">• {{ c.relative_time }}</span>
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed">{{ c.comment }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div id="comments-empty-placeholder" class="py-6 text-center text-slate-400 text-xs">
+                    No community comments yet. Be the first to share an update about this incident.
                 </div>
             {% endif %}
         </div>
     </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const reportLat = {{ report.location.coordinates[1] }};
-    const reportLon = {{ report.location.coordinates[0] }};
+    document.addEventListener('DOMContentLoaded', function () {
+        const reportLat = {{ report.location.coordinates[1] }};
+        const reportLon = {{ report.location.coordinates[0] }};
 
-    function createSvgPin(colorHex) {
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="42" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.5"/>
-                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.9"/>
-                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
-            </svg>
-        `;
-        return L.divIcon({
-            className: 'custom-map-pin',
-            html: svg,
-            iconSize: [28, 42],
-            iconAnchor: [14, 42],
-            popupAnchor: [0, -38]
-        });
-    }
+        // 1. Initialize Focused Pinpoint Map (Map 3)
+        if (document.getElementById('detail-map-canvas') && window.GCIRMaps) {
+            window.GCIRMaps.initPinpointMap('detail-map-canvas', {
+                coords: [reportLat, reportLon],
+                isPicker: false,
+                status: "{{ report.status }}"
+            });
+        }
 
-    const map = L.map('detail-map').setView([reportLat, reportLon], 15);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        keepBuffer: 2,
-        updateWhenIdle: true,
-        updateWhenZooming: false
-    }).addTo(map);
+        // 2. Capture Voter Coordinates for Geolocation Verification
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                const latEl = document.getElementById('vote_user_lat');
+                const lonEl = document.getElementById('vote_user_lon');
+                if (latEl && lonEl) {
+                    latEl.value = pos.coords.latitude;
+                    lonEl.value = pos.coords.longitude;
+                }
+            });
+        }
 
-    L.marker([reportLat, reportLon], { icon: createSvgPin('#1a73e8') }).addTo(map)
-        .bindPopup("<strong>{{ category_label }}</strong><br/>{{ report.description[:60] }}")
-        .openPopup();
+        // 3. Post-Resolution Interactive Star Rating Logic
+        const ratingWidget = document.getElementById('star-rating-widget');
+        if (ratingWidget) {
+            const starBtns = ratingWidget.querySelectorAll('.star-btn');
+            let holdTimeout = null;
+            let isHolding = false;
 
-    // Softly capture voter coordinates for proximity check if available
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(function(pos) {
-            const latEl = document.getElementById('vote_user_lat');
-            const lonEl = document.getElementById('vote_user_lon');
-            if (latEl && lonEl) {
-                latEl.value = pos.coords.latitude;
-                lonEl.value = pos.coords.longitude;
+            starBtns.forEach(btn => {
+                const val = parseFloat(btn.dataset.value);
+
+                // Press and hold for half-star
+                btn.addEventListener('pointerdown', () => {
+                    isHolding = false;
+                    holdTimeout = setTimeout(() => {
+                        isHolding = true;
+                        submitRating(val - 0.5);
+                    }, 450);
+                });
+
+                btn.addEventListener('pointerup', () => {
+                    clearTimeout(holdTimeout);
+                    if (!isHolding) {
+                        submitRating(val);
+                    }
+                });
+
+                btn.addEventListener('pointercancel', () => clearTimeout(holdTimeout));
+            });
+
+            function submitRating(stars) {
+                fetch("{{ url_for('reports.rate', report_id=report._id) }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ rating: stars })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        // Highlight stars
+                        starBtns.forEach(b => {
+                            const bVal = parseFloat(b.dataset.value);
+                            const icon = b.querySelector('.material-symbols-outlined');
+                            if (bVal <= data.user_rating) {
+                                icon.classList.add('text-amber-400');
+                                icon.classList.remove('text-slate-300');
+                            } else {
+                                icon.classList.remove('text-amber-400');
+                                icon.classList.add('text-slate-300');
+                            }
+                        });
+
+                        const scoreDisplay = document.getElementById('rating-score-display');
+                        if (scoreDisplay) {
+                            scoreDisplay.innerHTML = `Your rating: <strong>${data.user_rating} ★</strong> | Live Average: <strong class="text-slate-800 text-xs">★ ${data.avg_rating} / 5.0</strong> (${data.rating_count} ratings)`;
+                        }
+                    } else if (data.error) {
+                        alert(data.error);
+                    }
+                })
+                .catch(err => console.error('Rating failed:', err));
             }
-        });
-    }
+        }
+
+        // 3. Instant Upvote & Verification (AJAX without page reload)
+        const formUpvote = document.getElementById('form-upvote-detail');
+        if (formUpvote) {
+            formUpvote.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const btn = document.getElementById('btn-upvote-submit');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-75', 'scale-95');
+                }
+
+                function sendUpvote(lat, lon) {
+                    const formData = new FormData(formUpvote);
+                    if (lat && lon) {
+                        formData.set('user_lat', lat);
+                        formData.set('user_lon', lon);
+                    }
+
+                    fetch(formUpvote.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update count text
+                            const countEl = document.getElementById('upvote-count-text');
+                            if (countEl) {
+                                countEl.textContent = `${data.upvote_count} / 10 Upvotes`;
+                            }
+
+                            // Update progress bar
+                            const fillEl = document.querySelector('.progress-bar-fill');
+                            const progress = data.upvote_count >= 10 ? 100 : Math.round((data.upvote_count / 10) * 100);
+                            if (fillEl) {
+                                fillEl.style.width = progress + '%';
+                                if (data.upvote_count >= 10) {
+                                    fillEl.classList.remove('fill-primary');
+                                    fillEl.classList.add('fill-success');
+                                }
+                            }
+
+                            // Update status pill if verified
+                            if (data.status === 'Verified') {
+                                const statusPill = document.querySelector('.status-pill');
+                                if (statusPill) {
+                                    statusPill.className = 'status-pill status-verified';
+                                    statusPill.textContent = 'Verified';
+                                }
+                            }
+
+                            // Replace form with verified notice
+                            const parentBox = formUpvote.parentElement;
+                            formUpvote.remove();
+                            const verifiedNotice = document.createElement('div');
+                            verifiedNotice.className = 'text-center py-2 text-xs font-bold text-emerald-700 bg-emerald-100/60 rounded-xl animate-fade-in flex items-center justify-center gap-1.5';
+                            verifiedNotice.innerHTML = `
+                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                                <span>✓ You have verified this civic issue in your neighborhood.</span>
+                            `;
+                            parentBox.appendChild(verifiedNotice);
+                        } else {
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.classList.remove('opacity-75', 'scale-95');
+                            }
+                            alert(data.error || 'Could not record verification.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Upvote failed:', err);
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-75', 'scale-95');
+                        }
+                    });
+                }
+
+                if ('geolocation' in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        pos => sendUpvote(pos.coords.latitude, pos.coords.longitude),
+                        () => sendUpvote(null, null),
+                        { timeout: 2000 }
+                    );
+                } else {
+                    sendUpvote(null, null);
+                }
+            });
+        }
+
+        // 4. Instant Comments Submission (AJAX without page reload)
+        const formComment = document.getElementById('form-comment-detail');
+        if (formComment) {
+            formComment.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const textarea = document.getElementById('comment-input');
+                const commentText = (textarea ? textarea.value : '').trim();
+                if (!commentText || commentText.length < 2) return;
+
+                const submitBtn = document.getElementById('btn-submit-comment');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Posting...';
+                }
+
+                const formData = new FormData(formComment);
+
+                fetch(formComment.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Post Comment';
+                    }
+                    if (data.success && data.comment) {
+                        if (textarea) textarea.value = '';
+
+                        // Update comments count badge
+                        const countBadge = document.getElementById('comments-count-badge');
+                        if (countBadge) {
+                            countBadge.textContent = `${data.comments_count} Comments`;
+                        }
+
+                        // Remove empty placeholder if present
+                        const placeholder = document.getElementById('comments-empty-placeholder');
+                        if (placeholder) placeholder.remove();
+
+                        // Get stream container
+                        let streamContainer = document.getElementById('comments-stream-container');
+                        if (!streamContainer) {
+                            streamContainer = document.createElement('div');
+                            streamContainer.id = 'comments-stream-container';
+                            streamContainer.className = 'space-y-4 pt-2';
+                            formComment.parentElement.appendChild(streamContainer);
+                        }
+
+                        const commentCard = document.createElement('div');
+                        commentCard.className = 'flex items-start gap-3 p-3.5 rounded-2xl bg-emerald-50/40 border border-emerald-200 animate-fade-in transition-all';
+                        
+                        const safeComment = data.comment.comment
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/'/g, "&#039;");
+
+                        commentCard.innerHTML = `
+                            <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                ${data.comment.user_initials || 'CR'}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-bold text-slate-900">${data.comment.user_name}</span>
+                                    ${data.comment.is_moderator ? '<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">🛡️ Moderator</span>' : ''}
+                                    <span class="text-[11px] text-emerald-600 font-semibold">• Just now</span>
+                                </div>
+                                <p class="text-xs text-slate-800 leading-relaxed">${safeComment}</p>
+                            </div>
+                        `;
+
+                        // Prepend new comment to the top of comments stream
+                        streamContainer.insertBefore(commentCard, streamContainer.firstChild);
+                        commentCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } else {
+                        alert(data.error || 'Could not post comment.');
+                    }
+                })
+                .catch(err => {
+                    console.error('Comment failed:', err);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Post Comment';
+                    }
+                });
+            });
+        }
+    });
 </script>
 {% endblock %}

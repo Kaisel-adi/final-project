@@ -1,0 +1,44 @@
+<!-- Garuda Feed Shimmer Skeleton Partial -->
+{% for i in range(count|default(2)) %}
+<div class="feed-skeleton-card block p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm animate-pulse space-y-3.5 select-none pointer-events-none">
+    <!-- Top Row: User Avatar & Status Badge -->
+    <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-slate-200/90"></div>
+            <div class="space-y-1.5">
+                <div class="w-24 h-3.5 bg-slate-200 rounded-md"></div>
+                <div class="w-32 h-2.5 bg-slate-100 rounded"></div>
+            </div>
+        </div>
+        <div class="w-20 h-5 bg-slate-200/80 rounded-full"></div>
+    </div>
+
+    <!-- Category & Landmark -->
+    <div class="flex items-center gap-2">
+        <div class="w-24 h-4 bg-emerald-50 rounded-full border border-emerald-100/50"></div>
+        <div class="w-32 h-4 bg-slate-100 rounded-full"></div>
+    </div>
+
+    <!-- Title & Description Snippet -->
+    <div class="space-y-2 pt-1">
+        <div class="w-3/4 h-4 bg-slate-200 rounded-md"></div>
+        <div class="w-full h-3 bg-slate-100 rounded"></div>
+        <div class="w-5/6 h-3 bg-slate-100 rounded"></div>
+    </div>
+
+    <!-- Media Thumbnail Placeholder -->
+    <div class="w-full h-44 sm:h-52 bg-slate-200/80 rounded-xl relative overflow-hidden flex items-center justify-center">
+        <span class="material-symbols-outlined text-3xl text-slate-300">image</span>
+    </div>
+
+    <!-- Footer Action Bar -->
+    <div class="flex items-center justify-between pt-2.5 border-t border-slate-100">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-4 bg-slate-100 rounded-md"></div>
+            <div class="w-10 h-4 bg-slate-100 rounded-md"></div>
+            <div class="w-14 h-4 bg-slate-100 rounded-md"></div>
+        </div>
+        <div class="w-16 h-6 bg-slate-100 rounded-lg"></div>
+    </div>
+</div>
+{% endfor %}
