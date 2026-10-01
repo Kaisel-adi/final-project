@@ -511,7 +511,7 @@
         </button>
     </div>
 
-    <!-- Leaflet JS & GCIR Maps Decorator -->
+    <!-- Leaflet JS & Garuda Maps Decorator -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ url_for('static', filename='js/maps.js') }}"></script>
     <script>
@@ -566,10 +566,10 @@
 
             window.openShareSheet = function(data = {}) {
                 const url = data.url || window.location.href;
-                const title = data.title || 'Civic Issue Report | GCIR';
+                const title = data.title || 'Civic Issue Report | Garuda';
                 const landmark = data.landmark || 'Delhi-NCR';
                 const category = data.category || 'Civic Issue';
-                const shareMessage = `Check out this civic issue: "${title}" located at ${landmark}. Verify and support on GCIR: ${url}`;
+                const shareMessage = `Check out this civic issue: "${title}" located at ${landmark}. Verify and support on Garuda: ${url}`;
 
                 currentShareData = { url, title, landmark, category, shareMessage };
 

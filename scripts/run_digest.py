@@ -1,5 +1,5 @@
 """
-Standalone Digest Runner for GCIR.
+Standalone Digest Runner for Garuda.
 Can be executed directly from cron, Windows Task Scheduler, or CLI to dispatch periodic civic issue digests.
 
 Usage:
@@ -20,7 +20,7 @@ from app.jobs.digest import dispatch_digest
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run periodic GCIR neighborhood civic issue digest.")
+    parser = argparse.ArgumentParser(description="Run periodic Garuda neighborhood civic issue digest.")
     parser.add_argument("--hours", type=int, default=24, help="Lookback window in hours for unverified issues (default: 24)")
     args = parser.parse_args()
 
@@ -28,7 +28,7 @@ def main():
 
     with app.app_context():
         print("=" * 60)
-        print("Running GCIR Civic Verification Digest Job")
+        print("Running Garuda Civic Verification Digest Job")
         print(f"Lookback window: {args.hours} hours")
         print("=" * 60)
 

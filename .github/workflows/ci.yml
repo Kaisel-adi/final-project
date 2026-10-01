@@ -1,4 +1,4 @@
-name: GCIR CI Test Suite
+name: Garuda CI Test Suite
 
 on:
   push:

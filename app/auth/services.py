@@ -184,7 +184,7 @@ def verify_and_complete_signup(email: str, entered_otp: str, db=None) -> tuple[U
     db.pending_signups.delete_one({"email": email_clean})
     logger.info(f"User {email_clean} successfully verified and activated.")
 
-    return User(user_doc), "Email verified successfully! Welcome to GCIR."
+    return User(user_doc), "Email verified successfully! Welcome to Garuda."
 
 
 def resend_verification_otp(email: str, db=None) -> tuple[bool, str]:

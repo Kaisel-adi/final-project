@@ -22,7 +22,7 @@ def create_app(config_class=Config):
 
     # Setup Flask-Login
     login_manager = LoginManager()
-    login_manager.login_view = "auth.login"
+    login_manager.login_view = "auth.login"  # type: ignore[assignment]  # Flask-Login's untyped attribute is inferred as None
     login_manager.login_message = "Please log in to access this page."
     login_manager.login_message_category = "warning"
     login_manager.session_protection = "basic"

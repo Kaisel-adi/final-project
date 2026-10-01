@@ -1,6 +1,6 @@
-# Walkthrough: Geo-Tagged Civic Issue Reporter (GCIR)
+# Walkthrough: Garuda — Civic Grievance & Neighborhood Tracking Platform
 
-The **Geo-Tagged Civic Issue Reporter (GCIR)** has been built from scratch based on the approved architecture and PRD v2 specifications.
+The **Garuda — Civic Grievance & Neighborhood Tracking Platform** has been built from scratch based on the approved architecture and PRD v2 specifications.
 
 ---
 

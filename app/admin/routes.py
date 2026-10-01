@@ -406,12 +406,12 @@ def test_email_dispatch():
     backend = get_effective_email_backend()
 
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    subject = "GCIR Admin Diagnostic — SMTP & Email Delivery Test"
+    subject = "Garuda Admin Diagnostic — SMTP & Email Delivery Test"
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 560px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <h2 style="color: #1a73e8; margin-top: 0;">GCIR Email Dispatch Confirmed</h2>
+        <h2 style="color: #1a73e8; margin-top: 0;">Garuda Email Dispatch Confirmed</h2>
         <p>Hello <strong>{current_user.name}</strong>,</p>
-        <p>This email confirms that your GCIR email delivery backend is active and operational on your server.</p>
+        <p>This email confirms that your Garuda email delivery backend is active and operational on your server.</p>
         <div style="background: #f8fafc; border-left: 4px solid #1a73e8; padding: 12px; margin: 16px 0; border-radius: 4px;">
             <strong>Diagnostic Details:</strong><br/>
             <span>Active Backend: <code>{backend.upper()}</code></span><br/>
@@ -421,7 +421,7 @@ def test_email_dispatch():
         <p style="font-size: 13px; color: #64748b;">Dispatched from the Civic Administration Dashboard.</p>
     </div>
     """
-    text_body = f"Hello {current_user.name},\n\nGCIR Email delivery backend ({backend.upper()}) is operational.\nRecipient: {recipient}\nTimestamp: {now_str}"
+    text_body = f"Hello {current_user.name},\n\nGaruda Email delivery backend ({backend.upper()}) is operational.\nRecipient: {recipient}\nTimestamp: {now_str}"
 
     success, msg = send_email_with_status(recipient, subject, html_body, text_body)
     if success:

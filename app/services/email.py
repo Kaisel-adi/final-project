@@ -81,14 +81,14 @@ def get_effective_email_backend() -> str:
 def _cached_sanitize_from_email(clean_from: str, backend: str, clean_user: str) -> str:
     if backend == "smtp" and clean_user:
         if not clean_from or "@gcir.local" in clean_from or "@" not in clean_from:
-            return f"GCIR Civic Alerts <{clean_user}>"
+            return f"Garuda Civic Alerts <{clean_user}>"
         if "<" in clean_from and ">" in clean_from:
             display_name = clean_from.split("<")[0].strip()
-            return f"{display_name} <{clean_user}>" if display_name else f"GCIR Civic Alerts <{clean_user}>"
+            return f"{display_name} <{clean_user}>" if display_name else f"Garuda Civic Alerts <{clean_user}>"
         if clean_from.lower() != clean_user.lower():
-            return f"GCIR Civic Alerts <{clean_user}>"
+            return f"Garuda Civic Alerts <{clean_user}>"
 
-    return clean_from or "GCIR Civic Alerts <gcir.alerts@gmail.com>"
+    return clean_from or "Garuda Civic Alerts <gcir.alerts@gmail.com>"
 
 
 def _sanitize_from_email(from_email: str, backend: str, smtp_user: str) -> str:
@@ -196,7 +196,7 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
     Dispatches email and returns a tuple: (success: bool, status_message: str).
     """
     backend = get_effective_email_backend()
-    from_raw = _clean_str(_get_email_config("EMAIL_FROM", "GCIR Civic Alerts <gcir.alerts@gmail.com>"))
+    from_raw = _clean_str(_get_email_config("EMAIL_FROM", "Garuda Civic Alerts <gcir.alerts@gmail.com>"))
     smtp_user = _clean_str(_get_email_config("SMTP_USER", ""))
     from_email = _sanitize_from_email(from_raw, backend, smtp_user)
 
@@ -273,10 +273,10 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
             logger.error(err)
             return False, err
         try:
-            sender_name = "GCIR Civic Alerts"
+            sender_name = "Garuda Civic Alerts"
             sender_email = from_email
             if "<" in from_email and ">" in from_email:
-                sender_name = from_email.split("<")[0].strip() or "GCIR Civic Alerts"
+                sender_name = from_email.split("<")[0].strip() or "Garuda Civic Alerts"
                 sender_email = from_email.split("<")[-1].replace(">", "").strip()
 
             payload = {
@@ -365,7 +365,7 @@ def send_email_async(
     Preserves Flask application context if active.
     """
     from flask import current_app, has_app_context
-    app = current_app._get_current_object() if has_app_context() else None
+    app = current_app._get_current_object() if has_app_context() else None # type: ignore
 
     def _task():
         if app:

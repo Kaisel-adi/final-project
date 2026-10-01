@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: gcir-civic-reporter
+    name: garuda
     runtime: python
     buildCommand: pip install -r requirements.txt && python scripts/etl_boundaries.py
     startCommand: gunicorn wsgi:app

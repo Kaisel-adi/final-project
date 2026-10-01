@@ -1,5 +1,5 @@
 /**
- * GCIR Maps Decorator System
+ * Garuda Maps Decorator System
  * Modern, mobile-first Leaflet map utilities providing:
  *  1. Locality / Subscale Map (Dashboard widget with radius circle & full-screen expand)
  *  2. Interactive Overview Map (Full-bleed with clustering & mobile Action Sheet preview)
