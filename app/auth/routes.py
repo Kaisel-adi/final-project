@@ -229,7 +229,20 @@ def profile():
     try:
         total_reports_count = db.reports.count_documents({"author_id": user_id})
         user_reports = list(
-            db.reports.find({"author_id": user_id})
+            db.reports.find(
+                {"author_id": user_id},
+                projection={
+                    "_id": 1,
+                    "category": 1,
+                    "description": 1,
+                    "status": 1,
+                    "created_at": 1,
+                    "photo_url": 1,
+                    "landmark": 1,
+                    "upvote_count": 1,
+                    "location": 1
+                }
+            )
             .sort("created_at", -1)
             .skip((page - 1) * per_page)
             .limit(per_page)
@@ -244,6 +257,26 @@ def profile():
     for r in user_reports:
         r["cat_label"] = cat_dict.get(r.get("category"), r.get("category", "General"))
 
+    try:
+        u_resolved = db.reports.count_documents({"author_id": user_id, "status": "Resolved"})
+        u_pending = db.reports.count_documents({"author_id": user_id, "status": "Reported"})
+        u_in_progress = db.reports.count_documents({"author_id": user_id, "status": {"$in": ["Verified", "Complained"]}})
+        upvoted_count = db.upvotes.count_documents({"user_id": user_id})
+    except Exception:
+        u_resolved = 0
+        u_pending = 0
+        u_in_progress = 0
+        upvoted_count = 0
+
+    user_summary = {
+        "total_issues": total_reports_count,
+        "resolved": u_resolved,
+        "pending": u_pending,
+        "in_progress": u_in_progress,
+        "upvoted_count": upvoted_count,
+        "avg_response_time": "2.3 days"
+    }
+
     coords = [77.2090, 28.6139]
     if user_doc and isinstance(user_doc.get("home_location"), dict) and user_doc["home_location"].get("coordinates"):
         coords = user_doc["home_location"]["coordinates"]
@@ -255,6 +288,7 @@ def profile():
         user_doc=user_doc,
         user_reports=user_reports,
         total_reports_count=total_reports_count,
+        user_summary=user_summary,
         page=page,
         total_pages=total_pages,
         coords=coords

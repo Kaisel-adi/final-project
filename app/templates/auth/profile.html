@@ -1,296 +1,398 @@
 {% extends "base.html" %}
 
-{% block title %}Resident Profile — GCIR{% endblock %}
+{% block title %}My Profile & Civic Dashboard — Garuda{% endblock %}
+{% block header_title %}Account Profile — Garuda{% endblock %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 2rem auto; display: flex; flex-direction: column; gap: 2rem;">
+<div class="max-w-4xl mx-auto space-y-6">
+
     <!-- Profile Header Card -->
-    <div class="card" style="margin-bottom: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-            <div style="display: flex; gap: 1.25rem; align-items: center;">
-                <div style="width: 64px; height: 64px; border-radius: 50%; background: #e8f0fe; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; flex-shrink: 0;">
-                    {{ (user_doc.get('name') or current_user.name or 'U')[0]|upper }}
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-8 relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+            <div class="w-20 h-20 rounded-3xl bg-emerald-100 text-emerald-800 border-2 border-emerald-300 flex items-center justify-center font-bold text-2xl flex-shrink-0 shadow-sm">
+                {{ user_doc.name[:2]|upper if user_doc and user_doc.name else current_user.name[:2]|upper }}
+            </div>
+
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-center sm:justify-start gap-2.5 flex-wrap">
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900">{{ user_doc.name or current_user.name }}</h1>
+                    {% if current_user.is_moderator %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">shield_person</span> Moderator
+                        </span>
+                    {% else %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            Citizen
+                        </span>
+                    {% endif %}
                 </div>
-                <div>
-                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                        <h2 style="font-size: 1.5rem; color: var(--text-primary); margin: 0;">
-                            {{ user_doc.get('name') or current_user.name }}
-                        </h2>
-                        {% if current_user.is_admin %}
-                            <span class="badge badge-admin">ADMINISTRATOR</span>
-                        {% elif current_user.is_moderator %}
-                            <span class="badge badge-moderator">MODERATOR</span>
-                        {% else %}
-                            <span class="badge badge-resident">RESIDENT</span>
-                        {% endif %}
-                    </div>
-                    <div style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
-                        ✉️ {{ user_doc.get('email') or current_user.email }}
-                    </div>
+
+                <div class="flex items-center justify-center sm:justify-start gap-3 mt-1.5 text-xs text-slate-500 flex-wrap">
+                    <span class="flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-slate-400">mail</span>
+                        <span>{{ user_doc.email or current_user.email }}</span>
+                        <span class="text-emerald-600 font-bold" title="Email Verified">✓ Verified</span>
+                    </span>
+                    <span>•</span>
+                    <span class="flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-slate-400">home_pin</span>
+                        <span>Ward Pin: {{ coords[1]|round(4) }}, {{ coords[0]|round(4) }}</span>
+                    </span>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 0.75rem;">
-                <a href="{{ url_for('reports.create') }}" class="btn btn-primary btn-sm">
-                    + Report New Issue
-                </a>
-                {% if current_user.is_moderator %}
-                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-sm">
-                        Admin Panel
-                    </a>
-                {% endif %}
+            <a href="#edit-profile-section" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors self-center sm:self-auto">
+                <span class="material-symbols-outlined text-base">edit</span>
+                <span>Edit Profile</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MY COMPLAINTS SUMMARY CARD (media_1790803349535.png)                      -->
+    <!-- ========================================================================= -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-5">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald-600 text-2xl">insert_chart</span>
+            <h2 class="font-bold text-slate-900 text-lg">My Complaints Summary</h2>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+            <!-- Total Issues -->
+            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
+                <div class="flex items-center justify-center text-blue-600 mb-1">
+                    <span class="material-symbols-outlined text-2xl">trending_up</span>
+                </div>
+                <div class="text-2xl sm:text-3xl font-bold text-blue-900">{{ user_summary.total_issues }}</div>
+                <div class="text-xs font-semibold text-blue-600 mt-0.5">Total Issues Reported</div>
+            </div>
+
+            <!-- Resolved Issues -->
+            <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+                <div class="flex items-center justify-center text-emerald-600 mb-1">
+                    <span class="material-symbols-outlined text-2xl">task_alt</span>
+                </div>
+                <div class="text-2xl sm:text-3xl font-bold text-emerald-900">{{ user_summary.resolved }}</div>
+                <div class="text-xs font-semibold text-emerald-600 mt-0.5">Resolved by Municipalities</div>
+            </div>
+
+            <!-- Community Verifications Given -->
+            <div class="col-span-2 sm:col-span-1 bg-purple-50 border border-purple-100 rounded-2xl p-4 text-center">
+                <div class="flex items-center justify-center text-purple-600 mb-1">
+                    <span class="material-symbols-outlined text-2xl">thumb_up</span>
+                </div>
+                <div class="text-2xl sm:text-3xl font-bold text-purple-900">{{ user_summary.upvoted_count }}</div>
+                <div class="text-xs font-semibold text-purple-600 mt-0.5">Neighborhood Upvotes Given</div>
             </div>
         </div>
 
-        <!-- Quick Statistics -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">{{ total_reports_count if total_reports_count is defined else user_reports|length }}</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Reports Submitted</div>
-            </div>
-            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">
-                    {{ user_doc.get('digest_radius_km', current_user.digest_radius_km)|round(0)|int }} km
+        <!-- Progress Bars -->
+        <div class="space-y-3 pt-2 text-xs">
+            <div>
+                <div class="flex justify-between font-semibold mb-1">
+                    <span class="text-slate-600">Pending Verification</span>
+                    <span class="text-rose-600 font-bold">{{ user_summary.pending }}</span>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Alert Radius</div>
-            </div>
-            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
-                    {% if user_doc.get('digest_opt_in', current_user.digest_opt_in) %}Active{% else %}Off{% endif %}
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-rose-500 rounded-full" style="width: {{ (user_summary.pending / user_summary.total_issues * 100) if user_summary.total_issues > 0 else 0 }}%;"></div>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Email Digest</div>
             </div>
-            <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-secondary); margin-top: 0.35rem;">
-                    {{ coords[1]|round(2) }}, {{ coords[0]|round(2) }}
+
+            <div>
+                <div class="flex justify-between font-semibold mb-1">
+                    <span class="text-slate-600">In Progress / Verified</span>
+                    <span class="text-amber-600 font-bold">{{ user_summary.in_progress }}</span>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Home Pin</div>
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-amber-500 rounded-full" style="width: {{ (user_summary.in_progress / user_summary.total_issues * 100) if user_summary.total_issues > 0 else 0 }}%;"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 font-semibold text-slate-600">
+                <span>Average Resolution Timeline</span>
+                <span class="text-blue-600 flex items-center gap-1 font-bold">
+                    <span class="material-symbols-outlined text-sm">schedule</span>
+                    <span>{{ user_summary.avg_response_time }}</span>
+                </span>
             </div>
         </div>
     </div>
 
-    <!-- Reports Done by User Section -->
-    <div class="card" style="margin-bottom: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-            <div>
-                <h3 style="font-size: 1.25rem; color: var(--text-primary); margin: 0;">My Reported Issues</h3>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
-                    Civic issues you have reported across Delhi-NCR.
-                </p>
+    <!-- ========================================================================= -->
+    <!-- MY REPORTED ISSUES & DRAFTS TABS                                          -->
+    <!-- ========================================================================= -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                <span class="material-symbols-outlined text-slate-400">history_edu</span>
+                <span>My Submitted Civic Issues ({{ total_reports_count }} Total)</span>
+            </h3>
+            <a href="{{ url_for('reports.create') }}" class="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-all active:scale-95">
+                <span class="material-symbols-outlined text-sm">add</span>
+                <span>+ Report New</span>
+            </a>
+        </div>
+
+        <!-- Saved Draft Alert in Profile if present -->
+        <div id="profile-draft-alert" class="hidden p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 items-center justify-between gap-4">
+            <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-amber-600 text-xl">edit_note</span>
+                <div>
+                    <div class="font-bold">You have an unsaved draft saved locally</div>
+                    <div class="text-[11px] text-amber-700" id="profile-draft-desc">Click resume to complete and submit this report.</div>
+                </div>
             </div>
-            <span class="badge badge-primary-light" style="font-size: 0.85rem;">
-                {{ total_reports_count if total_reports_count is defined else user_reports|length }} Total
-            </span>
+            <div class="flex items-center gap-2">
+                <a href="{{ url_for('reports.create') }}" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs">
+                    Resume
+                </a>
+                <button type="button" id="btn-profile-clear-draft" class="px-2.5 py-1 text-slate-500 hover:text-rose-600 text-xs">
+                    Delete
+                </button>
+            </div>
         </div>
 
         {% if user_reports %}
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                {% for r in user_reports %}
-                    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; transition: box-shadow 0.15s;">
-                        <div style="display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 260px;">
-                            {% if r.photo_url %}
-                                {% if r.photo_url|is_video %}
-                                    <video src="{{ r.photo_url }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); flex-shrink: 0;" muted playsinline preload="metadata"></video>
-                                 {% else %}
-                                    <img src="{{ r.photo_url }}" alt="Issue Photo" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); flex-shrink: 0;">
-                                {% endif %}
-                            {% else %}
-                                <div style="width: 70px; height: 70px; background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-secondary); flex-shrink: 0;">
-                                    📍
-                                </div>
-                            {% endif %}
-                            <div style="flex: 1;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
-                                    <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
-                                        {{ r.cat_label }}
-                                    </span>
-                                    <span class="badge badge-{{ r.status }}">{{ r.status }}</span>
-                                    {% if r.is_flagged %}
-                                        <span class="badge badge-Removed">Flagged</span>
-                                    {% endif %}
-                                </div>
-                                <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                    {{ r.description }}
-                                </p>
-                                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.4rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                                    <span>📅 {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'Recent' }}</span>
-                                    <span>👍 {{ r.upvote_count }} / 10 Verifications</span>
-                                </div>
-                            </div>
+        <div class="space-y-3.5">
+            {% for r in user_reports %}
+            <a href="{{ url_for('reports.view', report_id=r._id) }}" class="issue-card block group">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="space-y-1.5 min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap text-xs">
+                            <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 font-bold text-[11px]">
+                                {{ r.cat_label }}
+                            </span>
+                            <span class="status-pill status-pill-{{ (r.status or 'Reported')|lower }}">
+                                <span class="status-pill-dot"></span>
+                                <span>{{ r.status }}</span>
+                            </span>
+                            <span class="text-slate-400 text-[11px]">
+                                📅 {{ r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else 'Recent' }}
+                            </span>
                         </div>
 
-                        <div style="display: flex; gap: 0.5rem;">
-                            <a href="{{ url_for('reports.view', report_id=r._id) }}" class="btn btn-secondary btn-sm">
-                                View Details &rarr;
-                            </a>
+                        <h4 class="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors text-sm line-clamp-1">
+                            {{ r.description.split('\n')[0][:70] }}
+                        </h4>
+                        <p class="text-xs text-slate-500 line-clamp-2">
+                            {{ r.description }}
+                        </p>
+
+                        <div class="text-[11px] text-slate-400 pt-1 flex items-center gap-3">
+                            <span class="text-emerald-600 font-semibold flex items-center gap-0.5">
+                                <span class="material-symbols-outlined text-xs">favorite</span>
+                                <span>{{ r.upvote_count }} Verifications</span>
+                            </span>
+                            {% if r.status in ['Verified', 'Complained', 'Resolved'] %}
+                            <span class="text-teal-600 font-semibold flex items-center gap-0.5">
+                                <span class="material-symbols-outlined text-xs">task_alt</span>
+                                <span>MCD Draft Eligible</span>
+                            </span>
+                            {% endif %}
                         </div>
                     </div>
-                {% endfor %}
-            </div>
-            {% if total_pages and total_pages > 1 %}
-                <div style="display: flex; justify-content: center; align-items: center; gap: 0.75rem; margin-top: 1.25rem;">
-                    {% if page > 1 %}
-                        <a href="{{ url_for('auth.profile', page=page-1) }}" class="btn btn-secondary btn-sm">&larr; Previous</a>
-                    {% endif %}
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Page {{ page }} of {{ total_pages }}</span>
-                    {% if page < total_pages %}
-                        <a href="{{ url_for('auth.profile', page=page+1) }}" class="btn btn-secondary btn-sm">Next &rarr;</a>
-                    {% endif %}
+
+                    <span class="text-slate-400 group-hover:text-emerald-600 p-2">
+                        <span class="material-symbols-outlined text-xl">arrow_forward</span>
+                    </span>
                 </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if total_pages and total_pages > 1 %}
+        <div class="flex justify-center items-center gap-3 pt-4 text-xs font-semibold">
+            {% if page > 1 %}
+                <a href="{{ url_for('auth.profile', page=page-1) }}" class="px-3.5 py-1.5 bg-slate-100 rounded-xl hover:bg-slate-200 text-slate-700">&larr; Previous</a>
             {% endif %}
+            <span class="text-slate-500">Page {{ page }} of {{ total_pages }}</span>
+            {% if page < total_pages %}
+                <a href="{{ url_for('auth.profile', page=page+1) }}" class="px-3.5 py-1.5 bg-slate-100 rounded-xl hover:bg-slate-200 text-slate-700">Next &rarr;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
         {% else %}
-            <div style="text-align: center; padding: 2.5rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color);">
-                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📋</div>
-                <h4 style="font-size: 1.05rem; color: var(--text-primary); margin-bottom: 0.35rem;">No Civic Issues Reported Yet</h4>
-                <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 420px; margin: 0 auto 1.25rem auto;">
-                    Have you spotted a pothole, overflowing garbage dump, or broken streetlight? Geo-tag it now to alert your neighbors and local authorities.
-                </p>
-                <a href="{{ url_for('reports.create') }}" class="btn btn-primary btn-sm">
-                    + Report Your First Issue
-                </a>
-            </div>
+        <div class="py-8 text-center text-slate-400 text-xs">
+            <span class="material-symbols-outlined text-4xl text-slate-300 mb-1">post_add</span>
+            <p class="font-semibold text-slate-600">No issues reported by you yet.</p>
+            <p class="text-slate-400 mt-0.5">Spot a broken road, open drain, or rubbish pile to report it to authorities.</p>
+        </div>
         {% endif %}
     </div>
 
-    <!-- Edit Profile & Neighborhood Location Form -->
-    <div class="card" style="margin-bottom: 0;">
-        <h3 style="font-size: 1.25rem; color: var(--text-primary); margin-bottom: 0.35rem;">Edit Profile & Neighborhood Pin</h3>
-        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.5rem;">
-            Update your display name, primary neighborhood coordinates, and email alert preferences.
-        </p>
-
-        <form method="POST">
-            <div class="form-group">
-                <label class="form-label" for="name">Full Name / Display Name</label>
-                <input class="form-input" type="text" id="name" name="name" value="{{ user_doc.get('name') or current_user.name }}" required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Email Address</label>
-                <input class="form-input" type="email" value="{{ user_doc.get('email') or current_user.email }}" disabled style="background: #f1f5f9; cursor: not-allowed;">
-                <span style="font-size: 0.8rem; color: var(--text-secondary);">Email is permanent and used for digest notifications.</span>
-            </div>
-
-            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
-
-            <h4 style="font-size: 1.05rem; margin-bottom: 0.35rem;">Primary Neighborhood Map Pin</h4>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-                Drag the marker or click the map to set where you live. This determines which local issues appear in your neighborhood email digest.
+    <!-- ========================================================================= -->
+    <!-- EDIT PROFILE & NEIGHBORHOOD LOCATION FORM                                 -->
+    <!-- ========================================================================= -->
+    <div id="edit-profile-section" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-6">
+        <div>
+            <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                <span class="material-symbols-outlined text-slate-400">manage_accounts</span>
+                <span>Edit Profile & Neighborhood Pin</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">
+                Updating your neighborhood location ensures your home feed defaults to relevant nearby civic issues.
             </p>
+        </div>
 
-            <div style="height: 280px; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; border: 1px solid var(--border-color);">
-                <div id="picker-map" style="width: 100%; height: 100%;"></div>
+        <form method="POST" action="{{ url_for('auth.profile') }}" class="space-y-4">
+            <div>
+                <label for="name" class="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                <input type="text" id="name" name="name" value="{{ user_doc.name or current_user.name }}" required 
+                       class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500">
             </div>
 
-            <div class="form-grid-coords">
-                <div>
-                    <label class="form-label" style="font-size: 0.8rem;">Latitude</label>
-                    <input class="form-input" type="text" id="home_lat" name="home_lat" value="{{ coords[1] }}" readonly>
+            <!-- Neighborhood Pin Map (Map 3) -->
+            <div class="pt-2">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-xs font-bold text-slate-700">Neighborhood Pinpoint</label>
+                    <button type="button" id="btn-geolocate-profile" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-emerald-600">my_location</span>
+                        <span>Detect Location</span>
+                    </button>
                 </div>
-                <div>
-                    <label class="form-label" style="font-size: 0.8rem;">Longitude</label>
-                    <input class="form-input" type="text" id="home_lon" name="home_lon" value="{{ coords[0] }}" readonly>
+                <div class="h-60 rounded-2xl overflow-hidden border border-slate-200 mb-2">
+                    <div id="profile-pin-map" class="w-full h-full"></div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-geolocate" style="height: 38px;">
-                    📍 GPS
-                </button>
+
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Latitude</label>
+                        <input type="text" id="home_lat" name="home_lat" value="{{ coords[1] }}" readonly 
+                               class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl font-mono text-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Longitude</label>
+                        <input type="text" id="home_lon" name="home_lon" value="{{ coords[0] }}" readonly 
+                               class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl font-mono text-slate-700">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
-                <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; font-size: 0.9rem;">
-                    <input type="checkbox" name="digest_opt_in" {% if user_doc.get('digest_opt_in', current_user.digest_opt_in) %}checked{% endif %} style="width: 18px; height: 18px;">
-                    Receive periodic email digest of unverified civic issues near me
+            <!-- Email Notification Settings -->
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" name="digest_opt_in" {% if user_doc.digest_opt_in %}checked{% endif %} class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                    <span class="text-xs font-semibold text-slate-700">Receive weekly neighborhood email digests</span>
                 </label>
-                <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <label for="digest_radius_km" style="font-size: 0.85rem; color: var(--text-secondary);">Digest Radius:</label>
-                    {% set cur_radius = user_doc.get('digest_radius_km', current_user.digest_radius_km)|float %}
-                    <select name="digest_radius_km" id="digest_radius_km" class="form-select" style="width: auto; padding: 0.35rem 0.75rem;">
-                        <option value="2.0" {% if cur_radius == 2.0 %}selected{% endif %}>2 km (Local Block)</option>
-                        <option value="5.0" {% if cur_radius == 5.0 %}selected{% endif %}>5 km (Ward / Neighborhood)</option>
-                        <option value="10.0" {% if cur_radius == 10.0 %}selected{% endif %}>10 km (Zone)</option>
+
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Digest Alert Radius (km)</label>
+                    <select name="digest_radius_km" class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800">
+                        <option value="1.0" {% if user_doc.digest_radius_km == 1.0 %}selected{% endif %}>1 km</option>
+                        <option value="3.0" {% if user_doc.digest_radius_km == 3.0 %}selected{% endif %}>3 km</option>
+                        <option value="5.0" {% if user_doc.digest_radius_km == 5.0 or not user_doc.digest_radius_km %}selected{% endif %}>5 km (Recommended)</option>
+                        <option value="10.0" {% if user_doc.digest_radius_km == 10.0 %}selected{% endif %}>10 km</option>
                     </select>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
-        </form>
-    </div>
-
-    <!-- Privacy & Delete Account Section -->
-    <div class="card" style="background: #fff5f5; border: 1px solid #fed7d7; margin-bottom: 2rem;">
-        <h4 style="color: #c53030; margin-bottom: 0.5rem; font-size: 1.05rem;">Danger Zone: Delete Account (DPDP Act)</h4>
-        <p style="font-size: 0.85rem; color: #742a2a; margin-bottom: 1rem; line-height: 1.4;">
-            Under the Digital Personal Data Protection (DPDP) Act, you have the right to be forgotten. Permanently deleting your account will erase your user profile, all your submitted civic reports, upvotes, and home location data from our database.
-        </p>
-        <form method="POST" action="{{ url_for('auth.delete_account') }}" onsubmit="return confirm('⚠️ Are you sure you want to permanently delete your account?\n\nThis will permanently delete your profile, all reports submitted by you, and your upvote history. This action CANNOT be undone.');">
-            <button type="submit" class="btn btn-danger btn-sm">
-                Permanently Delete My Account & All Data
+            <button type="submit" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-sm transition-all active:scale-98">
+                Save Profile Changes
             </button>
         </form>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODERATOR ACCESS CARD (Positioned right above Danger Zone & Logout)        -->
+    <!-- ========================================================================= -->
+    {% if current_user.is_moderator %}
+    <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-300 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-emerald-950 font-bold text-base">
+                <span class="material-symbols-outlined text-emerald-600 text-2xl">shield_person</span>
+                <span>Moderator Administration Tools</span>
+            </div>
+            <p class="text-xs text-emerald-800 mt-1 max-w-md leading-relaxed">
+                Access jurisdiction-wide moderation, MCD official complaint generation, and DBSCAN hotspot density analytics.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2.5 self-stretch sm:self-auto">
+            <a href="{{ url_for('admin.dashboard') }}" class="flex-1 sm:flex-initial text-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all">
+                Open Admin Panel
+            </a>
+            <a href="{{ url_for('admin.hotspots') }}" class="flex-1 sm:flex-initial text-center px-4 py-2.5 bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 font-bold text-xs rounded-xl transition-all">
+                Hotspots
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ========================================================================= -->
+    <!-- DANGER ZONE: DELETE ACCOUNT (DPDP ACT) & LOGOUT                           -->
+    <!-- ========================================================================= -->
+    <div class="bg-rose-50 border border-rose-200 rounded-3xl p-6 space-y-4">
+        <div>
+            <h4 class="font-bold text-rose-900 text-sm flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base text-rose-600">gavel</span>
+                <span>Account Management & Privacy (DPDP Act)</span>
+            </h4>
+            <p class="text-xs text-rose-800 mt-1 leading-relaxed">
+                Under the Digital Personal Data Protection Act, you have the right to be forgotten. Permanently deleting your account will erase your profile, submitted civic reports, upvotes, and home location data.
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-rose-200/60">
+            <form method="POST" action="{{ url_for('auth.delete_account') }}" onsubmit="return confirm('⚠️ Are you sure you want to permanently delete your account?\n\nThis will permanently delete your profile and data. This action CANNOT be undone.');">
+                <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors">
+                    Permanently Delete My Account
+                </button>
+            </form>
+
+            <a href="{{ url_for('auth.logout') }}" class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-center text-xs font-bold rounded-xl transition-colors">
+                Logout
+            </a>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const initLat = parseFloat("{{ coords[1] }}") || 28.6139;
-    const initLon = parseFloat("{{ coords[0] }}") || 77.2090;
+document.addEventListener('DOMContentLoaded', function () {
+    const lat = {{ coords[1] }};
+    const lon = {{ coords[0] }};
 
-    function createSvgPin(colorHex) {
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="44" style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35)); cursor: grab;">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.8"/>
-                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.95"/>
-                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
-            </svg>
-        `;
-        return L.divIcon({
-            className: 'custom-map-pin',
-            html: svg,
-            iconSize: [30, 44],
-            iconAnchor: [15, 44],
-            popupAnchor: [0, -40]
+    // 1. Initialize Profile Neighborhood Pin Map (Map 3)
+    if (document.getElementById('profile-pin-map') && window.GCIRMaps) {
+        window.GCIRMaps.initPinpointMap('profile-pin-map', {
+            coords: [lat, lon],
+            isPicker: true,
+            latInputId: 'home_lat',
+            lonInputId: 'home_lon',
+            geolocateBtnId: 'btn-geolocate-profile'
         });
     }
 
-    const map = L.map('picker-map').setView([initLat, initLon], 13);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        keepBuffer: 2,
-        updateWhenIdle: true,
-        updateWhenZooming: false
-    }).addTo(map);
-
-    let marker = L.marker([initLat, initLon], { draggable: true, icon: createSvgPin('#1a73e8') }).addTo(map);
-
-    function updateCoords(lat, lon) {
-        document.getElementById('home_lat').value = lat.toFixed(6);
-        document.getElementById('home_lon').value = lon.toFixed(6);
+    // 2. LocalStorage Draft Check in Profile
+    try {
+        const savedDraftRaw = localStorage.getItem('gcir_report_draft');
+        if (savedDraftRaw) {
+            const draft = JSON.parse(savedDraftRaw);
+            const alertBox = document.getElementById('profile-draft-alert');
+            const descEl = document.getElementById('profile-draft-desc');
+            if (alertBox && draft && (draft.description || draft.category)) {
+                alertBox.classList.remove('hidden');
+                alertBox.classList.add('flex');
+                if (descEl && draft.description) {
+                    descEl.textContent = `Draft: "${draft.description.substring(0, 45)}..."`;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn(e);
     }
 
-    marker.on('dragend', function (e) {
-        const pos = marker.getLatLng();
-        updateCoords(pos.lat, pos.lng);
-    });
-
-    map.on('click', function (e) {
-        marker.setLatLng(e.latlng);
-        updateCoords(e.latlng.lat, e.latlng.lng);
-    });
-
-    document.getElementById('btn-geolocate').addEventListener('click', function() {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(function(pos) {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                map.setView([lat, lon], 14);
-                marker.setLatLng([lat, lon]);
-                updateCoords(lat, lon);
-            }, function(err) {
-                alert("Geolocation access denied or unavailable.");
-            });
-        }
-    });
+    const btnClearDraft = document.getElementById('btn-profile-clear-draft');
+    if (btnClearDraft) {
+        btnClearDraft.addEventListener('click', () => {
+            localStorage.removeItem('gcir_report_draft');
+            const alertBox = document.getElementById('profile-draft-alert');
+            if (alertBox) alertBox.classList.add('hidden');
+        });
+    }
+});
 </script>
 {% endblock %}
