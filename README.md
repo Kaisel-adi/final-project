@@ -1,60 +1,115 @@
-# Geo-Tagged Civic Issue Reporter (GCIR)
+# Garuda — Civic Grievance & Neighborhood Tracking Platform
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-36%20Passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-58%20Passing-brightgreen.svg)](tests/)
 [![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-green.svg)](https://www.mongodb.com/cloud/atlas)
-[![Pilot Region](https://img.shields.io/badge/Pilot%20Region-Delhi--NCR%20(250%20Wards)-orange.svg)](data/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v3.4-38bdf8.svg)](https://tailwindcss.com/)
+[![Pilot Region](https://img.shields.io/badge/Pilot%20Region-Delhi--NCR%20(250%20Wards)-teal.svg)](data/)
 
-> **Community-verified, geo-spatial civic grievance platform.**  
-> Residents report geo-tagged civic problems (potholes, garbage dumps, water leaks, broken streetlights), nearby neighbors verify them with upvotes, and upon reaching the verification threshold (10 votes), the system automatically performs hierarchical point-in-polygon spatial routing to draft and address formal complaint emails to the exact responsible authority (Ward > Sector > District > State).
+> **"See the change. Be the change!"**  
+> **Garuda** is a community-driven, geo-spatial civic grievance platform. Residents report geo-tagged civic problems (potholes, garbage dumps, water leaks, broken streetlights), nearby neighbors verify them with upvotes, and upon reaching the verification threshold (10 votes), the platform automatically performs hierarchical point-in-polygon spatial routing to draft and address formal complaint emails to the exact responsible authority (Ward > Sector > District > State).
 
 [**Live Demo on Render**](https://geo-tagged-civic-issue-reporter.onrender.com)
 
 ---
 
-## 🌟 Key Capabilities
+## 🌟 Key Capabilities & Features
 
-1. **High-Precision Geo-Reporting & Multimedia Capture**:
-   - **Dual Evidence Submission**: Upload existing photos/videos or capture live in-browser.
-   - **In-App Camera & Video Recorder**: WebRTC live viewfinder supporting front/back camera flipping (`🔄 Flip Camera`), one-tap photo snapping, and 10-second video recording with real-time countdown progress.
-   - **HTML5 Geolocation & Interactive Map**: Auto-detects GPS coordinates with an interactive Leaflet draggable pin fallback. EXIF GPS metadata is isolated/untrusted for tamper resistance.
+### 1. High-Precision Geo-Reporting & Multimedia Capture
+- **Dual Evidence Submission**: Upload existing photos/videos or capture live in-browser.
+- **In-App Camera & WebRTC Video Recorder**: WebRTC live viewfinder supporting front/back camera flipping (`🔄 Flip Camera`), one-tap photo snapping, and 10-second video recording with real-time countdown progress.
+- **HTML5 Geolocation & Interactive Map**: Auto-detects GPS coordinates with an interactive Leaflet draggable pin fallback. EXIF GPS metadata is isolated/untrusted for tamper resistance.
+- **Client-Side Media Compression**: In-browser HTML5 Canvas downscaling and JPEG compression before upload to conserve mobile bandwidth.
 
-2. **Email Format Validation & 6-Digit OTP Verification**:
-   - **Strict Syntax Validation**: RFC 5322-compliant email format validation enforced across both sign-up and login.
-   - **OTP Ownership Verification**: Cryptographically secure 6-digit verification code (`secrets.randbelow(900000) + 100000`) dispatched via SMTP / SendGrid / Resend.
-   - **Staged Registration & TTL Cleanup**: Pending sign-ups are staged with hashed passwords and auto-purged after 15 minutes using MongoDB TTL indexes.
-   - **Anti-Spam Resend Protection**: Dedicated OTP input screen with a 30-second cooldown on code resend requests.
+### 2. Smooth Chunk-Based Feed & Infinite Scrolling
+- **Subsequent Chunk Pagination**: Initial visit loads 10 reports; scrolling down seamlessly streams 5 reports per chunk via lightweight HTML partials (`_cards.html`, `_sentinel.html`).
+- **Adjustable Neighborhood Radii**: Residents can set their neighborhood radius (5km, 10km, 15km, 20km, 25km, 30km).
+- **Dedicated Community Feed**: Fixed 100km metropolitan radius feed providing broader regional visibility.
+- **Dynamic Sorting & Filtering**: Sort without page reloads by *Most Liked*, *Newest*, *Reported*, *Pending Verification*, *Verified*, or *Distance (Closest to Farthest)*.
+- **Shimmer Loading Skeletons**: CSS-animated pulsing placeholders (`_skeleton.html`) eliminate Content Layout Shift (CLS) during filter updates and chunk pagination.
 
-3. **Community Verification Engine**:
-   - Enforces `VERIFY_THRESHOLD = 10` upvotes before complaint routing is unlocked.
-   - One upvote per account; authors cannot upvote their own reports.
-   - Soft proximity check (~5 km): votes from distant locations are accepted but flagged for audit.
-   - Visual progress bars transitioning dynamically from progress blue to verified green.
+### 3. Instant (Zero-Reload) Social Reactions & Share Action Sheet
+- **Optimistic Likes & Comments**: Upvoting and commenting update instantly in the DOM via background fetch calls without disrupting the user's scroll position.
+- **Social Share Action Sheet**: Native Web Share API integration with an Action Sheet modal fallback offering one-tap sharing to WhatsApp, X (Twitter), Facebook, and clipboard copy.
 
-4. **Hierarchical Authority Complaint Router**:
-   - Point-in-polygon spatial queries (`$geoIntersects`) resolving exact administrative boundaries: **250 MCD Wards (2022 Delimitation)**, NDMC, Noida Authority, and Ghaziabad Nagar Nigam.
-   - Specificity priority: `ward` > `sector` > `district` > `state` with automatic supervisory fallback.
-   - One-click `mailto:` dispatch and clipboard copy with pre-filled details, coordinates, photos/videos, upvote metrics, and corroborating issue counts (<200m).
+### 4. Email Validation & 6-Digit OTP Verification
+- **Strict RFC 5322 Syntax Validation**: Validates email integrity across sign-up, login, and password management.
+- **Cryptographic 6-Digit OTP**: Secure numeric codes (`secrets.randbelow(900000) + 100000`) dispatched via Brevo, Resend, SendGrid, or SMTP.
+- **Staged Registration & TTL Cleanup**: Pending sign-ups are stored with securely hashed passwords and auto-purged after 15 minutes via MongoDB TTL indexes.
+- **Anti-Spam Resend Protection**: Cooldown timer (30 seconds) prevents email flooding.
 
-5. **Civic Administration & Moderation Dashboard**:
-   - **Interactive Quick-Filter Tabs**: Filter instantly by *Total Reports*, *Community Verified*, *Complaints Filed*, *Registered Users*, and *Flagged Queue*.
-   - **Fast-Track Verification**: Administrators can instantly verify urgent civic hazards without waiting for 10 community votes.
-   - **Content Moderation**: One-click removal of fraudulent or inappropriate reports from the public feed.
-   - **User Role & Ban Management**: Super Admins can promote/demote users between Resident and Moderator roles, suspend/ban malicious accounts, and permanently delete accounts with complete cascade cleanup.
+### 5. Community Verification Engine
+- Enforces `VERIFY_THRESHOLD = 10` upvotes before official complaint routing is unlocked.
+- One upvote per account; authors cannot upvote their own reports.
+- Soft proximity check (~5 km): votes from distant locations are accepted but flagged for audit.
+- Visual progress bars dynamically transitioning from progress amber to verified emerald.
 
-6. **Resident Profile & Session Persistence**:
-   - 30-day persistent session cookies with `HttpOnly` and `SameSite=Lax` security attributes (prevents accidental logout on page refresh).
-   - Dedicated user profile displaying account credentials, active role badge, list of submitted civic reports, and account self-deletion options.
+### 6. Hierarchical Authority Complaint Router
+- Point-in-polygon spatial queries (`$geoIntersects`) resolving exact administrative boundaries: **250 MCD Wards (2022 Delimitation)**, NDMC, Noida Authority, and Ghaziabad Nagar Nigam.
+- Specificity priority: `ward` > `sector` > `district` > `state` with automatic supervisory fallback.
+- One-click `mailto:` dispatch and clipboard copy with pre-filled details, coordinates, photos/videos, upvote metrics, and corroborating issue counts (<200m).
 
-7. **Scheduled Neighborhood Email Digest**:
-   - Token-secured endpoint (`/jobs/digest`) scheduled to run periodically or manually dispatched via Admin panel.
-   - Groups unverified issues within each opted-in resident's radius (capped at 5 items).
-   - Strict duplicate suppression via `digest_log` and exclusion of user's own/upvoted issues.
+### 7. Civic Administration & Moderation Dashboard
+- **AJAX Actions (Zero-Reload)**: Instant verification, status updates, content moderation (unflag/remove), user role modification (Resident &harr; Moderator), and ban toggles without page reloads.
+- **Interactive Quick-Filter Tabs**: Filter instantly by *Total Reports*, *Community Verified*, *Complaints Filed*, *Registered Users*, and *Flagged Queue*.
+- **Fast-Track Verification**: Administrators can immediately verify urgent civic hazards without waiting for 10 community votes.
 
-8. **Data & ML Analytics**:
-   - **Hotspot Detection**: DBSCAN clustering using the Haversine metric on radian coordinates to locate dense civic problem zones.
-   - **Duplicate Detection**: Spatial radius candidate filter (<200m) paired with calibrated bi-gram TF-IDF cosine similarity (**100% Precision**, **70% Recall**, **0.8235 F1-Score**).
+### 8. Resident Profile & Civic Dashboard
+- **Session Persistence**: 30-day persistent session cookies with `HttpOnly` and `SameSite=Lax` security attributes.
+- **Civic Engagement Stats**: Tracks total reports, resolved count, in-progress items, upvotes cast, and average municipal response times.
+- **Lightweight DB Projections**: Optimized MongoDB queries fetch only essential user dashboard fields.
+
+### 9. Scheduled Neighborhood Email Digest
+- Token-secured endpoint (`/jobs/digest`) scheduled to run periodically or manually dispatched via Admin panel.
+- Groups unverified issues within each opted-in resident's radius (capped at 5 items).
+- Strict duplicate suppression via `digest_log` and exclusion of user's own/upvoted issues.
+
+### 10. Data & ML Analytics
+- **Hotspot Detection**: DBSCAN clustering using the Haversine metric on radian coordinates to locate dense civic problem zones.
+- **Duplicate Detection**: Spatial radius candidate filter (<200m) paired with calibrated bi-gram TF-IDF cosine similarity (**100% Precision**, **70% Recall**, **0.8235 F1-Score**).
+
+---
+
+## ⚡ Performance & Bandwidth Optimizations
+
+- **Absolute Lazy Video Loading**: Video elements do not download media bytes on page load; only a lightweight poster thumbnail is displayed until the user presses play.
+- **Lazy Image Loading**: Images utilize `loading="lazy"` and `decoding="async"` attributes to preserve network bandwidth on mobile connections.
+- **Debounced Geospatial Leaflet Pan**: Map movement and zoom events are debounced (300ms) to eliminate redundant spatial rendering and tile fetch bottlenecks.
+- **Zero-Network Vector Map Pins**: Custom SVG map pin DivIcons rendered purely via CSS and inline SVG, replacing external image asset requests.
+- **Non-Blocking Async Email Dispatch**: Transactional emails run in background worker threads (`ThreadPoolExecutor`) preventing HTTP request timeouts.
+- **Dual-Port SMTP Fallback**: Automatic failover between Port 587 (STARTTLS) and Port 465 (SSL) with automatic API detection for Brevo, Resend, and SendGrid on serverless/cloud environments (e.g. Render Free Tier).
+
+---
+
+## 🔍 SEO & Web Standards
+
+- **Open Graph & Twitter Cards**: Comprehensive `og:site_name`, `og:title`, `og:description`, `og:image`, `twitter:card="summary_large_image"` tags for rich link previews.
+- **Schema.org Structured Data**: JSON-LD `WebApplication` metadata embedded on all core entry pages.
+- **Search Engine Crawlers**: Dynamic `/robots.txt` and `/sitemap.xml` routes.
+- **App Icons & Favicon Suite**: Master eagle brand emblem exported across all standard formats:
+  - `favicon.ico` (32x32 multi-resolution)
+  - `favicon.png` (32x32) & `favicon-64.png` (64x64)
+  - `apple-touch-icon.png` (180x180)
+  - `icon-192.png` & `icon-512.png` (PWA / Android icons)
+  - `garuda-banner.jpg` (1024x537 social preview card)
+
+---
+
+## 🛠️ Tech Stack
+
+| Domain | Technology / Library | Role |
+|---|---|---|
+| **Backend Framework** | Python 3.11–3.13, Flask 3.x | Modular blueprint routing, application factory, WSGI entrypoint |
+| **Authentication** | Flask-Login, Werkzeug | Session management (30-day HttpOnly/SameSite), password hashing (PBKDF2:SHA256) |
+| **Database & GIS** | MongoDB Atlas, PyMongo | GeoJSON `2dsphere` indexes (`$nearSphere`, `$geoIntersects`), TTL indexes |
+| **Frontend Styling** | Tailwind CSS v3.4, Vanilla CSS | Utility-first CSS, responsive dark navigation, custom components, responsive grids |
+| **Mapping & Location** | Leaflet.js, OpenStreetMap | Interactive draggable pin picker, locality radar maps, full-screen map overview |
+| **Media & Audio/Video**| WebRTC MediaDevices API, HTML5 Canvas | Browser camera flipping, 10s video recording, client-side downscaling |
+| **Machine Learning** | Scikit-Learn, NumPy | DBSCAN (Haversine spatial hotspots), TF-IDF bi-grams (duplicate detection) |
+| **Email Delivery** | Brevo REST API, Resend, SendGrid, SMTPLib | Transactional OTP verification & neighborhood digests with async threading |
+| **Cloud Storage** | Cloudinary SDK | Cloud media hosting with automatic delivery optimization |
+| **Testing** | Pytest, Mongomock | 58 in-memory unit and integration tests with deterministic isolation |
 
 ---
 
@@ -62,20 +117,21 @@
 
 ```mermaid
 flowchart TD
-    subgraph Client["Client Tier (Browser)"]
-        UI["Jinja2 Responsive UI + Semantic CSS"]
+    subgraph Client["Client Tier (Mobile / Desktop Browser)"]
+        UI["Tailwind CSS + Jinja2 Responsive UI"]
+        SKELETON["Shimmer Loading Skeletons"]
         CAMERA["In-App Camera & WebRTC Video Recorder"]
-        LEAFLET["Leaflet.js + OSM Tile Layer"]
+        LEAFLET["Leaflet.js + Custom SVG Vector Pins"]
         GEO["HTML5 Geolocation API (Draggable Pin Fallback)"]
     end
 
-    subgraph App["Application Tier (Flask Modular Blueprints)"]
-        AUTH["Auth: Flask-Login + Email Regex + 6-Digit OTP"]
-        REPORTS["Report Service: Uploads & Validation"]
-        FEED["Feed & Map: $near Geospatial Filter"]
+    subgraph App["Application Tier (Flask Blueprints)"]
+        AUTH["Auth: Flask-Login + 6-Digit OTP + TTL Index"]
+        REPORTS["Report Service: Uploads, Compression, Categories"]
+        FEED["Feed & Map: Chunk Pagination + Radius Filter ($nearSphere)"]
         ROUTER["Authority Router: $geoIntersects Point-in-Polygon"]
         COMPLAINTS["Complaint Drafter: mailto & Corroboration Engine"]
-        ADMIN["Admin Dashboard: Fast-Track Verify & User Bans"]
+        ADMIN["Admin Dashboard: AJAX Verify, Moderate, Bans & Roles"]
         JOBS["Scheduled Digest Endpoint (/jobs/digest)"]
         ML_HOTSPOTS["DBSCAN Spatial Hotspots (Haversine)"]
         ML_DUPES["TF-IDF Duplicate Detection (<200m)"]
@@ -84,9 +140,10 @@ flowchart TD
     subgraph Storage["Data & Storage Tier"]
         MONGO[("MongoDB Atlas (2dsphere Geospatial + TTL Indexes)")]
         IMG[("Cloudinary / Local Uploads (Images & Videos)")]
-        EMAIL["Email Dispatcher (SMTP / Resend / SendGrid)"]
+        EMAIL["Email Dispatcher (Brevo / Resend / SendGrid / SMTP)"]
     end
 
+    UI --> SKELETON
     UI --> AUTH
     AUTH --> EMAIL
     AUTH --> MONGO
@@ -108,6 +165,7 @@ flowchart TD
 
 ### 1. Prerequisites
 - Python 3.11+ (Tested on Python 3.13)
+- Node.js 18+ & npm (for Tailwind CSS asset compilation)
 - Git
 
 ### 2. Environment Setup
@@ -123,8 +181,12 @@ python -m venv .venv
 # On Linux/macOS:
 source .venv/bin/activate
 
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
+
+# Install frontend dependencies and build CSS
+npm install
+npm run build:css
 ```
 
 ### 3. Environment Variables
@@ -137,7 +199,8 @@ copy .env.example .env   # On Windows
 Key configuration settings:
 - `MONGODB_URI`: Your MongoDB Atlas connection string (or leave default for local in-memory fallback).
 - `USE_CLOUDINARY`: `True` with Cloudinary credentials for permanent media hosting, or `False` for local dev.
-- `EMAIL_BACKEND`: `mock` (logs to console), `smtp` (for Gmail/standard SMTP), `resend`, or `sendgrid`.
+- `EMAIL_BACKEND`: `mock` (logs to console), `brevo`, `resend`, `sendgrid`, or `smtp`.
+- `BREVO_API_KEY`: API key for HTTPS-based email dispatch (recommended for cloud hosts like Render).
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`: SMTP credentials for live transactional OTP verification emails.
 - `CRON_SECRET_TOKEN`: Secret token protecting the periodic digest endpoint.
 
@@ -177,16 +240,17 @@ python scripts/clean_demo_data.py
 
 ## 🧪 Testing & Validation
 
-### Run Full Test Suite (36 Tests)
+### Run Full Test Suite (58 Tests)
 ```bash
 python -m pytest tests/ -v
 ```
-All **36 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
+All **58 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
 - **Authentication & Roles**: Password hashing, duplicate email handling, session management.
 - **Email Validation & OTP**: Regex syntax tests, OTP generation, 15-min expiration, and resend cooldown.
 - **Reports & Verification**: GeoJSON coordinate validation, proximity checks, 10-vote threshold flip.
 - **Camera & Video Support**: File upload constraints, WebM/MP4 storage, and embedded player rendering.
-- **Admin Panel**: Fast-track verification, tab switching, and role management.
+- **Admin AJAX Actions**: Fast-track verification, tab switching, AJAX role changing, user ban toggles, and content moderation without page reloads.
+- **Responsiveness & Performance**: Mobile bottom navigation bars, SVG pins, lazy-loading media, client image compression, debounced maps, and static caching headers.
 - **Authority Router & Complaints**: Point-in-polygon routing across MCD Wards and draft generation.
 - **Machine Learning**: DBSCAN clustering and TF-IDF duplicate identification.
 
@@ -198,7 +262,7 @@ All **36 automated unit and integration tests** run deterministically in isolate
 2. Select **New Web Service** and link this repository.
 3. Configuration:
    - **Runtime:** `Python`
-   - **Build Command:** `pip install -r requirements.txt && python scripts/etl_boundaries.py`
+   - **Build Command:** `pip install -r requirements.txt && npm install && npm run build:css && python scripts/etl_boundaries.py`
    - **Start Command:** `gunicorn wsgi:app`
 4. Environment Variables:
    - `MONGODB_URI`: `<Your MongoDB Atlas connection string>`
@@ -206,12 +270,8 @@ All **36 automated unit and integration tests** run deterministically in isolate
    - `SECRET_KEY`: `<Random secret string>`
    - `CRON_SECRET_TOKEN`: `<Random cron secret>`
    - `USE_CLOUDINARY`: `True` (with Cloudinary API keys)
-   - `EMAIL_BACKEND`: `smtp` (or `resend`/`sendgrid`)
-   - `SMTP_HOST`: `smtp.gmail.com`
-   - `SMTP_PORT`: `587`
-   - `SMTP_USER`: `<Your email>`
-   - `SMTP_PASSWORD`: `<Your Google App Password>`
-   - `SMTP_USE_TLS`: `True`
+   - `EMAIL_BACKEND`: `brevo` (or `resend` / `smtp`)
+   - `BREVO_API_KEY`: `<Your Brevo API Key>`
 5. Schedule the digest job every 6 hours via an external cron scheduler (e.g., [cron-job.org](https://cron-job.org)) by sending a `POST` request to `https://<your-app>.onrender.com/jobs/digest` with header `X-Job-Token: <CRON_SECRET_TOKEN>`.
 
 ---
