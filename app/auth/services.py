@@ -20,12 +20,12 @@ def generate_otp() -> str:
 
 def send_verification_otp_email(to_email: str, name: str, otp: str) -> tuple[bool, str]:
     """Dispatches a professional OTP verification email."""
-    subject = f"Verify Your Email — Garuda Code: {otp}"
+    subject = f"Verify Your Email — Garuda Code"
 
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: #0d9488; padding: 24px; text-align: center; color: #ffffff;">
-            <div style="font-size: 28px; margin-bottom: 4px;">🦅</div>
+            <div style="font-size: 28px; margin-bottom: 4px;"><img src="C:\\Users\\lnegi\\OneDrive\\Desktop\\project\\personalProjects\\Geo-TaggedCivicIssueReporter\\app\\static\\img\\garuda-icon.png" alt="Garuda logo" width="30px" height="30px"></div>
             <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Garuda</h1>
             <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">See the change. Be the change!</p>
         </div>
@@ -53,14 +53,10 @@ def send_verification_otp_email(to_email: str, name: str, otp: str) -> tuple[boo
     """
 
     text_body = f"""Hi {name},
-
-Thank you for signing up for Garuda.
-
-Your 6-digit email verification code is: {otp}
-
-This code will expire in {OTP_VALIDITY_MINUTES} minutes.
-If you did not request this, please safely ignore this message.
-"""
+    Thank you for signing up for Garuda.
+    Your 6-digit email verification code is: {otp}
+    This code will expire in {OTP_VALIDITY_MINUTES} minutes.
+    If you did not request this, please safely ignore this message."""
 
     return send_email_with_status(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
 
