@@ -228,72 +228,31 @@ body {
     padding: 1.5rem;
 }
 
-/* Mobile Bottom Navigation Bar (Thumb-friendly mobile UX) */
+/* Mobile Bottom Navigation Bar */
 .mobile-bottom-nav {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 62px;
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid var(--border-color);
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-    z-index: 1000;
-    justify-content: space-around;
-    align-items: center;
-    padding: 0 0.5rem;
-}
-.mobile-nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 0.72rem;
-    font-weight: 600;
-    gap: 2px;
-    flex: 1;
-    height: 100%;
-    transition: color 0.15s;
-    touch-action: manipulation;
-}
-.mobile-nav-item:hover, .mobile-nav-item.is-active {
-    color: var(--primary);
-}
-.mobile-nav-icon {
-    font-size: 1.25rem;
-    line-height: 1;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    align-items: stretch !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 60px !important;
+    background: #ffffff !important;
+    border-top: 1px solid #e2e8f0 !important;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
+    z-index: 9990 !important;
+    padding: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
 }
 .mobile-nav-cta {
-    position: relative;
-    top: -12px;
-    color: var(--primary);
-}
-.mobile-nav-icon-circle {
-    width: 44px;
-    height: 44px;
-    background: var(--primary);
-    color: #ffffff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.35);
-    border: 3px solid #ffffff;
-    transition: transform 0.15s;
-}
-.mobile-nav-cta:active .mobile-nav-icon-circle {
-    transform: scale(0.92);
+    position: relative !important;
+    top: 0 !important;
 }
 
 @media (max-width: 768px) {
     .mobile-bottom-nav {
-        display: flex;
+        display: grid !important;
     }
     .main-content {
         padding: 1rem 0.75rem 80px 0.75rem;
@@ -403,12 +362,14 @@ body {
 
 /* Feed & Map Split View */
 .feed-view-toggle-bar {
-    display: none;
-    background: #e2e8f0;
-    border-radius: 8px;
-    padding: 3px;
-    margin-bottom: 1rem;
+    background: rgba(4, 47, 46, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 1rem !important;
+    padding: 4px !important;
+    margin-bottom: 0 !important;
     gap: 4px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 .view-toggle-btn {
     flex: 1;
@@ -475,11 +436,12 @@ body {
 .issue-card {
     background: #fff;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius);
-    padding: 1rem;
+    border-radius: 1rem;
+    padding: 1.15rem;
     margin-bottom: 1rem;
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.65rem;
     transition: transform 0.15s, box-shadow 0.15s;
     text-decoration: none;
     color: inherit;
@@ -535,7 +497,8 @@ body {
 
 @media (max-width: 900px) {
     .feed-view-toggle-bar {
-        display: flex;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
     }
     .feed-layout {
         grid-template-columns: 1fr;

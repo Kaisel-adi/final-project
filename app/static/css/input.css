@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow-x: hidden;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col;
+    overflow-x: hidden;
+    max-width: 100%;
+    width: 100%;
+    position: relative;
+  }
+}
+
+/* Mobile Bottom Navigation Bar (Clean Light Theme matching target mockups) */
+.mobile-bottom-nav {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  z-index: 9990 !important;
+  background-color: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  align-items: stretch !important;
+}
+
+/* Feed View Toggle Bar (Dark Teal Glass Container) */
+.feed-view-toggle-bar {
+  background-color: rgba(4, 47, 46, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 1rem !important;
+}
+
+/* Leaflet Tile Map Compatibility Reset (Prevents Tailwind preflight from squishing tiles) */
+.leaflet-pane img,
+.leaflet-tile-pane img,
+.leaflet-marker-pane img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Stacking context containment: Confines Leaflet internal panes so they never bleed over navigation elements */
+.leaflet-container {
+  position: relative !important;
+  z-index: 10 !important;
+  isolation: isolate !important;
+}
+
+@layer components {
+  /* Status Pill Base */
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize;
+  }
+  .status-pill-dot {
+    @apply w-2 h-2 rounded-full flex-shrink-0;
+  }
+
+  /* Status Variants */
+  .status-pill-reported {
+    @apply bg-red-50 text-red-700 border border-red-200/60;
+  }
+  .status-pill-reported .status-pill-dot {
+    @apply bg-red-500 animate-pulse;
+  }
+
+  .status-pill-verified {
+    @apply bg-amber-50 text-amber-700 border border-amber-200/60;
+  }
+  .status-pill-verified .status-pill-dot {
+    @apply bg-amber-500;
+  }
+
+  .status-pill-complained {
+    @apply bg-purple-50 text-purple-700 border border-purple-200/60;
+  }
+  .status-pill-complained .status-pill-dot {
+    @apply bg-purple-500;
+  }
+
+  .status-pill-resolved {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200/60;
+  }
+  .status-pill-resolved .status-pill-dot {
+    @apply bg-emerald-500;
+  }
+
+  .status-pill-urgent {
+    @apply bg-rose-100 text-rose-800 border border-rose-300 font-bold;
+  }
+  .status-pill-urgent .status-pill-dot {
+    @apply bg-rose-600 animate-ping;
+  }
+
+  /* Category Selection Card */
+  .category-card {
+    @apply flex flex-col items-center justify-center p-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-center cursor-pointer transition-all duration-150 hover:border-emerald-500 hover:bg-emerald-50/40 select-none;
+  }
+  .category-card.is-selected {
+    @apply border-emerald-600 bg-emerald-50 ring-2 ring-emerald-500/30 font-semibold text-emerald-900;
+  }
+
+  /* Metric Card */
+  .metric-card {
+    @apply bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between;
+  }
+
+  /* Issue Card (Strict Vertical Column Layout) */
+  .issue-card {
+    @apply bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-5 transition-all duration-150 hover:shadow-md hover:border-slate-300 cursor-pointer;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.65rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Dark Navigation Surface */
+  .nav-dark-rail {
+    @apply bg-[#181a1b] text-slate-300;
+  }
+
+  /* Dark Action Sheet / Modal */
+  .modal-dark-backdrop {
+    @apply fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4;
+  }
+  .modal-dark-content {
+    @apply bg-[#1e2022] text-white rounded-2xl border border-white/10 shadow-2xl w-full max-w-md p-6 text-center;
+  }
+
+  /* Star Rating Widget */
+  .star-rating-container {
+    @apply inline-flex items-center gap-1 text-2xl select-none;
+  }
+  .star-btn {
+    @apply text-slate-300 transition-colors duration-150 cursor-pointer hover:text-amber-400;
+  }
+  .star-btn.is-active {
+    @apply text-amber-400;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

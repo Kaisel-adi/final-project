@@ -27,6 +27,10 @@ uploads/
 .coverage
 htmlcov/
 GCIR_PRD_v2.md
+UI.md
+
+# Node / Frontend
+node_modules/
 
 # OS generated
 .DS_Store
