@@ -365,7 +365,7 @@ def send_email_async(
     Preserves Flask application context if active.
     """
     from flask import current_app, has_app_context
-    app = current_app if has_app_context() else None
+    app = current_app._get_current_object() if has_app_context() else None
 
     def _task():
         if app:

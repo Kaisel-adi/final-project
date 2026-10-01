@@ -96,7 +96,7 @@ def dispatch_digest(db=None, lookback_hours: int = 24) -> dict:
     # 4. Dispatch digest emails and log
     emails_sent = 0
     for u_id_str, (u, items) in user_matches.items():
-        subject = f"GCIR Digest: {len(items)} civic issues near you need community verification"
+        subject = f"Garuda Digest: {len(items)} civic issues near you need community verification"
         
         items_html = ""
         items_text = ""
@@ -115,14 +115,14 @@ def dispatch_digest(db=None, lookback_hours: int = 24) -> dict:
 
         html_body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-            <h2 style="color: #1a73e8;">GCIR Civic Verification Digest</h2>
+            <h2 style="color: #0d9488;">Garuda Civic Verification Digest</h2>
             <p>Hello {u.get('name', 'Resident')},</p>
             <p>New civic issues were recently reported within your <strong>{u.get('digest_radius_km', 5)} km</strong> neighborhood radius. Take a minute to verify them:</p>
             <ul style="list-style-type: none; padding-left: 0;">
                 {items_html}
             </ul>
             <p style="font-size: 0.85em; color: #777;">
-                To adjust your neighborhood radius or unsubscribe, update your profile settings in GCIR.
+                To adjust your neighborhood radius or unsubscribe, update your profile settings in Garuda.
             </p>
         </div>
         """

@@ -79,6 +79,37 @@ def create_app(config_class=Config):
     def index():
         return redirect(url_for("feed.feed_view"))
 
+    @app.route("/robots.txt")
+    def robots_txt():
+        lines = [
+            "User-agent: *",
+            "Allow: /",
+            "Disallow: /admin/",
+            f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml"
+        ]
+        return "\n".join(lines), 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+    @app.route("/sitemap.xml")
+    def sitemap_xml():
+        root = request.url_root.rstrip("/")
+        urls = [
+            (f"{root}/feed", "daily", "1.0"),
+            (f"{root}/feed?view=list", "daily", "0.9"),
+            (f"{root}/feed?view=map", "daily", "0.8"),
+            (f"{root}/reports/new", "weekly", "0.8"),
+            (f"{root}/login", "monthly", "0.4"),
+            (f"{root}/register", "monthly", "0.5")
+        ]
+        xml_items = [
+            f"<url><loc>{loc}</loc><changefreq>{freq}</changefreq><priority>{pri}</priority></url>"
+            for loc, freq, pri in urls
+        ]
+        xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{"".join(xml_items)}
+</urlset>"""
+        return xml, 200, {"Content-Type": "application/xml; charset=utf-8"}
+
     @app.route("/health")
     def health():
         from app.db import is_mock_database, get_db

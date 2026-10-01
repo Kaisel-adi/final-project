@@ -1,36 +1,68 @@
 {% extends "base.html" %}
 
-{% block title %}Log In — GCIR{% endblock %}
+{% block title %}Log In — Garuda &bull; See the change. Be the change!{% endblock %}
 
 {% block content %}
-<div style="max-width: 440px; margin: 2rem auto;">
-    <div class="card">
-        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary);">Resident Login</h2>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-            Sign in to report civic issues and verify reports in your neighborhood.
-        </p>
+<div class="max-w-md mx-auto px-4 py-8 sm:py-12">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <img src="{{ url_for('static', filename='img/garuda-icon.png') }}" alt="Garuda" class="w-14 h-14 rounded-2xl mx-auto mb-3 shadow-md object-contain">
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Sign In to Garuda</h1>
+            <p class="text-xs sm:text-sm text-emerald-600 font-semibold mt-0.5">
+                See the change. Be the change!
+            </p>
+            <p class="text-xs text-slate-500 mt-1">
+                Access your civic dashboard to report, verify, and resolve neighborhood hazards.
+            </p>
+        </div>
 
-        <form method="POST" id="login-form">
-            <div class="form-group">
-                <label class="form-label" for="email">Email Address</label>
-                <input class="form-input" type="email" id="email" name="email" required placeholder="name@example.com">
+        <form method="POST" id="login-form" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="email">
+                    Email Address
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <span class="material-symbols-outlined text-[20px]">mail</span>
+                    </span>
+                    <input class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 text-slate-900 text-sm font-medium transition-all" 
+                           type="email" id="email" name="email" required placeholder="name@example.com" autofocus>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <input class="form-input" type="password" id="password" name="password" required placeholder="••••••••">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="password">
+                    Password
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <span class="material-symbols-outlined text-[20px]">key</span>
+                    </span>
+                    <input class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 text-slate-900 text-sm font-medium transition-all" 
+                           type="password" id="password" name="password" required placeholder="••••••••">
+                </div>
             </div>
 
             <!-- Optional browser location capture on login -->
             <input type="hidden" id="last_lat" name="last_lat">
             <input type="hidden" id="last_lon" name="last_lon">
 
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Sign In</button>
+            <button type="submit" 
+                    class="w-full py-3 px-4 rounded-xl bg-brand-green hover:bg-emerald-600 text-white font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2 mt-2">
+                <span>Sign In</span>
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </button>
         </form>
 
-        <div style="margin-top: 1.5rem; text-align: center; font-size: 0.88rem; color: var(--text-secondary);">
-            Don't have an account? <a href="{{ url_for('auth.register') }}" style="color: var(--primary); font-weight: 600;">Sign Up</a>
+        <div class="mt-6 pt-6 border-t border-slate-100 text-center text-xs sm:text-sm text-slate-500">
+            Don't have an account yet? 
+            <a href="{{ url_for('auth.register') }}" class="font-bold text-brand-green hover:underline">
+                Create one now
+            </a>
         </div>
+
     </div>
 </div>
 {% endblock %}

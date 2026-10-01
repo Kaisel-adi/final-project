@@ -20,22 +20,22 @@ def generate_otp() -> str:
 
 def send_verification_otp_email(to_email: str, name: str, otp: str) -> tuple[bool, str]:
     """Dispatches a professional OTP verification email."""
-    subject = f"Verify Your Email — GCIR Code: {otp}"
+    subject = f"Verify Your Email — Garuda Code: {otp}"
 
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-        <div style="background: #1a73e8; padding: 24px; text-align: center; color: #ffffff;">
-            <div style="font-size: 28px; margin-bottom: 4px;">🏛️</div>
-            <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Geo-Tagged Civic Issue Reporter</h1>
-            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Email Ownership Verification</p>
+        <div style="background: #0d9488; padding: 24px; text-align: center; color: #ffffff;">
+            <div style="font-size: 28px; margin-bottom: 4px;">🦅</div>
+            <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">Garuda</h1>
+            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">See the change. Be the change!</p>
         </div>
         <div style="padding: 28px 24px; color: #334155;">
             <p style="font-size: 15px; margin-top: 0;">Hi <strong>{name}</strong>,</p>
             <p style="font-size: 14px; line-height: 1.6; color: #475569;">
-                Thank you for joining GCIR to report and verify civic issues in your neighborhood. Please enter the 6-digit verification code below to confirm ownership of this email address:
+                Thank you for joining Garuda to report and verify civic issues in your neighborhood. Please enter the 6-digit verification code below to confirm ownership of this email address:
             </p>
-            <div style="background: #f8fafc; border: 2px dashed #93c5fd; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0;">
-                <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #1a73e8; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
+            <div style="background: #f8fafc; border: 2px dashed #99f6e4; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0;">
+                <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0d9488; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
                     {otp}
                 </div>
                 <div style="font-size: 12px; color: #64748b; margin-top: 8px; font-weight: 500;">
@@ -43,18 +43,18 @@ def send_verification_otp_email(to_email: str, name: str, otp: str) -> tuple[boo
                 </div>
             </div>
             <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 0;">
-                If you did not sign up for GCIR, you can safely ignore this email. Someone may have entered your address by mistake.
+                If you did not sign up for Garuda, you can safely ignore this email. Someone may have entered your address by mistake.
             </p>
         </div>
         <div style="background: #f1f5f9; border-top: 1px solid #e2e8f0; padding: 14px; text-align: center; font-size: 12px; color: #94a3b8;">
-            Geo-Tagged Civic Issue Reporter &bull; Delhi-NCR Civic Network
+            Garuda &bull; See the change. Be the change!
         </div>
     </div>
     """
 
     text_body = f"""Hi {name},
 
-Thank you for signing up for GCIR.
+Thank you for signing up for Garuda.
 
 Your 6-digit email verification code is: {otp}
 

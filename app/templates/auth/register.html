@@ -1,66 +1,119 @@
 {% extends "base.html" %}
 
-{% block title %}Resident Registration — GCIR{% endblock %}
+{% block title %}Resident Registration — Garuda &bull; See the change. Be the change!{% endblock %}
 
 {% block content %}
-<div style="max-width: 650px; margin: 2rem auto;">
-    <div class="card">
-        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary);">Join Your Community</h2>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-            Register to post geo-tagged issues and verify reports in your neighborhood.
-        </p>
-
-        <form method="POST">
-            <div class="form-grid-2col">
-                <div class="form-group">
-                    <label class="form-label" for="name">Full Name</label>
-                    <input class="form-input" type="text" id="name" name="name" value="{{ name or '' }}" required placeholder="e.g. Arun Kumar">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="email">Email Address</label>
-                    <input class="form-input" type="email" id="email" name="email" value="{{ email or '' }}" required placeholder="name@example.com">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <input class="form-input" type="password" id="password" name="password" required minlength="6" placeholder="At least 6 characters">
-            </div>
-
-            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
-
-            <h3 style="font-size: 1.1rem; margin-bottom: 0.35rem;">Set Your Home Neighborhood Pin</h3>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-                Drag the marker to your residence/locality. We use this to calculate your proximity for upvoting and to send nearby issue digests.
+<div class="max-w-xl mx-auto px-4 py-8 sm:py-10">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+        
+        <!-- Header -->
+        <div class="text-center">
+            <img src="{{ url_for('static', filename='img/garuda-icon.png') }}" alt="Garuda" class="w-14 h-14 rounded-2xl mx-auto mb-3 shadow-md object-contain">
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Join Garuda</h1>
+            <p class="text-xs sm:text-sm text-emerald-600 font-semibold mt-0.5">
+                See the change. Be the change!
             </p>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Register to post civic issues and verify reports in your neighborhood.
+            </p>
+        </div>
 
-            <div style="height: 280px; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; border: 1px solid var(--border-color);">
-                <div id="picker-map" style="width: 100%; height: 100%;"></div>
+        <form method="POST" class="space-y-4">
+            <!-- Name & Email 2-column on desktop -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="name">
+                        Full Name
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <span class="material-symbols-outlined text-[20px]">badge</span>
+                        </span>
+                        <input class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 text-slate-900 text-sm font-medium transition-all" 
+                               type="text" id="name" name="name" value="{{ name or '' }}" required placeholder="e.g. Arun Kumar" autofocus>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="email">
+                        Email Address
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <span class="material-symbols-outlined text-[20px]">mail</span>
+                        </span>
+                        <input class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 text-slate-900 text-sm font-medium transition-all" 
+                               type="email" id="email" name="email" value="{{ email or '' }}" required placeholder="name@example.com">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-grid-coords">
-                <div>
-                    <label class="form-label" style="font-size: 0.8rem;">Latitude</label>
-                    <input class="form-input" type="text" id="home_lat" name="home_lat" value="28.6139" readonly>
-                </div>
-                <div>
-                    <label class="form-label" style="font-size: 0.8rem;">Longitude</label>
-                    <input class="form-input" type="text" id="home_lon" name="home_lon" value="77.2090" readonly>
-                </div>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-geolocate" style="height: 38px;">
-                    📍 Use My GPS
-                </button>
-            </div>
-
-            <div class="form-group" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
-                <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; font-size: 0.9rem;">
-                    <input type="checkbox" name="digest_opt_in" checked style="width: 18px; height: 18px;">
-                    Receive periodic email digest of unverified issues near me
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="password">
+                    Password
                 </label>
-                <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 1rem;">
-                    <label for="digest_radius_km" style="font-size: 0.85rem; color: var(--text-secondary);">Digest Radius:</label>
-                    <select name="digest_radius_km" id="digest_radius_km" class="form-select" style="width: auto; padding: 0.35rem 0.75rem;">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <span class="material-symbols-outlined text-[20px]">key</span>
+                    </span>
+                    <input class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 text-slate-900 text-sm font-medium transition-all" 
+                           type="password" id="password" name="password" required minlength="6" placeholder="At least 6 characters">
+                </div>
+            </div>
+
+            <hr class="border-slate-100 my-4">
+
+            <!-- Neighborhood Pin Map -->
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-brand-green text-[18px]">home_pin</span>
+                        <span>Set Your Neighborhood Pin</span>
+                    </h3>
+                    <button type="button" id="btn-geolocate" 
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-brand-green text-xs font-bold transition-colors">
+                        <span class="material-symbols-outlined text-[15px]">my_location</span>
+                        <span>Detect GPS</span>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-400 mb-2">
+                    Drag the pin to your residence. This sets your community radius for local voting and civic digests.
+                </p>
+
+                <div class="h-56 rounded-2xl overflow-hidden border border-slate-200 relative mb-3">
+                    <div id="picker-map" class="w-full h-full"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1" for="home_lat">
+                            Latitude
+                        </label>
+                        <input class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700" 
+                               type="text" id="home_lat" name="home_lat" value="28.6139" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1" for="home_lon">
+                            Longitude
+                        </label>
+                        <input class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700" 
+                               type="text" id="home_lon" name="home_lon" value="77.2090" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Digest Settings -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <label class="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-800 cursor-pointer">
+                    <input type="checkbox" name="digest_opt_in" checked 
+                           class="w-4 h-4 rounded text-brand-green focus:ring-brand-green/20 border-slate-300">
+                    <span>Receive email digests of pending issues in my area</span>
+                </label>
+                
+                <div class="flex items-center gap-2 pt-1 pl-6.5 text-xs text-slate-600">
+                    <span>Radius:</span>
+                    <select name="digest_radius_km" id="digest_radius_km" 
+                            class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-brand-green">
                         <option value="2.0">2 km (Local Block)</option>
                         <option value="5.0" selected>5 km (Ward / Neighborhood)</option>
                         <option value="10.0">10 km (Zone)</option>
@@ -68,74 +121,36 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create Account</button>
+            <button type="submit" 
+                    class="w-full py-3 px-4 rounded-xl bg-brand-green hover:bg-emerald-600 text-white font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2 mt-4">
+                <span>Create Resident Account</span>
+                <span class="material-symbols-outlined text-[18px]">check_circle</span>
+            </button>
         </form>
 
-        <div style="margin-top: 1.5rem; text-align: center; font-size: 0.88rem; color: var(--text-secondary);">
-            Already have an account? <a href="{{ url_for('auth.login') }}" style="color: var(--primary); font-weight: 600;">Sign In</a>
+        <div class="pt-4 border-t border-slate-100 text-center text-xs sm:text-sm text-slate-500">
+            Already have an account? 
+            <a href="{{ url_for('auth.login') }}" class="font-bold text-brand-green hover:underline">
+                Sign In
+            </a>
         </div>
+
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const defaultLat = 28.6139;
-    const defaultLon = 77.2090;
-
-    function createSvgPin(colorHex) {
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="30" height="44" style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35)); cursor: grab;">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.8"/>
-                <circle cx="12" cy="11" r="5" fill="#ffffff" opacity="0.95"/>
-                <circle cx="12" cy="11" r="2.5" fill="${colorHex}"/>
-            </svg>
-        `;
-        return L.divIcon({
-            className: 'custom-map-pin',
-            html: svg,
-            iconSize: [30, 44],
-            iconAnchor: [15, 44],
-            popupAnchor: [0, -40]
-        });
-    }
-
-    const map = L.map('picker-map').setView([defaultLat, defaultLon], 12);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        keepBuffer: 2,
-        updateWhenIdle: true,
-        updateWhenZooming: false
-    }).addTo(map);
-
-    let marker = L.marker([defaultLat, defaultLon], { draggable: true, icon: createSvgPin('#1a73e8') }).addTo(map);
-
-    function updateCoords(lat, lon) {
-        document.getElementById('home_lat').value = lat.toFixed(6);
-        document.getElementById('home_lon').value = lon.toFixed(6);
-    }
-
-    marker.on('dragend', function (e) {
-        const pos = marker.getLatLng();
-        updateCoords(pos.lat, pos.lng);
-    });
-
-    map.on('click', function (e) {
-        marker.setLatLng(e.latlng);
-        updateCoords(e.latlng.lat, e.latlng.lng);
-    });
-
-    document.getElementById('btn-geolocate').addEventListener('click', function() {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(function(pos) {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                map.setView([lat, lon], 14);
-                marker.setLatLng([lat, lon]);
-                updateCoords(lat, lon);
-            }, function(err) {
-                alert("Geolocation access denied or unavailable.");
+    document.addEventListener("DOMContentLoaded", function() {
+        if (window.GCIRMaps && window.GCIRMaps.initPinpointMap) {
+            window.GCIRMaps.initPinpointMap("picker-map", {
+                lat: 28.6139,
+                lon: 77.2090,
+                zoom: 12,
+                draggable: true,
+                latInputId: "home_lat",
+                lonInputId: "home_lon",
+                gpsBtnId: "btn-geolocate"
             });
         }
     });
