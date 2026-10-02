@@ -23,3 +23,20 @@ def validate_email_format(email: str | None) -> bool:
     if ".." in email_clean:
         return False
     return bool(EMAIL_REGEX.match(email_clean))
+
+
+def validate_password_strength(password: str | None) -> tuple[bool, str]:
+    """
+    Validates password requirements:
+      - Non-empty
+      - Minimum 6 characters
+      - Maximum 128 characters
+    Returns (is_valid, error_message).
+    """
+    if not password:
+        return False, "Password cannot be empty."
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long."
+    if len(password) > 128:
+        return False, "Password cannot exceed 128 characters."
+    return True, ""

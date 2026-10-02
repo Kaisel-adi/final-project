@@ -52,8 +52,9 @@ def create_app(config_class=Config):
         )
 
     # Register blueprints
-    from app.auth.routes import auth_bp
+    from app.auth.routes import auth_bp, api_auth_bp
     app.register_blueprint(auth_bp)
+    app.register_blueprint(api_auth_bp)
 
     # Reports Blueprint
     from app.reports.routes import reports_bp
@@ -78,6 +79,15 @@ def create_app(config_class=Config):
     @app.route("/")
     def index():
         return redirect(url_for("feed.feed_view"))
+
+    @app.route("/forgot-password")
+    def forgot_password_root():
+        return redirect(url_for("auth.forgot_password"))
+
+    @app.route("/reset-password")
+    def reset_password_root():
+        token = request.args.get("token", "")
+        return redirect(url_for("auth.reset_password", token=token))
 
     @app.route("/robots.txt")
     def robots_txt():

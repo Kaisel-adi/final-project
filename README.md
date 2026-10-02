@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-67%20Passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-121%20Passing-brightgreen.svg)](tests/)
 [![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-green.svg)](https://www.mongodb.com/cloud/atlas)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v3.4-38bdf8.svg)](https://tailwindcss.com/)
 [![Pilot Region](https://img.shields.io/badge/Pilot%20Region-Delhi--NCR%20(250%20Wards)-teal.svg)](data/)
@@ -43,33 +43,42 @@
 - **Staged Registration & TTL Cleanup**: Pending sign-ups are stored with securely hashed passwords and auto-purged after 15 minutes via MongoDB TTL indexes.
 - **Anti-Spam Resend Protection**: Cooldown timer (30 seconds) prevents email flooding.
 
-### 5. Community Verification Engine
+### 5. Secure Password Reset & Recovery System (Brevo Transactional Integration)
+- **Account Enumeration Defense**: `POST /api/auth/forgot-password` and Web UI consistently return a uniform generic notice (`"If an account exists for this email, password reset instructions have been sent."`) regardless of whether the account exists or if transactional dispatch encounters provider issues.
+- **Cryptographic Token Hashing (SHA-256)**: Reset tokens are generated using cryptographically secure entropy (`secrets.token_urlsafe(32)`). Raw reset tokens are strictly never stored in the database or written to server logs; only SHA-256 hashes (`password_reset_token_hash`) are persisted.
+- **Strict 30-Minute Expiry & Single-Use Invalidation**: Tokens expire automatically in 30 minutes. Upon a successful reset or upon a newer reset request, existing tokens are immediately and atomically invalidated (`$unset`).
+- **Adaptive Rate Limiting & Abuse Prevention**: Sliding-window rate limiter restricts reset requests by both client IP (max 10 requests / 15 mins) and account email (max 5 requests / 15 mins), returning HTTP 429 to mitigate automated credential and inbox spam attacks.
+- **Password Strength Rules & Secure Hashing**: Enforces length constraints (6–128 characters), confirmation matching, and hashes using Werkzeug's adaptive algorithm (`scrypt`/`pbkdf2`). Plaintext passwords are never stored.
+- **Dual API & Responsive Web Flow**: Complete RESTful API endpoints (`POST /api/auth/forgot-password`, `GET/POST /api/auth/reset-password`) and user-friendly server-rendered views with client-side real-time strength/matching feedback, interactive submit spinners, and password visibility toggles.
+- **Automatic Expired Token Purging**: Database cleanup utility (`cleanup_expired_reset_tokens`) purges expired tokens from user profiles.
+
+### 6. Community Verification Engine
 - Enforces `VERIFY_THRESHOLD = 10` upvotes before official complaint routing is unlocked.
 - One upvote per account; authors cannot upvote their own reports.
 - Soft proximity check (~5 km): votes from distant locations are accepted but flagged for audit.
 - Visual progress bars dynamically transitioning from progress amber to verified emerald.
 
-### 6. Hierarchical Authority Complaint Router
+### 7. Hierarchical Authority Complaint Router
 - Point-in-polygon spatial queries (`$geoIntersects`) resolving exact administrative boundaries: **250 MCD Wards (2022 Delimitation)**, NDMC, Noida Authority, and Ghaziabad Nagar Nigam.
 - Specificity priority: `ward` > `sector` > `district` > `state` with automatic supervisory fallback.
 - One-click `mailto:` dispatch and clipboard copy with pre-filled details, coordinates, photos/videos, upvote metrics, and corroborating issue counts (<200m).
 
-### 7. Civic Administration & Moderation Dashboard
+### 8. Civic Administration & Moderation Dashboard
 - **AJAX Actions (Zero-Reload)**: Instant verification, status updates, content moderation (unflag/remove), user role modification (Resident &harr; Moderator), and ban toggles without page reloads.
 - **Interactive Quick-Filter Tabs**: Filter instantly by *Total Reports*, *Community Verified*, *Complaints Filed*, *Registered Users*, and *Flagged Queue*.
 - **Fast-Track Verification**: Administrators can immediately verify urgent civic hazards without waiting for 10 community votes.
 
-### 8. Resident Profile & Civic Dashboard
+### 9. Resident Profile & Civic Dashboard
 - **Session Persistence**: 30-day persistent session cookies with `HttpOnly` and `SameSite=Lax` security attributes.
 - **Civic Engagement Stats**: Tracks total reports, resolved count, in-progress items, upvotes cast, and average municipal response times.
 - **Lightweight DB Projections**: Optimized MongoDB queries fetch only essential user dashboard fields.
 
-### 9. Scheduled Neighborhood Email Digest
+### 10. Scheduled Neighborhood Email Digest
 - Token-secured endpoint (`/jobs/digest`) scheduled to run periodically or manually dispatched via Admin panel.
 - Groups unverified issues within each opted-in resident's radius (capped at 5 items).
 - Strict duplicate suppression via `digest_log` and exclusion of user's own/upvoted issues.
 
-### 10. Data & ML Analytics
+### 11. Data & ML Analytics
 - **Hotspot Detection**: DBSCAN clustering using the Haversine metric on radian coordinates to locate dense civic problem zones.
 - **Duplicate Detection**: Spatial radius candidate filter (<200m) paired with calibrated bi-gram TF-IDF cosine similarity (**100% Precision**, **70% Recall**, **0.8235 F1-Score**).
 

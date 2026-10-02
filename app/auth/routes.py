@@ -4,11 +4,20 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, login_required, current_user
 from app.auth.models import User
 from app.auth.validators import validate_email_format
-from app.auth.services import stage_pending_signup, verify_and_complete_signup, resend_verification_otp
+from app.auth.services import (
+    stage_pending_signup,
+    verify_and_complete_signup,
+    resend_verification_otp,
+    initiate_password_reset,
+    verify_reset_token,
+    reset_user_password,
+    GENERIC_RESET_MSG
+)
 from app.reports.services import CATEGORIES
 from app.db import get_db
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+api_auth_bp = Blueprint("api_auth", __name__, url_prefix="/api/auth")
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -319,3 +328,138 @@ def delete_account():
     logout_user()
     flash("Your account, reported issues, and associated personal data have been completely deleted.", "info")
     return redirect(url_for("auth.login"))
+
+
+# --- Password Reset Web Routes ---
+
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("feed.feed_view"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        if client_ip and "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+        base_url = request.url_root.rstrip("/")
+
+        success, msg, status_code = initiate_password_reset(
+            email=email,
+            base_url=base_url,
+            client_ip=client_ip
+        )
+
+        if status_code == 429:
+            flash(msg, "warning")
+            return render_template("auth/forgot_password.html", state="rate_limited", email=email, error=msg), 429
+        elif status_code == 400:
+            flash(msg, "danger")
+            return render_template("auth/forgot_password.html", state="invalid_email", email=email, error=msg), 400
+        elif status_code == 500:
+            flash(msg, "danger")
+            return render_template("auth/forgot_password.html", state="server_error", email=email, error=msg), 500
+        else:
+            flash(msg, "info")
+            return render_template("auth/forgot_password.html", state="sent", email=email), 200
+
+    return render_template("auth/forgot_password.html", state="initial")
+
+
+@auth_bp.route("/reset-password", methods=["GET", "POST"])
+def reset_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("feed.feed_view"))
+
+    if request.method == "POST":
+        token = request.form.get("token", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        success, msg, status_code = reset_user_password(
+            raw_token=token,
+            new_password=password,
+            confirm_password=confirm_password
+        )
+        if success:
+            flash(msg, "success")
+            return redirect(url_for("auth.login"))
+        else:
+            flash(msg, "danger")
+            is_valid, _, _ = verify_reset_token(token)
+            if not is_valid:
+                state = "expired" if "expired" in msg.lower() else "invalid"
+                return render_template("auth/reset_password.html", state=state, token=token, error=msg), status_code
+            return render_template("auth/reset_password.html", state="ready", token=token, error=msg), status_code
+
+    token = request.args.get("token", "").strip()
+    if not token:
+        flash("Reset token is missing or invalid.", "danger")
+        return render_template("auth/reset_password.html", state="invalid", error="Reset token is missing or invalid."), 400
+
+    is_valid, user, msg = verify_reset_token(token)
+    if not is_valid:
+        flash(msg, "danger")
+        state = "expired" if "expired" in msg.lower() else "invalid"
+        return render_template("auth/reset_password.html", state=state, token=token, error=msg), 400
+
+    return render_template("auth/reset_password.html", state="ready", token=token)
+
+
+# --- Password Reset API Routes ---
+
+@api_auth_bp.route("/forgot-password", methods=["POST"])
+def api_forgot_password():
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    email = data.get("email", "").strip() if isinstance(data, dict) else ""
+    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    base_url = request.url_root.rstrip("/")
+
+    success, msg, status_code = initiate_password_reset(
+        email=email,
+        base_url=base_url,
+        client_ip=client_ip
+    )
+    return jsonify({
+        "status": "success" if success else "error",
+        "message": msg
+    }), status_code
+
+
+@api_auth_bp.route("/reset-password", methods=["GET"])
+def api_verify_reset_token():
+    token = request.args.get("token", "").strip()
+    if not token:
+        return jsonify({"valid": False, "message": "Reset token is required."}), 400
+
+    is_valid, user, msg = verify_reset_token(token)
+    if not is_valid:
+        return jsonify({"valid": False, "message": msg}), 400
+
+    return jsonify({"valid": True, "message": msg}), 200
+
+
+@api_auth_bp.route("/reset-password", methods=["POST"])
+def api_reset_password():
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "message": "Malformed request payload."}), 400
+
+    token = (data.get("token") or "").strip()
+    password = data.get("password") or data.get("new_password") or ""
+    confirm_password = data.get("confirm_password") or data.get("confirm_new_password") or ""
+
+    if not token:
+        return jsonify({"success": False, "message": "Reset token is required."}), 400
+
+    success, msg, status_code = reset_user_password(
+        raw_token=token,
+        new_password=password,
+        confirm_password=confirm_password
+    )
+    return jsonify({
+        "success": success,
+        "message": msg
+    }), status_code
