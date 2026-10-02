@@ -52,33 +52,52 @@
 - **Dual API & Responsive Web Flow**: Complete RESTful API endpoints (`POST /api/auth/forgot-password`, `GET/POST /api/auth/reset-password`) and user-friendly server-rendered views with client-side real-time strength/matching feedback, interactive submit spinners, and password visibility toggles.
 - **Automatic Expired Token Purging**: Database cleanup utility (`cleanup_expired_reset_tokens`) purges expired tokens from user profiles.
 
-### 6. Community Verification Engine
-- Enforces `VERIFY_THRESHOLD = 10` upvotes before official complaint routing is unlocked.
-- One upvote per account; authors cannot upvote their own reports.
-- Soft proximity check (~5 km): votes from distant locations are accepted but flagged for audit.
-- Visual progress bars dynamically transitioning from progress amber to verified emerald.
+### 6. Dedicated Life Hazard Emergency Flow & First-Responder Directory
+- **Minimal High-Speed Submission**: Auto-captures high-accuracy GPS coordinates; description and photo attachments are completely optional to ensure rapid reporting during imminent threats.
+- **Zero Moderation Delays & Deduplication Bypass**: Bypasses the moderation queue and duplicate merging delays. Duplicates are treated as immediate corroboration rather than merged, providing real-time corroboration metrics to first responders.
+- **Optional Direct Authority Dispatch Checkbox**: Users can toggle `☑ Dispatch this report to the concerned authority` (`From: Garuda`, `To: Concerned Authority`, `Reply-To: User's verified email`). This avoids unnecessary email dispatches if single-call resolution is already handled.
+- **1 km Neighborhood Proximity Alerts**: Automatically emails residents within a 1 km radius (verified via last login coordinates with fallback to home location), embedded with direct links to the live report.
+- **Direct 112 Emergency Dialer**: Dedicated high-contrast red button (`Call 112 (National)`) that directly triggers the device dialer with the national emergency number.
+- **Static Offline Emergency Directory**: Instant bottom action sheet opening without network calls or API dependencies, providing one-tap dialers for:
+  - **Police**: `112`
+  - **Fire**: `101`
+  - **Ambulance**: `102`
+  - **Children in Difficult Situations (Childline)**: `1098`
+  - **LPG Gas Leak Helpline**: `1906`
+  - **Disaster Management Services**: `108`
+- **Abuse Rate Limiting**: Capped at 5 life hazard reports per user per hour.
+- **Top Priority & Escalation Timers**: Pinned at the top of all views and automatically escalates if unacknowledged within 60 minutes.
 
-### 7. Hierarchical Authority Complaint Router
+### 7. Community Verification & Immediate Complaint Filing
+- **Verification Milestone**: Reports that reach 10 community upvotes receive a distinct "Community Verified" emerald status tag.
+- **Immediate Complaint Access**: Removed artificial 10-vote hard limits—residents can generate and dispatch formal complaints to responsible authorities immediately upon reporting without delay.
+- Soft proximity check (~5 km) flags distant votes for audit while maintaining democratic participation.
+
+### 8. Hierarchical Authority Complaint Router
 - Point-in-polygon spatial queries (`$geoIntersects`) resolving exact administrative boundaries: **250 MCD Wards (2022 Delimitation)**, NDMC, Noida Authority, and Ghaziabad Nagar Nigam.
 - Specificity priority: `ward` > `sector` > `district` > `state` with automatic supervisory fallback.
 - One-click `mailto:` dispatch and clipboard copy with pre-filled details, coordinates, photos/videos, upvote metrics, and corroborating issue counts (<200m).
 
-### 8. Civic Administration & Moderation Dashboard
+### 9. Interactive Geospatial Map & User Location Pinpoint
+- **Distinct White User Pointer**: Visual pinpoint marker displaying the user's live coordinates with their avatar or initials for easy orientation.
+- **100 km Metro Coverage Circle**: Dynamic radar circle displaying the coverage boundary on both the feed radar and interactive full-screen map views.
+
+### 10. Civic Administration & Smooth Moderation Dashboard
+- **Zero-Disruption Report Removal**: When an administrator deletes an inappropriate or resolved report, it is permanently removed from the database and feed without freezing or forcing reloads on active users scrolling through the feed.
 - **AJAX Actions (Zero-Reload)**: Instant verification, status updates, content moderation (unflag/remove), user role modification (Resident &harr; Moderator), and ban toggles without page reloads.
 - **Interactive Quick-Filter Tabs**: Filter instantly by *Total Reports*, *Community Verified*, *Complaints Filed*, *Registered Users*, and *Flagged Queue*.
-- **Fast-Track Verification**: Administrators can immediately verify urgent civic hazards without waiting for 10 community votes.
 
-### 9. Resident Profile & Civic Dashboard
+### 11. Resident Profile & Civic Dashboard
 - **Session Persistence**: 30-day persistent session cookies with `HttpOnly` and `SameSite=Lax` security attributes.
 - **Civic Engagement Stats**: Tracks total reports, resolved count, in-progress items, upvotes cast, and average municipal response times.
 - **Lightweight DB Projections**: Optimized MongoDB queries fetch only essential user dashboard fields.
 
-### 10. Scheduled Neighborhood Email Digest
+### 12. Scheduled Neighborhood Email Digest
 - Token-secured endpoint (`/jobs/digest`) scheduled to run periodically or manually dispatched via Admin panel.
 - Groups unverified issues within each opted-in resident's radius (capped at 5 items).
 - Strict duplicate suppression via `digest_log` and exclusion of user's own/upvoted issues.
 
-### 11. Data & ML Analytics
+### 13. Data & ML Analytics
 - **Hotspot Detection**: DBSCAN clustering using the Haversine metric on radian coordinates to locate dense civic problem zones.
 - **Duplicate Detection**: Spatial radius candidate filter (<200m) paired with calibrated bi-gram TF-IDF cosine similarity (**100% Precision**, **70% Recall**, **0.8235 F1-Score**).
 
@@ -253,17 +272,19 @@ python scripts/clean_demo_data.py
 
 ## 🧪 Testing & Validation
 
-### Run Full Test Suite (67 Tests)
+### Run Full Test Suite (121 Tests)
 ```bash
 python -m pytest tests/ -v
 ```
-All **67 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
+All **121 automated unit and integration tests** run deterministically in isolated memory using `mongomock` with zero external database dependencies:
 - **Authentication & Roles**: Password hashing, duplicate email handling, session management.
 - **Email Validation & OTP**: Regex syntax tests, OTP generation, 15-min expiration, and resend cooldown.
-- **Reports & Verification**: GeoJSON coordinate validation, proximity checks, 10-vote threshold flip.
+- **Secure Password Reset**: Cryptographic token hashing (SHA-256), 30-min expiration, anti-enumeration generic responses, sliding-window rate limiting (IP & email), single-use invalidation, and Brevo delivery failure resilience.
+- **Life Hazard Emergency System**: 5-reports/hour rate limiting, immediate corroboration without duplicate delay, optional authority email dispatch, 1 km proximity alert dispatch, 112 dialing, and static action sheet directory rendering.
+- **Reports & Verification**: GeoJSON coordinate validation, proximity checks, immediate complaint filing, and verified milestone tags.
 - **Camera & Video Support**: File upload constraints, WebM/MP4 storage, and embedded player rendering.
-- **Admin AJAX Actions**: Fast-track verification, tab switching, AJAX role changing, user ban toggles, and content moderation without page reloads.
-- **Responsiveness & Performance**: Mobile bottom navigation bars, SVG pins, lazy-loading media, client image compression, debounced maps, and static caching headers.
+- **Admin AJAX Actions**: Fast-track verification, smooth zero-disruption report removal, tab switching, AJAX role changing, user ban toggles, and content moderation without page reloads.
+- **Responsiveness & Performance**: Mobile bottom navigation bars, SVG pins, lazy-loading media, client image compression, debounced maps, user location pinpoint, 100km coverage circle, and static caching headers.
 - **Authority Router & Complaints**: Point-in-polygon routing across MCD Wards and draft generation.
 - **Machine Learning**: DBSCAN clustering and TF-IDF duplicate identification.
 - **WSGI & Keep-Alive Daemon**: Production Render background ping worker threading, startup grace period, and `/health` reachability.

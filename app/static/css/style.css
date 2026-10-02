@@ -1120,3 +1120,39 @@ input.border-rose-500 {
     background: #991b1b !important;
     color: #ffffff !important;
 }
+
+/* Life Hazard Call 112 & Emergency Directory Buttons */
+.btn-call-112,
+.bg-red-600 {
+    background-color: #dc2626 !important;
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.45) !important;
+}
+.btn-call-112:hover,
+.bg-red-600:hover,
+.hover\:bg-red-700:hover {
+    background-color: #b91c1c !important;
+    background: #b91c1c !important;
+    color: #ffffff !important;
+}
+.btn-call-112:active,
+.bg-red-600:active,
+.active\:bg-red-800:active {
+    background-color: #991b1b !important;
+    background: #991b1b !important;
+    color: #ffffff !important;
+}
+
+.btn-emergency-call {
+    background-color: #0f172a !important;
+    background: #0f172a !important;
+    color: #ffffff !important;
+    border: 1px solid #334155 !important;
+}
+.btn-emergency-call:hover {
+    background-color: #020617 !important;
+    background: #020617 !important;
+    color: #ffffff !important;
+}

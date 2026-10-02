@@ -201,14 +201,23 @@
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <!-- Button 1: Call 112 -->
-                        <a href="tel:112" class="flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-red-600/30 transition-all select-none">
-                            <span class="material-symbols-outlined text-xl">call</span>
-                            <span>Call 112 (National)</span>
+                        <a href="tel:112" 
+                           id="btn-call-112-direct"
+                           class="btn-call-112 flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all select-none cursor-pointer"
+                           style="background-color: #dc2626 !important; background: #dc2626 !important; color: #ffffff !important; box-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.45) !important;"
+                           aria-label="Direct dial national emergency police and fire helpline 112">
+                            <span class="material-symbols-outlined text-xl" style="color: #ffffff !important;">call</span>
+                            <span class="font-extrabold tracking-wide" style="color: #ffffff !important;">Call 112 (National)</span>
                         </a>
                         <!-- Button 2: Emergency Call -->
-                        <button type="button" onclick="openEmergencyActionSheet()" class="flex items-center justify-center gap-2 py-3.5 px-4 bg-slate-900 hover:bg-black active:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl border border-slate-700 shadow-sm transition-all select-none cursor-pointer">
-                            <span class="material-symbols-outlined text-xl text-amber-400">emergency_home</span>
-                            <span>Emergency Call</span>
+                        <button type="button" 
+                                id="btn-emergency-directory"
+                                onclick="openEmergencyActionSheet()" 
+                                class="btn-emergency-call flex items-center justify-center gap-2 py-3.5 px-4 bg-slate-900 hover:bg-black active:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl border border-slate-700 shadow-sm transition-all select-none cursor-pointer"
+                                style="background-color: #0f172a !important; color: #ffffff !important;"
+                                aria-label="Open emergency call directory">
+                            <span class="material-symbols-outlined text-xl text-amber-400" style="color: #fbbf24 !important;">emergency_home</span>
+                            <span class="font-extrabold tracking-wide" style="color: #ffffff !important;">Emergency Call</span>
                         </button>
                     </div>
                 </div>
