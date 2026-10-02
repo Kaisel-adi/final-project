@@ -42,15 +42,20 @@ def _get_email_config(key: str, default=None):
 def get_effective_email_backend() -> str:
     """
     Determines active email backend.
-    If EMAIL_BACKEND is set to 'mock' (or unset), but SMTP credentials
-    (SMTP_HOST and SMTP_USER) are present in config/env and not in test mode,
-    automatically upgrades backend to 'smtp'.
+    In testing mode, defaults strictly to 'mock' to prevent background network blocking and avoid emailing real services.
     """
-    is_testing = bool(_get_email_config("TESTING", False))
-    raw_backend = _clean_str(_get_email_config("EMAIL_BACKEND", "mock")).lower()
+    import sys
+    from flask import current_app, has_app_context
 
-    if is_testing:
-        return raw_backend or "mock"
+    if has_app_context() and current_app.config.get("TESTING", False):
+        return _clean_str(current_app.config.get("EMAIL_BACKEND", "mock")).lower() or "mock"
+
+    if "pytest" in sys.modules or bool(_get_email_config("TESTING", False)):
+        if has_app_context():
+            return _clean_str(current_app.config.get("EMAIL_BACKEND", "mock")).lower() or "mock"
+        return "mock"
+
+    raw_backend = _clean_str(_get_email_config("EMAIL_BACKEND", "mock")).lower()
 
     if raw_backend in ("smtp", "resend", "sendgrid", "brevo"):
         return raw_backend

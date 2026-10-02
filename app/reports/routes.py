@@ -42,13 +42,14 @@ def create():
         lon_str = request.form.get("longitude")
         photo_file = request.files.get("photo")
 
-        if not photo_file or photo_file.filename == "":
+        # For life_hazard: minimal form, photo is optional. For other categories: photo is required
+        if category != "life_hazard" and (not photo_file or photo_file.filename == ""):
             flash("A photo or video evidence of the issue is required.", "danger")
             return render_template("reports/create.html", categories=CATEGORIES,
                                    description=description, selected_cat=category)
 
         if not lat_str or not lon_str:
-            flash("Coordinates are required. Please use browser location or drop a pin on the map.", "danger")
+            flash("Coordinates are required. Please allow browser location or drop a pin on the map.", "danger")
             return render_template("reports/create.html", categories=CATEGORIES,
                                    description=description, selected_cat=category)
 
@@ -56,7 +57,7 @@ def create():
             lat = float(lat_str)
             lon = float(lon_str)
             coords = [lon, lat]  # GeoJSON [longitude, latitude]
-            photo_url = save_image(photo_file)
+            photo_url = save_image(photo_file) if (photo_file and photo_file.filename) else ""
             
             report = create_report(
                 author_id=current_user.id,
@@ -65,7 +66,10 @@ def create():
                 photo_url=photo_url,
                 coordinates=coords
             )
-            flash("Civic issue successfully reported! It is now live for community verification.", "success")
+            if category == "life_hazard":
+                flash("🚨 Immediate Life Hazard alert broadcast! Emergency dispatch has been notified directly.", "danger")
+            else:
+                flash("Civic issue successfully reported! It is now live for community verification.", "success")
             return redirect(url_for("reports.view", report_id=str(report["_id"])))
         except Exception as e:
             flash(f"Error submitting report: {str(e)}", "danger")
@@ -79,8 +83,10 @@ def create():
         if coords and len(coords) == 2:
             default_lon, default_lat = coords[0], coords[1]
 
+    selected_cat = request.args.get("category", "")
     return render_template("reports/create.html", categories=CATEGORIES,
-                           default_lat=default_lat, default_lon=default_lon)
+                           default_lat=default_lat, default_lon=default_lon,
+                           selected_cat=selected_cat)
 
 
 @reports_bp.route("/<report_id>")

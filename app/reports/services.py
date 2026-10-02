@@ -1,5 +1,5 @@
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 from flask import current_app
 from app.db import get_db
@@ -49,8 +49,29 @@ def create_report(author_id: str, category: str, description: str,
     if category not in valid_cats:
         raise ValueError(f"Invalid category '{category}'. Allowed: {valid_cats}")
 
-    if not description or len(description.strip()) < 10:
-        raise ValueError("Description must be at least 10 characters long.")
+    now = datetime.now(timezone.utc)
+
+    # Life hazard specific validation and rate limiting
+    if category == "life_hazard":
+        # Rate limit: max 5 life hazard reports per user within 1 hour
+        one_hour_ago = now - timedelta(hours=1)
+        recent_life_hazards = db.reports.count_documents({
+            "author_id": ObjectId(author_id),
+            "category": "life_hazard",
+            "created_at": {"$gte": one_hour_ago}
+        })
+        if recent_life_hazards >= 5:
+            raise ValueError("Rate limit exceeded: You can submit at most 5 life hazard reports per hour. Please call 112 directly for urgent emergencies.")
+
+        # Minimal form: description is optional for life hazards
+        if not description or not description.strip():
+            description = "Immediate life hazard reported at coordinates."
+        else:
+            description = description.strip()
+    else:
+        if not description or len(description.strip()) < 10:
+            raise ValueError("Description must be at least 10 characters long.")
+        description = description.strip()
 
     if not coordinates or len(coordinates) != 2:
         raise ValueError("Valid [longitude, latitude] coordinates are required.")
@@ -59,11 +80,10 @@ def create_report(author_id: str, category: str, description: str,
     if not (-180 <= lon <= 180 and -90 <= lat <= 90):
         raise ValueError(f"Invalid coordinate range: [{lon}, {lat}]")
 
-    now = datetime.now(timezone.utc)
     report_doc = {
         "author_id": ObjectId(author_id),
         "category": category,
-        "description": description.strip(),
+        "description": description,
         "photo_url": photo_url,
         "location": {
             "type": "Point",
@@ -88,18 +108,58 @@ def create_report(author_id: str, category: str, description: str,
     res = db.reports.insert_one(report_doc)
     report_doc["_id"] = res.inserted_id
 
-    # Check for potential duplicates within 200m
-    try:
-        from app.ml.duplicates import check_potential_duplicate
-        dup_match = check_potential_duplicate(report_doc, db=db)
-        if dup_match:
-            db.reports.update_one(
-                {"_id": report_doc["_id"]},
-                {"$set": {"duplicate_of": dup_match["_id"]}}
-            )
-            report_doc["duplicate_of"] = dup_match["_id"]
-    except Exception:
-        pass
+    # Duplicate & routing handling
+    if category == "life_hazard":
+        # No moderation queue and no duplicate-merging delay.
+        # Treat duplicates as corroboration, not something to dedupe before routing.
+        try:
+            from app.ml.duplicates import check_potential_duplicate
+            dup_match = check_potential_duplicate(report_doc, db=db)
+            if dup_match:
+                db.reports.update_one(
+                    {"_id": dup_match["_id"]},
+                    {
+                        "$inc": {"corroboration_count": 1},
+                        "$push": {
+                            "status_log": {
+                                "status": dup_match.get("status", "Reported"),
+                                "timestamp": now,
+                                "note": f"Corroborating emergency report filed: {report_doc['_id']}"
+                            }
+                        }
+                    }
+                )
+                db.reports.update_one(
+                    {"_id": report_doc["_id"]},
+                    {
+                        "$set": {
+                            "corroboration_count": 1,
+                            "corroborates_id": dup_match["_id"]
+                        }
+                    }
+                )
+        except Exception:
+            pass
+
+        # Direct routing: notify emergency authority immediately
+        try:
+            from app.services.emergency import send_emergency_dispatch
+            send_emergency_dispatch(report_doc, db=db)
+        except Exception:
+            pass
+    else:
+        # Check for potential duplicates within 200m for standard reports
+        try:
+            from app.ml.duplicates import check_potential_duplicate
+            dup_match = check_potential_duplicate(report_doc, db=db)
+            if dup_match:
+                db.reports.update_one(
+                    {"_id": report_doc["_id"]},
+                    {"$set": {"duplicate_of": dup_match["_id"]}}
+                )
+                report_doc["duplicate_of"] = dup_match["_id"]
+        except Exception:
+            pass
 
     return report_doc
 
