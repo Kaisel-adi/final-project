@@ -6,7 +6,10 @@ from app.services.emergency import (
     check_and_escalate_life_hazards,
     get_emergency_authority,
     send_emergency_dispatch,
-    EMERGENCY_SERVICES
+    dispatch_report_to_concerned_authority,
+    EMERGENCY_SERVICES,
+    AUTHORITY_TEST_EMAIL,
+    TEST_USER_EMAIL
 )
 from app.feed.routes import fetch_feed_reports, build_feed_match_query
 from app.auth.models import User
@@ -27,7 +30,7 @@ def test_emergency_services_directory_completeness():
 
 def test_minimal_form_life_hazard_description_optional(mock_db):
     """Someone in danger won't fill out fields: description is optional for life hazards."""
-    author = User.create(name="Citizen", email="citizen@example.com", password="pwd", db=mock_db)
+    author = User.create(name="Test Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
     coords = [77.2090, 28.6139]
 
     # Empty description for life_hazard should succeed with default text
@@ -47,7 +50,7 @@ def test_minimal_form_life_hazard_description_optional(mock_db):
 
 def test_rate_limiting_life_hazards_five_per_hour(mock_db):
     """Rate limit: 5 reports per user within 1 hour; 6th report raises ValueError."""
-    author = User.create(name="Urgent User", email="urgent@example.com", password="pwd", db=mock_db)
+    author = User.create(name="Test User", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
     coords = [77.21, 28.62]
 
     # Create 5 reports
@@ -67,8 +70,8 @@ def test_rate_limiting_life_hazards_five_per_hour(mock_db):
 
 def test_duplicates_treated_as_corroboration_no_merging_delay(mock_db):
     """Life hazard duplicates are treated as corroboration, not suppressed or delayed."""
-    u1 = User.create(name="User 1", email="u1@example.com", password="pwd", db=mock_db)
-    u2 = User.create(name="User 2", email="u2@example.com", password="pwd", db=mock_db)
+    u1 = User.create(name="Primary Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
+    u2 = User.create(name="Secondary Citizen", email="corroborator@example.com", password="pwd", db=mock_db)
     coords = [77.2090, 28.6139]
 
     rep1 = create_report(u1.id, "life_hazard", "Transformer sparking violently near metro gate", "", coords, db=mock_db)
@@ -84,19 +87,100 @@ def test_duplicates_treated_as_corroboration_no_merging_delay(mock_db):
 
 
 def test_direct_routing_authority():
-    """Verifies direct routing replaces authority emails with lalitnegi0002@gmail.com while testing."""
+    """Verifies direct routing strictly uses AUTHORITY_TEST_EMAIL (lalitnegi0002@gmail.com) while testing."""
     auth = get_emergency_authority(77.2090, 28.6139)
     assert "fire_email" in auth
     assert "police_email" in auth
     assert "contact_email" in auth
-    assert auth["contact_email"] == "lalitnegi0002@gmail.com"
-    assert auth["fire_email"] == "lalitnegi0002@gmail.com"
-    assert auth["police_email"] == "lalitnegi0002@gmail.com"
+    assert auth["contact_email"] == AUTHORITY_TEST_EMAIL
+    assert auth["fire_email"] == AUTHORITY_TEST_EMAIL
+    assert auth["police_email"] == AUTHORITY_TEST_EMAIL
+    assert AUTHORITY_TEST_EMAIL == "lalitnegi0002@gmail.com"
+    assert TEST_USER_EMAIL == "luckfreefire2021@gmail.com"
+
+
+def test_dispatch_checkbox_on_flow(mock_db):
+    """
+    When Checkbox is ON:
+    Save report -> Send email to authority (with Reply-To: user's verified email) -> User gets dispatch status in Garuda.
+    """
+    author = User.create(name="Civic Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
+    coords = [77.2090, 28.6139]
+
+    # Life hazard report with Checkbox ON
+    rep = create_report(
+        author_id=author.id,
+        category="life_hazard",
+        description="Transformer fire burst",
+        photo_url="",
+        coordinates=coords,
+        db=mock_db,
+        dispatch_to_authority=True,
+        author_email=TEST_USER_EMAIL
+    )
+
+    assert rep["dispatched_to_authority"] is True
+    assert rep["authority_dispatched_to"] == AUTHORITY_TEST_EMAIL
+    assert "Dispatched to" in rep["authority_dispatch_status"]
+
+    # Verify persisted in database
+    db_rep = mock_db.reports.find_one({"_id": rep["_id"]})
+    assert db_rep["dispatched_to_authority"] is True
+    assert db_rep["authority_dispatched_to"] == AUTHORITY_TEST_EMAIL
+    assert any("dispatched" in log.get("note", "").lower() for log in db_rep["status_log"])
+
+
+def test_dispatch_checkbox_off_flow(mock_db):
+    """
+    When Checkbox is OFF:
+    Save report only -> No email dispatched to authority.
+    """
+    author = User.create(name="Civic Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
+    coords = [77.2090, 28.6139]
+
+    rep = create_report(
+        author_id=author.id,
+        category="life_hazard",
+        description="Transformer fire burst",
+        photo_url="",
+        coordinates=coords,
+        db=mock_db,
+        dispatch_to_authority=False,
+        author_email=TEST_USER_EMAIL
+    )
+
+    assert rep["dispatched_to_authority"] is False
+    assert rep["authority_dispatch_status"] == "Not Dispatched"
+
+    db_rep = mock_db.reports.find_one({"_id": rep["_id"]})
+    assert db_rep["dispatched_to_authority"] is False
+    assert db_rep["authority_dispatch_status"] == "Not Dispatched"
+
+
+def test_standard_civic_report_dispatch_flow(mock_db):
+    """Standard civic report (e.g. pothole) with Checkbox ON dispatches to authority."""
+    author = User.create(name="Civic Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
+    coords = [77.2090, 28.6139]
+
+    rep = create_report(
+        author_id=author.id,
+        category="pothole",
+        description="Dangerous pothole on main road causing accidents",
+        photo_url="https://example.com/pothole.jpg",
+        coordinates=coords,
+        db=mock_db,
+        dispatch_to_authority=True,
+        author_email=TEST_USER_EMAIL
+    )
+
+    assert rep["dispatched_to_authority"] is True
+    assert rep["authority_dispatched_to"] == AUTHORITY_TEST_EMAIL
+    assert "Dispatched to" in rep["authority_dispatch_status"]
 
 
 def test_escalation_timers_sixty_minutes(mock_db):
     """If a life hazard report is unacknowledged for 60 minutes, it automatically escalates."""
-    author = User.create(name="Citizen", email="timer@example.com", password="pwd", db=mock_db)
+    author = User.create(name="Test Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
     coords = [77.2090, 28.6139]
 
     # 1. Fresh report (0 mins old)
@@ -122,7 +206,7 @@ def test_escalation_timers_sixty_minutes(mock_db):
 
 def test_life_hazard_top_priority_in_feed_across_filters(mock_db):
     """Life hazard reports hold top priority in every field even after any filter is applied until resolved."""
-    author = User.create(name="Citizen", email="prio@example.com", password="pwd", db=mock_db)
+    author = User.create(name="Test Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
     coords = [77.2090, 28.6139]
 
     # Create standard pothole reports
@@ -167,9 +251,18 @@ def test_report_view_renders_emergency_buttons_and_action_sheet(mock_db):
     """Report view renders Call 112, Emergency Call, and the static Emergency Action Sheet for life hazards."""
     app = create_app(TestConfig)
     with app.test_client() as client:
-        author = User.create(name="Citizen", email="viewer@example.com", password="pwd", db=mock_db)
+        author = User.create(name="Test Citizen", email=TEST_USER_EMAIL, password="pwd", db=mock_db)
         coords = [77.2090, 28.6139]
-        rep = create_report(author.id, "life_hazard", "Massive gas pipe leak near public school", "", coords, db=mock_db)
+        rep = create_report(
+            author.id,
+            "life_hazard",
+            "Massive gas pipe leak near public school",
+            "",
+            coords,
+            db=mock_db,
+            dispatch_to_authority=True,
+            author_email=TEST_USER_EMAIL
+        )
 
         response = client.get(f"/reports/{rep['_id']}")
         assert response.status_code == 200
@@ -183,6 +276,9 @@ def test_report_view_renders_emergency_buttons_and_action_sheet(mock_db):
         assert "Emergency Call" in html
         assert "openEmergencyActionSheet()" in html
 
+        # Authority dispatch status badge present
+        assert "Dispatched to Authority" in html
+
         # MCD formal complaint link replaced / not rendered
         assert "View &amp; Dispatch MCD Formal Complaint Letter" not in html
 
@@ -192,3 +288,49 @@ def test_report_view_renders_emergency_buttons_and_action_sheet(mock_db):
         assert "tel:1098" in html  # Childline
         assert "tel:1906" in html  # LPG Leak
         assert "tel:108" in html   # Disaster Management
+
+
+def test_create_report_route_checkbox_integration(mock_db):
+    """Verifies that the /reports/create route properly saves reports and handles checkbox ON/OFF."""
+    app = create_app(TestConfig)
+    with app.test_client() as client:
+        # Create and log in test user
+        user = User.create(name="Citizen", email=TEST_USER_EMAIL, password="password123", db=mock_db)
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+            sess["_fresh"] = True
+
+        # 1. Post report with checkbox ON
+        res1 = client.post("/reports/create", data={
+            "category": "life_hazard",
+            "description": "Urgent life risk situation",
+            "latitude": "28.6139",
+            "longitude": "77.2090",
+            "dispatch_to_authority": "true"
+        }, follow_redirects=True)
+        assert res1.status_code == 200
+        html1 = res1.get_data(as_text=True)
+        assert "Emergency notification dispatched directly to authorities" in html1
+
+        # Check DB
+        rep1 = mock_db.reports.find_one({"category": "life_hazard", "description": "Urgent life risk situation"})
+        assert rep1 is not None
+        assert rep1["dispatched_to_authority"] is True
+        assert rep1["authority_dispatched_to"] == AUTHORITY_TEST_EMAIL
+
+        # 2. Post report with checkbox OFF (no dispatch_to_authority field)
+        res2 = client.post("/reports/create", data={
+            "category": "life_hazard",
+            "description": "Second emergency situation",
+            "latitude": "28.6139",
+            "longitude": "77.2090"
+        }, follow_redirects=True)
+        assert res2.status_code == 200
+        html2 = res2.get_data(as_text=True)
+        assert "Direct authority email dispatch was skipped by reporter" in html2
+
+        rep2 = mock_db.reports.find_one({"category": "life_hazard", "description": "Second emergency situation"})
+        assert rep2 is not None
+        assert rep2["dispatched_to_authority"] is False
+        assert rep2["authority_dispatch_status"] == "Not Dispatched"
+

@@ -1102,6 +1102,21 @@ input.border-rose-500 {
     font-weight: 700 !important;
 }
 
-
-
-
+/* Life Hazard Emergency Submit Button */
+.btn-emergency-submit {
+    background-color: #dc2626 !important;
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 10px 20px -3px rgba(220, 38, 38, 0.4), 0 4px 6px -4px rgba(220, 38, 38, 0.4) !important;
+}
+.btn-emergency-submit:hover {
+    background-color: #b91c1c !important;
+    background: #b91c1c !important;
+    color: #ffffff !important;
+}
+.btn-emergency-submit:active {
+    background-color: #991b1b !important;
+    background: #991b1b !important;
+    color: #ffffff !important;
+}

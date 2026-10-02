@@ -83,11 +83,13 @@ def lookup_authority_for_point(lon: float, lat: float, category: str, db=None) -
             "is_fallback": True
         }
 
+    from app.services.emergency import AUTHORITY_CENTRAL_GRIEVANCE_EMAIL
+
     return {
         "name": "NCT of Delhi Central Grievance Cell",
         "level": "state",
         "body": "Government of NCT of Delhi",
-        "contact_email": "pgmsdelhi@nic.in",
+        "contact_email": AUTHORITY_CENTRAL_GRIEVANCE_EMAIL,
         "phone": "1031",
         "website": "https://pgms.delhi.gov.in",
         "is_fallback": True

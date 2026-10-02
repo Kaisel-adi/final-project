@@ -196,9 +196,16 @@ def _dispatch_via_smtp(
     return False, last_error
 
 
-def send_email_with_status(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> tuple[bool, str]:
+def send_email_with_status(
+    to_email: str,
+    subject: str,
+    html_body: str,
+    text_body: str | None = None,
+    reply_to: str | None = None
+) -> tuple[bool, str]:
     """
     Dispatches email and returns a tuple: (success: bool, status_message: str).
+    Includes Reply-To header support so authorities can directly respond to verified citizens.
     """
     backend = get_effective_email_backend()
     from_raw = _clean_str(_get_email_config("EMAIL_FROM", "Garuda Civic Alerts <gcir.alerts@gmail.com>"))
@@ -207,7 +214,10 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
 
     if backend == "mock":
         logger.info("--- [MOCK EMAIL DISPATCH] ---")
+        logger.info(f"From: {from_email}")
         logger.info(f"To: {to_email}")
+        if reply_to:
+            logger.info(f"Reply-To: {reply_to}")
         logger.info(f"Subject: {subject}")
         logger.info(f"Body snippet: {text_body[:150] if text_body else html_body[:150]}...")
         logger.info("-----------------------------")
@@ -220,16 +230,19 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
             logger.error(err)
             return False, err
         try:
+            payload = {
+                "from": from_email,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body or html_body
+            }
+            if reply_to:
+                payload["reply_to"] = reply_to
             res = requests.post(
                 "https://api.resend.com/emails",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={
-                    "from": from_email,
-                    "to": [to_email],
-                    "subject": subject,
-                    "html": html_body,
-                    "text": text_body or html_body
-                },
+                json=payload,
                 timeout=10
             )
             if res.status_code in (200, 201):
@@ -250,15 +263,18 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
             return False, err
         try:
             sender = from_email.split("<")[-1].replace(">", "").strip() if "<" in from_email else from_email
+            payload = {
+                "personalizations": [{"to": [{"email": to_email}]}],
+                "from": {"email": sender},
+                "subject": subject,
+                "content": [{"type": "text/html", "value": html_body}]
+            }
+            if reply_to:
+                payload["reply_to"] = {"email": reply_to}
             res = requests.post(
                 "https://api.sendgrid.com/v3/mail/send",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={
-                    "personalizations": [{"to": [{"email": to_email}]}],
-                    "from": {"email": sender},
-                    "subject": subject,
-                    "content": [{"type": "text/html", "value": html_body}]
-                },
+                json=payload,
                 timeout=10
             )
             if res.status_code in (200, 202):
@@ -292,6 +308,8 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
             }
             if text_body:
                 payload["textContent"] = text_body
+            if reply_to:
+                payload["replyTo"] = {"email": reply_to}
 
             res = requests.post(
                 "https://api.brevo.com/v3/smtp/email",
@@ -335,6 +353,8 @@ def send_email_with_status(to_email: str, subject: str, html_body: str, text_bod
         msg["Subject"] = subject
         msg["From"] = from_email
         msg["To"] = to_email
+        if reply_to:
+            msg["Reply-To"] = reply_to
 
         if text_body:
             msg.attach(MIMEText(text_body, "plain", "utf-8"))
@@ -363,11 +383,12 @@ def send_email_async(
     subject: str,
     html_body: str,
     text_body: str | None = None,
+    reply_to: str | None = None,
     callback: Any = None
 ) -> concurrent.futures.Future:
     """
     Dispatches email asynchronously in a background thread to prevent blocking HTTP requests.
-    Preserves Flask application context if active.
+    Preserves Flask application context if active. Supports Reply-To for official authority notices.
     """
     from flask import current_app, has_app_context
     app = current_app._get_current_object() if has_app_context() else None # type: ignore
@@ -375,7 +396,7 @@ def send_email_async(
     def _task():
         if app:
             with app.app_context():
-                res = send_email_with_status(to_email, subject, html_body, text_body)
+                res = send_email_with_status(to_email, subject, html_body, text_body, reply_to=reply_to)
                 if callback:
                     try:
                         callback(res)
@@ -383,7 +404,7 @@ def send_email_async(
                         logger.error(f"Error in async email callback: {cb_err}")
                 return res
         else:
-            res = send_email_with_status(to_email, subject, html_body, text_body)
+            res = send_email_with_status(to_email, subject, html_body, text_body, reply_to=reply_to)
             if callback:
                 try:
                     callback(res)
@@ -394,15 +415,21 @@ def send_email_async(
     return _email_executor.submit(_task)
 
 
-def send_email(to_email: str, subject: str, html_body: str, text_body: str | None = None, background: bool = False) -> bool:
+def send_email(
+    to_email: str,
+    subject: str,
+    html_body: str,
+    text_body: str | None = None,
+    background: bool = False,
+    reply_to: str | None = None
+) -> bool:
     """
     Dispatches transactional email. Returns True if succeeded, False otherwise.
     When background=True, dispatches via background thread pool executor to unblock critical path.
-    Maintains complete backward compatibility for callers.
+    Supports Reply-To header for direct citizen correspondence.
     """
     if background:
-        send_email_async(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
+        send_email_async(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body, reply_to=reply_to)
         return True
-
-    success, _ = send_email_with_status(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body)
+    success, _ = send_email_with_status(to_email=to_email, subject=subject, html_body=html_body, text_body=text_body, reply_to=reply_to)
     return success

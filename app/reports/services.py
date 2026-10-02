@@ -37,10 +37,13 @@ def haversine_distance_km(lon1: float, lat1: float, lon2: float, lat2: float) ->
 
 
 def create_report(author_id: str, category: str, description: str,
-                  photo_url: str, coordinates: list[float], db=None) -> dict:
+                  photo_url: str, coordinates: list[float], db=None,
+                  dispatch_to_authority: bool = False,
+                  author_email: str | None = None) -> dict:
     """
     Creates a new civic issue report in MongoDB.
     Location is stored strictly as a GeoJSON Point [longitude, latitude].
+    Supports optional direct email dispatch to concerned authority with citizen Reply-To.
     """
     if db is None:
         db = get_db()
@@ -95,6 +98,8 @@ def create_report(author_id: str, category: str, description: str,
         "duplicate_of": None,
         "is_flagged": False,
         "flag_reason": None,
+        "dispatched_to_authority": False,
+        "authority_dispatch_status": "Not Dispatched",
         "status_log": [
             {
                 "status": "Reported",
@@ -140,13 +145,6 @@ def create_report(author_id: str, category: str, description: str,
                 )
         except Exception:
             pass
-
-        # Direct routing: notify emergency authority immediately
-        try:
-            from app.services.emergency import send_emergency_dispatch
-            send_emergency_dispatch(report_doc, db=db)
-        except Exception:
-            pass
     else:
         # Check for potential duplicates within 200m for standard reports
         try:
@@ -160,6 +158,14 @@ def create_report(author_id: str, category: str, description: str,
                 report_doc["duplicate_of"] = dup_match["_id"]
         except Exception:
             pass
+
+    # Direct routing: Dispatch email to concerned authority only if checkbox is ON
+    if dispatch_to_authority:
+        try:
+            from app.services.emergency import dispatch_report_to_concerned_authority
+            dispatch_report_to_concerned_authority(report_doc, author_email=author_email, db=db)
+        except Exception as e:
+            logger.error(f"Failed to dispatch report {report_doc['_id']} to authority: {e}")
 
     return report_doc
 

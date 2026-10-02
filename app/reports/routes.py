@@ -59,17 +59,28 @@ def create():
             coords = [lon, lat]  # GeoJSON [longitude, latitude]
             photo_url = save_image(photo_file) if (photo_file and photo_file.filename) else ""
             
+            dispatch_to_authority = request.form.get("dispatch_to_authority") in ("true", "1", "on", "yes")
+            author_email = getattr(current_user, "email", None)
+
             report = create_report(
                 author_id=current_user.id,
                 category=category,
                 description=description,
                 photo_url=photo_url,
-                coordinates=coords
+                coordinates=coords,
+                dispatch_to_authority=dispatch_to_authority,
+                author_email=author_email
             )
             if category == "life_hazard":
-                flash("🚨 Immediate Life Hazard alert broadcast! Emergency dispatch has been notified directly.", "danger")
+                if dispatch_to_authority:
+                    flash("🚨 Immediate Life Hazard alert broadcast! Emergency notification dispatched directly to authorities.", "danger")
+                else:
+                    flash("🚨 Immediate Life Hazard report saved. Direct authority email dispatch was skipped by reporter.", "danger")
             else:
-                flash("Civic issue successfully reported! It is now live for community verification.", "success")
+                if dispatch_to_authority:
+                    flash("Civic issue successfully reported and dispatched to the concerned authority!", "success")
+                else:
+                    flash("Civic issue successfully reported! It is now live for community verification.", "success")
             return redirect(url_for("reports.view", report_id=str(report["_id"])))
         except Exception as e:
             flash(f"Error submitting report: {str(e)}", "danger")
