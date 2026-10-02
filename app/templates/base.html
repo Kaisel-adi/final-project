@@ -749,6 +749,14 @@
         if (!navigator.onLine) {
             updateNetworkStatus();
         }
+        // Register Service Worker for offline emergency action sheet & assets
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/sw.js').catch(function(err) {
+                    console.debug('SW registration skipped:', err);
+                });
+            });
+        }
     </script>
     {% block scripts %}{% endblock %}
 </body>

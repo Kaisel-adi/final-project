@@ -33,18 +33,28 @@
         <div class="report-detail-layout grid grid-cols-1 md:grid-cols-2">
             <!-- Left: High-Res Photo / Video Evidence -->
             <div class="report-detail-media bg-slate-950 flex items-center justify-center relative min-h-[300px] md:min-h-[420px] overflow-hidden">
-                {% if report.photo_url|is_video %}
-                    <video src="{{ report.photo_url }}" controls playsinline preload="none" class="w-full h-full max-h-[480px] object-contain">
-                        Your browser does not support HTML5 video.
-                    </video>
-                    <span class="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
-                        <span class="material-symbols-outlined text-sm text-rose-500">videocam</span> Video Evidence
-                    </span>
+                {% if report.photo_url %}
+                    {% if report.photo_url|is_video %}
+                        <video src="{{ report.photo_url }}" controls playsinline preload="none" class="w-full h-full max-h-[480px] object-contain">
+                            Your browser does not support HTML5 video.
+                        </video>
+                        <span class="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm text-rose-500">videocam</span> Video Evidence
+                        </span>
+                    {% else %}
+                        <img src="{{ report.photo_url }}" alt="Verified Issue Evidence" class="w-full h-full max-h-[480px] object-contain" loading="lazy" decoding="async">
+                        <span class="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">photo_camera</span> Photo Evidence
+                        </span>
+                    {% endif %}
                 {% else %}
-                    <img src="{{ report.photo_url }}" alt="Verified Issue Evidence" class="w-full h-full max-h-[480px] object-contain" loading="lazy" decoding="async">
-                    <span class="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
-                        <span class="material-symbols-outlined text-sm">photo_camera</span> Photo Evidence
-                    </span>
+                    <div class="flex flex-col items-center justify-center p-8 text-center text-white space-y-3">
+                        <div class="w-16 h-16 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-3xl text-red-500 animate-pulse">emergency</span>
+                        </div>
+                        <div class="text-sm font-bold text-slate-200">🚨 Immediate Life Hazard Protocol</div>
+                        <div class="text-xs text-slate-400 max-w-xs">GPS coordinates were broadcast instantly. Evidence media was omitted for rapid emergency dispatch.</div>
+                    </div>
                 {% endif %}
             </div>
 
@@ -158,8 +168,27 @@
                     {% endif %}
                 </div>
 
-                <!-- Complaint Dispatch Banner -->
-                {% if report.status != 'Removed' %}
+                <!-- Complaint Dispatch Banner OR Life Hazard Emergency Action Buttons -->
+                {% if report.category == 'life_hazard' %}
+                <div class="space-y-2 pt-1">
+                    <div class="text-[11px] font-bold text-red-600 uppercase tracking-wider flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm animate-pulse">crisis_alert</span>
+                        <span>Emergency First-Responder Helpline</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <!-- Button 1: Call 112 -->
+                        <a href="tel:112" class="flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-red-600/30 transition-all select-none">
+                            <span class="material-symbols-outlined text-xl">call</span>
+                            <span>Call 112 (National)</span>
+                        </a>
+                        <!-- Button 2: Emergency Call -->
+                        <button type="button" onclick="openEmergencyActionSheet()" class="flex items-center justify-center gap-2 py-3.5 px-4 bg-slate-900 hover:bg-black active:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl border border-slate-700 shadow-sm transition-all select-none cursor-pointer">
+                            <span class="material-symbols-outlined text-xl text-amber-400">emergency_home</span>
+                            <span>Emergency Call</span>
+                        </button>
+                    </div>
+                </div>
+                {% elif report.status != 'Removed' %}
                 <a href="{{ url_for('complaints.draft_view', report_id=report._id) }}" class="flex items-center justify-center gap-2 w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all active:scale-98">
                     <span class="material-symbols-outlined text-lg">description</span>
                     <span>View & Dispatch MCD Formal Complaint Letter &rarr;</span>
@@ -603,5 +632,175 @@
             });
         }
     });
+
+    // Static Emergency Action Sheet Functions (Zero network latency, offline ready)
+    function openEmergencyActionSheet() {
+        const sheet = document.getElementById('emergency-action-sheet');
+        if (sheet) {
+            sheet.classList.remove('hidden');
+            sheet.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+    }
+
+    function closeEmergencyActionSheet() {
+        const sheet = document.getElementById('emergency-action-sheet');
+        if (sheet) {
+            sheet.classList.add('hidden');
+            sheet.classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        const sheet = document.getElementById('emergency-action-sheet');
+        if (sheet && e.target === sheet) {
+            closeEmergencyActionSheet();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEmergencyActionSheet();
+        }
+    });
 </script>
+
+<!-- ========================================================================= -->
+<!-- STATIC EMERGENCY CALL ACTION SHEET (Zero API Call, Weak/Offline Ready)    -->
+<!-- ========================================================================= -->
+<div id="emergency-action-sheet" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 select-none" role="dialog" aria-modal="true" aria-labelledby="emergency-sheet-title">
+    <div class="bg-[#181a1b] text-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl border border-red-500/40 shadow-2xl p-5 sm:p-6 space-y-4 animate-fade-in max-h-[90vh] overflow-y-auto">
+        <!-- Mobile Drawer Drag Handle -->
+        <div class="w-12 h-1.5 bg-slate-600 rounded-full mx-auto sm:hidden -mt-1 mb-2"></div>
+
+        <!-- Sheet Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-700/80">
+            <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-2xl bg-red-600/25 text-red-500 flex items-center justify-center font-bold border border-red-500/30">
+                    <span class="material-symbols-outlined text-2xl animate-pulse">emergency</span>
+                </span>
+                <div>
+                    <h3 id="emergency-sheet-title" class="font-extrabold text-base sm:text-lg text-white">Emergency Call Directory</h3>
+                    <p class="text-[11px] text-slate-400">Direct one-tap dialing to official emergency services</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeEmergencyActionSheet()" class="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" aria-label="Close directory">
+                <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+        </div>
+
+        <!-- Static Emergency Helplines -->
+        <div class="space-y-2.5 pt-1">
+            <!-- 1. POLICE: 112 -->
+            <a href="tel:112" class="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#23272a] hover:bg-[#2c3136] active:bg-blue-950/40 border border-slate-700 hover:border-blue-500/50 text-white transition-all min-h-[60px] group">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl">local_police</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm sm:text-base text-white tracking-wide">POLICE</div>
+                        <div class="text-[11px] text-slate-400">National Emergency Unified Helpline</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-extrabold text-xl sm:text-2xl text-blue-400 group-hover:underline">112</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Tap to Dial</span>
+                </div>
+            </a>
+
+            <!-- 2. FIRE: 101 -->
+            <a href="tel:101" class="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#23272a] hover:bg-[#2c3136] active:bg-red-950/40 border border-slate-700 hover:border-red-500/50 text-white transition-all min-h-[60px] group">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl">local_fire_department</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm sm:text-base text-white tracking-wide">FIRE</div>
+                        <div class="text-[11px] text-slate-400">Delhi Fire Service Control Room</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-extrabold text-xl sm:text-2xl text-red-400 group-hover:underline">101</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Tap to Dial</span>
+                </div>
+            </a>
+
+            <!-- 3. AMBULANCE: 102 -->
+            <a href="tel:102" class="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#23272a] hover:bg-[#2c3136] active:bg-emerald-950/40 border border-slate-700 hover:border-emerald-500/50 text-white transition-all min-h-[60px] group">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl">medical_services</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm sm:text-base text-white tracking-wide">AMBULANCE</div>
+                        <div class="text-[11px] text-slate-400">Emergency Medical CATS Service</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-extrabold text-xl sm:text-2xl text-emerald-400 group-hover:underline">102</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Tap to Dial</span>
+                </div>
+            </a>
+
+            <!-- 4. Children In Difficult Situation: 1098 -->
+            <a href="tel:1098" class="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#23272a] hover:bg-[#2c3136] active:bg-amber-950/40 border border-slate-700 hover:border-amber-500/50 text-white transition-all min-h-[60px] group">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl">child_care</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm sm:text-base text-white tracking-wide">Children In Difficult Situation</div>
+                        <div class="text-[11px] text-slate-400">Childline 24x7 Emergency Helpline</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-extrabold text-xl sm:text-2xl text-amber-400 group-hover:underline">1098</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Tap to Dial</span>
+                </div>
+            </a>
+
+            <!-- 5. LPG Leak Helpline: 1906 Police -->
+            <a href="tel:1906" class="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#23272a] hover:bg-[#2c3136] active:bg-orange-950/40 border border-slate-700 hover:border-orange-500/50 text-white transition-all min-h-[60px] group">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl">warning</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm sm:text-base text-white tracking-wide">LPG Leak Helpline</div>
+                        <div class="text-[11px] text-slate-400">Gas Leak Emergency & Police Dispatch</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-extrabold text-xl sm:text-2xl text-orange-400 group-hover:underline">1906</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Tap to Dial</span>
+                </div>
+            </a>
+
+            <!-- 6. Disaster Management Services: 108 -->
+            <a href="tel:108" class="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#23272a] hover:bg-[#2c3136] active:bg-purple-950/40 border border-slate-700 hover:border-purple-500/50 text-white transition-all min-h-[60px] group">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-outlined text-2xl">flood</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm sm:text-base text-white tracking-wide">Disaster Management Services</div>
+                        <div class="text-[11px] text-slate-400">Delhi Disaster Management (DDMA)</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-extrabold text-xl sm:text-2xl text-purple-400 group-hover:underline">108</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Tap to Dial</span>
+                </div>
+            </a>
+        </div>
+
+        <!-- Dismiss Footer -->
+        <div class="pt-2">
+            <button type="button" onclick="closeEmergencyActionSheet()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 font-bold text-xs rounded-2xl transition-colors">
+                Close Emergency Directory
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
