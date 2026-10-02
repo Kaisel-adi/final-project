@@ -312,4 +312,13 @@ All **121 automated unit and integration tests** run deterministically in isolat
 ---
 
 ## 📄 License
-This project is licensed under the [MIT License](LICENSE).
+
+**All Rights Reserved.**
+
+This project is not licensed for public reuse, modification, distribution, or commercial use by default.
+
+If you would like to use, modify, distribute, or incorporate any part of this project's source code into another project, please contact the project owner/contributors and obtain explicit permission first.
+
+Permission may be granted on a case-by-case basis.
+
+See the repository's [`LICENSE`](LICENSE) file for the full terms.
