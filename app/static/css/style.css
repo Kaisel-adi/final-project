@@ -250,6 +250,12 @@ body {
     top: 0 !important;
 }
 
+@media (min-width: 1024px) {
+    .mobile-bottom-nav {
+        display: none !important;
+    }
+}
+
 @media (max-width: 768px) {
     .mobile-bottom-nav {
         display: grid !important;
