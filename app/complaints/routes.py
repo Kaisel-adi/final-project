@@ -25,10 +25,9 @@ def draft_view(report_id):
         flash("Report not found.", "warning")
         return redirect(url_for("feed.feed_view"))
 
-    # Strict business rule: Complaint drafter unlocks ONLY at Verified status
-    if report.get("status") == "Reported":
-        flash("Complaint draft is locked until the report receives 10 community upvotes (Verified).", "warning")
-        return redirect(url_for("reports.view", report_id=report_id))
+    if report.get("status") == "Removed":
+        flash("This report has been removed and is no longer available.", "warning")
+        return redirect(url_for("feed.feed_view"))
 
     lon, lat = report["location"]["coordinates"]
     category = report["category"]

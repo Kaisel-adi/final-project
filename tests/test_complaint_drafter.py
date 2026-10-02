@@ -4,7 +4,7 @@ from app.reports.services import create_report
 from scripts.etl_boundaries import seed_database
 
 
-def test_complaint_locked_when_reported(app, client, mock_db):
+def test_complaint_allowed_immediately_when_reported(app, client, mock_db):
     seed_database(mock_db)
     author = User.create(name="Author", email="drafter1@example.com", password="pwd", db=mock_db)
     report = create_report(author.id, "pothole", "Pothole needing complaint", "url", [77.19, 28.65], db=mock_db)
@@ -12,11 +12,11 @@ def test_complaint_locked_when_reported(app, client, mock_db):
     with client.session_transaction() as sess:
         sess["_user_id"] = str(author.id)
 
-    # Access complaint draft for unverified report (status: Reported)
+    # Access complaint draft for unverified report (status: Reported) - should be allowed immediately
     response = client.get(f"/complaints/{report['_id']}")
-    # Must redirect back to report view
-    assert response.status_code == 302
-    assert f"/reports/{report['_id']}" in response.headers["Location"]
+    assert response.status_code == 200
+    content = response.data.decode("utf-8")
+    assert "Official Complaint Draft" in content
 
 
 def test_complaint_unlocked_when_verified(app, client, mock_db):

@@ -158,8 +158,8 @@
                     {% endif %}
                 </div>
 
-                <!-- Complaint Unlock Banner -->
-                {% if report.status in ['Verified', 'Complained', 'Resolved'] %}
+                <!-- Complaint Dispatch Banner -->
+                {% if report.status != 'Removed' %}
                 <a href="{{ url_for('complaints.draft_view', report_id=report._id) }}" class="flex items-center justify-center gap-2 w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all active:scale-98">
                     <span class="material-symbols-outlined text-lg">description</span>
                     <span>View & Dispatch MCD Formal Complaint Letter &rarr;</span>
