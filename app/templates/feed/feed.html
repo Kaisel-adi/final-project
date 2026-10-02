@@ -440,6 +440,13 @@
         const centerCoords = [{{ center_lat }}, {{ center_lon }}];
         const radius = {{ radius_km }};
 
+        const userProfile = {
+            isAuthenticated: {{ 'true' if current_user.is_authenticated else 'false' }},
+            name: {{ (current_user.name if current_user.is_authenticated else '')|tojson }},
+            initials: {{ (current_user.name[:2]|upper if current_user.is_authenticated and current_user.name else 'ME')|tojson }},
+            avatarUrl: {{ (current_user.doc.get('photo_url') or current_user.doc.get('avatar_url') or current_user.doc.get('profile_picture') or '')|tojson if current_user.is_authenticated else '""' }}
+        };
+
         // 1. Initialize Dashboard Locality Map (Map 1) if container exists
         let localityMapObj = null;
         if (document.getElementById('locality-map-widget') && window.GCIRMaps) {
@@ -447,7 +454,8 @@
             localityMapObj = window.GCIRMaps.initLocalityMap('locality-map-widget', {
                 center: centerCoords,
                 radiusKm: radius,
-                issues: rawIssues
+                issues: rawIssues,
+                userProfile: userProfile
             });
         }
 
@@ -457,7 +465,8 @@
                 center: centerCoords,
                 radiusKm: radius,
                 category: "{{ category_filter or '' }}",
-                status: "{{ status_filter or '' }}"
+                status: "{{ status_filter or '' }}",
+                userProfile: userProfile
             });
         }
 

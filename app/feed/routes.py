@@ -251,14 +251,14 @@ def feed_view():
         else:
             active_view = "dashboard"
 
-    # Radius logic: Community list view defaults to fixed 100km; Home dashboard defaults to 5km
+    # Radius logic: Community list view and Map view default to fixed 100km; Home dashboard defaults to 5km
     if "radius" in request.args:
         try:
             radius_km = float(request.args.get("radius"))
         except (ValueError, TypeError):
-            radius_km = 100.0 if active_view == "list" else 5.0
+            radius_km = 100.0 if active_view in ["list", "map"] else 5.0
     else:
-        radius_km = 100.0 if active_view == "list" else 5.0
+        radius_km = 100.0 if active_view in ["list", "map"] else 5.0
 
     sort_by = request.args.get("sort", "distance").lower()
     category_filter = request.args.get("category", "")
@@ -400,9 +400,9 @@ def api_feed_chunk():
         try:
             radius_km = float(request.args.get("radius"))
         except (ValueError, TypeError):
-            radius_km = 100.0 if active_view == "list" else 5.0
+            radius_km = 100.0 if active_view in ["list", "map"] else 5.0
     else:
-        radius_km = 100.0 if active_view == "list" else 5.0
+        radius_km = 100.0 if active_view in ["list", "map"] else 5.0
 
     try:
         offset = max(0, int(request.args.get("offset", 0)))

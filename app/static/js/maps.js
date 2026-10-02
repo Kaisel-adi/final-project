@@ -59,6 +59,50 @@ window.GCIRMaps = (function () {
     }
 
     /**
+     * Creates a white map pointer DivIcon with the user's profile picture for Leaflet
+     */
+    function createUserLocationPin(profile) {
+        profile = profile || {};
+        let avatarInner = '';
+        if (profile.avatarUrl) {
+            avatarInner = `
+                <img src="${profile.avatarUrl}" alt="You" class="w-full h-full rounded-full object-cover" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                <div class="w-full h-full rounded-full bg-emerald-600 text-white font-bold text-[10px] items-center justify-center hidden tracking-tight select-none">${profile.initials || 'ME'}</div>
+            `;
+        } else if (profile.initials) {
+            avatarInner = `
+                <div class="w-full h-full rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center shadow-inner tracking-tight select-none">${profile.initials}</div>
+            `;
+        } else {
+            avatarInner = `
+                <div class="w-full h-full rounded-full bg-slate-700 text-white flex items-center justify-center shadow-inner select-none">
+                    <span class="material-symbols-outlined text-[15px]">person</span>
+                </div>
+            `;
+        }
+
+        const html = `
+            <div class="relative flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95" style="width: 40px; height: 50px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));">
+                <svg viewBox="0 0 40 50" width="40" height="50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 1C10.0589 1 2 9.05887 2 19C2 31.5 20 49 20 49C20 49 38 31.5 38 19C38 9.05887 29.9411 1 20 1Z" fill="#ffffff" stroke="#94a3b8" stroke-width="1.8"/>
+                    <circle cx="20" cy="19" r="14" fill="#f1f5f9"/>
+                </svg>
+                <div class="absolute rounded-full overflow-hidden flex items-center justify-center" style="top: 5px; left: 6px; width: 28px; height: 28px; border: 1.5px solid #e2e8f0; background: #ffffff;">
+                    ${avatarInner}
+                </div>
+            </div>
+        `;
+
+        return L.divIcon({
+            className: 'gcir-user-location-pin',
+            html: html,
+            iconSize: [40, 50],
+            iconAnchor: [20, 49],
+            popupAnchor: [0, -46]
+        });
+    }
+
+    /**
      * Standard OpenStreetMap / Carto tile layer
      */
     function createTileLayer() {
@@ -113,9 +157,12 @@ window.GCIRMaps = (function () {
             dashArray: '4, 6'
         }).addTo(map);
 
-        // User Center Pin
-        L.marker(center, { icon: createMapPin('default', 'home_pin', true) })
-            .bindTooltip('Your Neighborhood Center', { direction: 'top' })
+        // User Location Pin (White pointer with profile picture)
+        const userMarker = L.marker(center, {
+            icon: createUserLocationPin(options.userProfile),
+            zIndexOffset: 1000
+        })
+            .bindTooltip((options.userProfile && options.userProfile.name) ? `Your Location (${options.userProfile.name})` : 'Your Location', { direction: 'top' })
             .addTo(map);
 
         // Render Issue Pins if provided
@@ -182,18 +229,38 @@ window.GCIRMaps = (function () {
     function initOverviewMap(containerId, options) {
         options = options || {};
         const center = options.center || [28.6139, 77.2090];
-        const radiusKm = options.radiusKm || 5.0;
+        const radiusKm = options.radiusKm || 100.0;
         const container = document.getElementById(containerId);
         if (!container) return null;
 
+        const initialZoom = radiusKm >= 50 ? 9 : 13;
         const map = L.map(containerId, {
             center: center,
-            zoom: 13,
+            zoom: initialZoom,
             zoomControl: false
         });
 
         createTileLayer().addTo(map);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Semi-transparent Radius Boundary Circle (Teal / Emerald, 100km or custom radius)
+        const radiusMeters = radiusKm * 1000;
+        const circle = L.circle(center, {
+            radius: radiusMeters,
+            color: '#0d9488',
+            fillColor: '#0d9488',
+            fillOpacity: 0.08,
+            weight: 2,
+            dashArray: '4, 6'
+        }).addTo(map);
+
+        // User Location Pin (White pointer with profile picture)
+        let userMarker = L.marker(center, {
+            icon: createUserLocationPin(options.userProfile),
+            zIndexOffset: 1000
+        })
+            .bindTooltip((options.userProfile && options.userProfile.name) ? `Your Location (${options.userProfile.name})` : 'Your Location', { direction: 'top' })
+            .addTo(map);
 
         // Marker layer group
         const markerGroup = L.layerGroup().addTo(map);
@@ -296,18 +363,34 @@ window.GCIRMaps = (function () {
                 navigator.geolocation.getCurrentPosition(pos => {
                     const uLat = pos.coords.latitude;
                     const uLon = pos.coords.longitude;
-                    map.setView([uLat, uLon], 14);
+                    // Move or create user location marker
+                    if (userMarker) {
+                        userMarker.setLatLng([uLat, uLon]);
+                    } else {
+                        userMarker = L.marker([uLat, uLon], {
+                            icon: createUserLocationPin(options.userProfile),
+                            zIndexOffset: 1000
+                        }).addTo(map);
+                    }
+                    // Update coverage circle
+                    if (circle) {
+                        circle.setLatLng([uLat, uLon]);
+                        circle.setRadius(radiusMeters);
+                    }
+                    map.setView([uLat, uLon], radiusKm >= 50 ? 9 : 14);
                     loadReports(uLat, uLon, radiusKm, options.category, options.status);
                     locateBtn.disabled = false;
                 }, () => {
                     alert('Geolocation access unavailable or denied.');
                     locateBtn.disabled = false;
                 });
+            } else {
+                alert('Geolocation is not supported by your browser.');
             }
         });
         container.appendChild(locateBtn);
 
-        return { map, loadReports };
+        return { map, loadReports, circle, userMarker };
     }
 
     /**
