@@ -1,3 +1,4 @@
+import logging
 import math
 from datetime import datetime, timezone
 from bson import ObjectId
@@ -5,6 +6,8 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import current_user
 from app.reports.services import CATEGORIES, haversine_distance_km
 from app.db import get_db
+
+logger = logging.getLogger(__name__)
 
 feed_bp = Blueprint("feed", __name__, url_prefix="/feed")
 
@@ -46,8 +49,59 @@ REPORT_FEED_PROJECTION = {
 }
 
 
+def build_feed_match_query(category_filter: str = "", status_filter: str = "", search_query: str = "") -> dict:
+    """
+    Builds the match query for the civic feed.
+    Life hazard reports hold top priority in every view/feed even after any filter is applied until resolved.
+    """
+    base_conditions = [
+        {"is_flagged": {"$ne": True}},
+        {"status": {"$ne": "Removed"}}
+    ]
+
+    filter_conditions = []
+    if category_filter:
+        filter_conditions.append({"category": category_filter})
+    if status_filter and status_filter != "all":
+        filter_conditions.append({"status": status_filter})
+    if search_query:
+        filter_conditions.append({
+            "$or": [
+                {"description": {"$regex": search_query, "$options": "i"}},
+                {"category": {"$regex": search_query, "$options": "i"}}
+            ]
+        })
+
+    if not filter_conditions:
+        return {"$and": base_conditions}
+
+    user_criteria = {"$and": filter_conditions} if len(filter_conditions) > 1 else filter_conditions[0]
+    unresolved_life_hazard = {
+        "category": "life_hazard",
+        "status": {"$ne": "Resolved"}
+    }
+
+    return {
+        "$and": [
+            *base_conditions,
+            {"$or": [user_criteria, unresolved_life_hazard]}
+        ]
+    }
+
+
 def fetch_feed_reports(db, center_lon, center_lat, radius_km, match_query, sort_by="distance", skip=0, limit=10):
-    """Queries reports using spatial optimization ($geoNear or bounding box fallback), applies sorting, and projects lightweight fields."""
+    """
+    Queries reports using spatial optimization ($geoNear or bounding box fallback),
+    guarantees life hazard reports hold top priority until resolved across all sorting modes,
+    and checks escalation timers.
+    """
+    # 60-minute automatic escalation check for unacknowledged life hazard reports
+    try:
+        from app.services.emergency import check_and_escalate_life_hazards
+        check_and_escalate_life_hazards(db=db)
+    except Exception as e:
+        logger.debug(f"Life hazard escalation check notice: {e}")
+
     radius_meters = radius_km * 1000.0
     reports = []
     total_reports_count = 0
@@ -63,20 +117,34 @@ def fetch_feed_reports(db, center_lon, center_lat, radius_km, match_query, sort_
                     "query": match_query
                 }
             },
-            {"$project": {**REPORT_FEED_PROJECTION, "distance_meters": 1}}
+            {"$project": {**REPORT_FEED_PROJECTION, "distance_meters": 1}},
+            # Life hazard reports hold top priority until resolved
+            {
+                "$addFields": {
+                    "_life_hazard_priority": {
+                        "$cond": [
+                            {"$and": [{"$eq": ["$category", "life_hazard"]}, {"$ne": ["$status", "Resolved"]}]},
+                            0,
+                            1
+                        ]
+                    }
+                }
+            }
         ]
 
         if sort_by == "likes":
-            pipeline.append({"$sort": {"upvote_count": -1, "distance_meters": 1}})
+            pipeline.append({"$sort": {"_life_hazard_priority": 1, "upvote_count": -1, "distance_meters": 1}})
         elif sort_by == "date":
-            pipeline.append({"$sort": {"created_at": -1}})
+            pipeline.append({"$sort": {"_life_hazard_priority": 1, "created_at": -1}})
         elif sort_by in ["pending", "reported"]:
             pipeline.append({"$addFields": {"_sort_priority": {"$cond": [{"$eq": ["$status", "Reported"]}, 0, 1]}}})
-            pipeline.append({"$sort": {"_sort_priority": 1, "created_at": -1}})
+            pipeline.append({"$sort": {"_life_hazard_priority": 1, "_sort_priority": 1, "created_at": -1}})
         elif sort_by == "verified":
             pipeline.append({"$addFields": {"_sort_priority": {"$cond": [{"$eq": ["$status", "Verified"]}, 0, 1]}}})
-            pipeline.append({"$sort": {"_sort_priority": 1, "upvote_count": -1, "created_at": -1}})
-        # default is "distance" (sorted nearest first by $geoNear)
+            pipeline.append({"$sort": {"_life_hazard_priority": 1, "_sort_priority": 1, "upvote_count": -1, "created_at": -1}})
+        else:
+            # default is "distance"
+            pipeline.append({"$sort": {"_life_hazard_priority": 1, "distance_meters": 1}})
 
         pipeline.append({"$skip": skip})
         pipeline.append({"$limit": limit})
@@ -118,27 +186,36 @@ def fetch_feed_reports(db, center_lon, center_lat, radius_km, match_query, sort_
                     r["_dist_km"] = round(dist, 2)
                     matching_reports.append(r)
 
+        def _is_unresolved_life_hazard(doc):
+            return 0 if (doc.get("category") == "life_hazard" and doc.get("status") != "Resolved") else 1
+
         if sort_by == "likes":
-            matching_reports.sort(key=lambda x: (x.get("upvote_count", 0), -x.get("_dist_km", 999)), reverse=True)
+            matching_reports.sort(
+                key=lambda x: (_is_unresolved_life_hazard(x), -x.get("upvote_count", 0), x.get("_dist_km", 999))
+            )
         elif sort_by == "date":
             matching_reports.sort(
-                key=lambda x: x.get("created_at") or datetime.min.replace(tzinfo=timezone.utc),
-                reverse=True
+                key=lambda x: (
+                    _is_unresolved_life_hazard(x),
+                    -(x.get("created_at").timestamp() if (x.get("created_at") and hasattr(x.get("created_at"), "timestamp")) else 0)
+                )
             )
         elif sort_by in ["pending", "reported"]:
             def _pending_key(x):
+                lhp = _is_unresolved_life_hazard(x)
                 is_rep = 0 if x.get("status") == "Reported" else 1
                 cat = x.get("created_at")
                 ts = cat.timestamp() if cat and hasattr(cat, "timestamp") else 0
-                return (is_rep, -ts)
+                return (lhp, is_rep, -ts)
             matching_reports.sort(key=_pending_key)
         elif sort_by == "verified":
             def _verified_key(x):
+                lhp = _is_unresolved_life_hazard(x)
                 is_ver = 0 if x.get("status") == "Verified" else 1
-                return (is_ver, -x.get("upvote_count", 0))
+                return (lhp, is_ver, -x.get("upvote_count", 0))
             matching_reports.sort(key=_verified_key)
         else:  # distance
-            matching_reports.sort(key=lambda x: x.get("_dist_km", 999))
+            matching_reports.sort(key=lambda x: (_is_unresolved_life_hazard(x), x.get("_dist_km", 999)))
 
         total_reports_count = len(matching_reports)
         reports = matching_reports[skip: skip + limit]
@@ -281,17 +358,12 @@ def feed_view():
 
     skip = (page - 1) * per_page
 
-    # Build match query for active, non-flagged reports
-    match_query: dict[str, object] = {"is_flagged": {"$ne": True}}
-    if category_filter:
-        match_query["category"] = category_filter
-    if status_filter and status_filter != "all":
-        match_query["status"] = status_filter
-    if search_query:
-        match_query["$or"] = [
-            {"description": {"$regex": search_query, "$options": "i"}},
-            {"category": {"$regex": search_query, "$options": "i"}}
-        ]
+    # Build match query guaranteeing life hazard top priority
+    match_query = build_feed_match_query(
+        category_filter=category_filter,
+        status_filter=status_filter,
+        search_query=search_query
+    )
 
     raw_reports, total_reports_count = fetch_feed_reports(
         db=db,
@@ -419,16 +491,11 @@ def api_feed_chunk():
     status_filter = request.args.get("status", "")
     search_query = request.args.get("q", "").strip()
 
-    match_query: dict[str, object] = {"is_flagged": {"$ne": True}}
-    if category_filter:
-        match_query["category"] = category_filter
-    if status_filter and status_filter != "all":
-        match_query["status"] = status_filter
-    if search_query:
-        match_query["$or"] = [
-            {"description": {"$regex": search_query, "$options": "i"}},
-            {"category": {"$regex": search_query, "$options": "i"}}
-        ]
+    match_query = build_feed_match_query(
+        category_filter=category_filter,
+        status_filter=status_filter,
+        search_query=search_query
+    )
 
     raw_reports, total_count = fetch_feed_reports(
         db=db,
@@ -481,11 +548,7 @@ def api_reports():
     skip = (page - 1) * limit
     radius_meters = radius_km * 1000.0
 
-    query: dict[str, object] = {"is_flagged": {"$ne": True}}
-    if category:
-        query["category"] = category
-    if status and status != "all":
-        query["status"] = status
+    query = build_feed_match_query(category_filter=category, status_filter=status)
 
     features = []
     cat_dict = dict(CATEGORIES)
