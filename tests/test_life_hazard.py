@@ -334,3 +334,74 @@ def test_create_report_route_checkbox_integration(mock_db):
         assert rep2["dispatched_to_authority"] is False
         assert rep2["authority_dispatch_status"] == "Not Dispatched"
 
+
+def test_notify_nearby_users_within_1km_radius(mock_db, monkeypatch):
+    """
+    Verifies that when a life hazard is reported:
+    - Users within 1km radius receive an email alert.
+    - User location is verified using last_login_location first; if null, user home_location.
+    - The report link is embedded in the email.
+    - The author is excluded.
+    """
+    author = User.create(name="Author", email="author@example.com", password="pwd",
+                         home_coords=[77.2090, 28.6139], db=mock_db)
+
+    # User 1: Home is 50km away, but last_login_location is 200m away from incident
+    u1 = User.create(name="Nearby Mobile User", email="nearby_mobile@example.com", password="pwd",
+                     home_coords=[77.8000, 28.1000], db=mock_db)
+    mock_db.users.update_one(
+        {"_id": u1.doc["_id"]},
+        {"$set": {"last_login_location": {"type": "Point", "coordinates": [77.2105, 28.6145]}}}
+    )
+
+    # User 2: last_login_location is null, but home_location is 400m away from incident
+    u2 = User.create(name="Nearby Home Resident", email="nearby_home@example.com", password="pwd",
+                     home_coords=[77.2060, 28.6120], db=mock_db)
+    mock_db.users.update_one(
+        {"_id": u2.doc["_id"]},
+        {"$set": {"last_login_location": None}}
+    )
+
+    # User 3: Both last_login_location and home_location are far (5km away)
+    u3 = User.create(name="Far Resident", email="far_resident@example.com", password="pwd",
+                     home_coords=[77.2600, 28.6139], db=mock_db)
+
+    # Intercept dispatched emails
+    sent_emails = []
+    from app.services import emergency as emerg_svc
+    monkeypatch.setattr(emerg_svc, "send_email", lambda to, subj, html, text_body=None, background=False, reply_to=None: (
+        sent_emails.append({"to": to, "subject": subj, "html": html, "text": text_body}), True
+    )[1])
+
+    # Report life hazard at [77.2090, 28.6139]
+    rep = create_report(
+        author_id=author.id,
+        category="life_hazard",
+        description="Fallen live 11kV electrical wire sparking on street",
+        photo_url="",
+        coordinates=[77.2090, 28.6139],
+        db=mock_db
+    )
+
+    # Check who received alerts
+    notified_recipients = [e["to"] for e in sent_emails]
+
+    # Author should NOT receive alert
+    assert "author@example.com" not in notified_recipients
+
+    # u1 (nearby via last_login_location) MUST receive alert
+    assert "nearby_mobile@example.com" in notified_recipients
+
+    # u2 (nearby via home_location fallback) MUST receive alert
+    assert "nearby_home@example.com" in notified_recipients
+
+    # u3 (far away, 5km) must NOT receive alert
+    assert "far_resident@example.com" not in notified_recipients
+
+    # Verify report link is embedded in the dispatched email
+    rep_id_str = str(rep["_id"])
+    for em in sent_emails:
+        assert f"/reports/{rep_id_str}" in em["html"]
+        assert f"/reports/{rep_id_str}" in em["text"]
+
+

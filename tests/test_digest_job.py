@@ -53,3 +53,61 @@ def test_digest_matching_and_exclusions(app, client, mock_db):
     res_repeat = client.post("/jobs/digest", headers={"X-Job-Token": valid_token})
     data_repeat = res_repeat.get_json()
     assert data_repeat["emails_dispatched"] == 0
+
+
+def test_digest_embeds_report_links_and_uses_location_precedence(app, client, mock_db, monkeypatch):
+    """
+    Verifies that the digest job:
+    1. Dispatches to opted-in users within 5km radius.
+    2. Prioritizes last_login_location, falling back to home_location if null.
+    3. Embeds direct report web links in the email body.
+    """
+    # Incident Author
+    author = User.create(name="Author", email="author_digest@example.com", password="pwd",
+                         home_coords=[77.2090, 28.6139], db=mock_db)
+
+    # Opted-in user: Home is 40km away, but last_login_location is within 2km of report
+    u1 = User.create(name="Mobile Citizen", email="mobile_optin@example.com", password="pwd",
+                     home_coords=[77.7000, 28.1000], digest_opt_in=True, db=mock_db)
+    mock_db.users.update_one(
+        {"_id": u1.doc["_id"]},
+        {"$set": {"last_login_location": {"type": "Point", "coordinates": [77.2200, 28.6140]}}}
+    )
+
+    # Opted-out user within 1km (should NOT be emailed)
+    u2 = User.create(name="Opted Out", email="optout@example.com", password="pwd",
+                     home_coords=[77.2100, 28.6140], digest_opt_in=False, db=mock_db)
+
+    # User outside 5km radius (7km away, should NOT be emailed)
+    u3 = User.create(name="Beyond 5km", email="far_5km@example.com", password="pwd",
+                     home_coords=[77.2900, 28.6140], digest_opt_in=True, db=mock_db)
+
+    # Create unverified report
+    rep = create_report(author.id, "pothole", "Dangerous pothole near metro station exit",
+                        "url", [77.2090, 28.6139], db=mock_db)
+
+    sent_emails = []
+    from app.jobs import digest as digest_module
+    monkeypatch.setattr(digest_module, "send_email", lambda to, subj, html, text_body=None: (
+        sent_emails.append({"to": to, "subject": subj, "html": html, "text": text_body}), True
+    )[1])
+
+    valid_token = app.config.get("CRON_SECRET_TOKEN", "gcir-dev-cron-token-xyz")
+    res = client.post("/jobs/digest", headers={"X-Job-Token": valid_token})
+    assert res.status_code == 200
+    data = res.get_json()
+
+    recipients = [e["to"] for e in sent_emails]
+    # u1 (within 5km via last_login_location) received digest
+    assert "mobile_optin@example.com" in recipients
+    # u2 (opted out) did NOT receive
+    assert "optout@example.com" not in recipients
+    # u3 (beyond 5km) did NOT receive
+    assert "far_5km@example.com" not in recipients
+
+    # Verify report link is embedded in the digest email
+    rep_id_str = str(rep["_id"])
+    for em in sent_emails:
+        assert f"/reports/{rep_id_str}" in em["html"]
+        assert f"/reports/{rep_id_str}" in em["text"]
+

@@ -135,6 +135,9 @@ def send_emergency_dispatch(report: dict, db=None, reply_to: str | None = None) 
         created_str = datetime.now(timezone.utc).strftime("%d %b %Y, %I:%M:%S %p UTC")
         gmaps_url = f"https://www.google.com/maps?q={lat},{lon}"
 
+        from app.reports.services import get_report_url
+        report_url = get_report_url(rep_id)
+
         subject = f"🚨 [IMMEDIATE LIFE HAZARD] Priority Emergency Alert at {lat:.5f}, {lon:.5f}"
 
         html_body = f"""
@@ -151,7 +154,7 @@ def send_emergency_dispatch(report: dict, db=None, reply_to: str | None = None) 
                 .meta-table {{ width: 100%; border-collapse: collapse; margin-top: 16px; margin-bottom: 20px; }}
                 .meta-table td {{ padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }}
                 .meta-table td.label {{ color: #64748b; font-weight: 600; width: 35%; }}
-                .action-btn {{ display: inline-block; background: #dc2626; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 14px; margin-top: 10px; }}
+                .action-btn {{ display: inline-block; background: #dc2626; color: #ffffff !important; padding: 12px 20px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 13px; margin: 5px; }}
                 .footer {{ background: #f8fafc; padding: 16px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }}
             </style>
         </head>
@@ -194,7 +197,8 @@ def send_emergency_dispatch(report: dict, db=None, reply_to: str | None = None) 
                     </table>
 
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="{gmaps_url}" class="action-btn" target="_blank">Open GPS Location in Google Maps &rarr;</a>
+                        <a href="{report_url}" class="action-btn" target="_blank">View Incident on Garuda &rarr;</a>
+                        <a href="{gmaps_url}" class="action-btn" target="_blank" style="background: #1e293b;">Open in Google Maps &rarr;</a>
                     </div>
                 </div>
                 <div class="footer">
@@ -209,6 +213,7 @@ def send_emergency_dispatch(report: dict, db=None, reply_to: str | None = None) 
 Incident ID: {rep_id}
 Category: Life Hazard
 Coordinates: {lat:.6f}, {lon:.6f}
+View on Garuda: {report_url}
 Google Maps: {gmaps_url}
 Reported At: {created_str}
 Description: {description}
@@ -313,6 +318,9 @@ def dispatch_report_to_concerned_authority(report: dict, author_email: str | Non
         recipient = AUTHORITY_TEST_EMAIL if is_testing_mode() else authority.get("contact_email", AUTHORITY_CENTRAL_GRIEVANCE_EMAIL)
         authority_name = authority.get("name", "Concerned Authority")
 
+        from app.reports.services import get_report_url
+        report_url = get_report_url(rep_id)
+
         cat_label = category.replace("_", " ").title()
         subject = f"🚨 [CIVIC ISSUE DISPATCH] {cat_label} - Ref #{rep_id[-6:]}"
         gmaps_url = f"https://www.google.com/maps?q={lat},{lon}"
@@ -335,7 +343,7 @@ def dispatch_report_to_concerned_authority(report: dict, author_email: str | Non
                 .meta-table {{ width: 100%; border-collapse: collapse; margin: 16px 0; }}
                 .meta-table td {{ padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }}
                 .meta-table td.label {{ color: #64748b; font-weight: 600; width: 35%; }}
-                .action-btn {{ display: inline-block; background: #0f766e; color: #ffffff !important; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px; }}
+                .action-btn {{ display: inline-block; background: #0f766e; color: #ffffff !important; padding: 10px 18px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px; margin: 4px; }}
                 .footer {{ background: #f8fafc; padding: 14px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }}
             </style>
         </head>
@@ -359,7 +367,8 @@ def dispatch_report_to_concerned_authority(report: dict, author_email: str | Non
                     </table>
                     {photo_section}
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="{gmaps_url}" class="action-btn" target="_blank">View GPS Location on Google Maps &rarr;</a>
+                        <a href="{report_url}" class="action-btn" target="_blank">View Report on Garuda &rarr;</a>
+                        <a href="{gmaps_url}" class="action-btn" target="_blank" style="background: #1e293b;">View GPS Location on Google Maps &rarr;</a>
                     </div>
                 </div>
                 <div class="footer">
@@ -375,6 +384,7 @@ Incident ID: {rep_id}
 Category: {cat_label}
 Description: {description}
 Coordinates: {lat:.6f}, {lon:.6f}
+View on Garuda: {report_url}
 Maps: {gmaps_url}
 Authority: {authority_name}
 Reply-To: {author_email}
@@ -411,3 +421,163 @@ Reply-To: {author_email}
         logger.error(f"Error recording authority dispatch status in DB: {err}")
 
     return sent, status_msg
+
+
+def notify_nearby_users_of_life_hazard(report: dict, db=None) -> list[str]:
+    """
+    Dispatches immediate safety notification email to users located within 1km radius of the life hazard.
+    Location determination rule:
+    - Verify with last_login_location of users; if null, check user home_location.
+    - Embeds the Garuda report web link so citizens can directly visit the website from email.
+    """
+    if db is None:
+        db = get_db()
+
+    coords = report.get("location", {}).get("coordinates", [])
+    if not coords or len(coords) != 2:
+        return []
+
+    inc_lon, inc_lat = float(coords[0]), float(coords[1])
+    rep_id = str(report.get("_id", "unknown"))
+    author_id = report.get("author_id")
+    description = report.get("description", "Immediate life hazard reported at coordinates.")
+
+    from app.reports.services import get_report_url, haversine_distance_km
+    report_url = get_report_url(rep_id)
+    gmaps_url = f"https://www.google.com/maps?q={inc_lat},{inc_lon}"
+
+    # Query users with an email address (excluding author)
+    query = {"email": {"$exists": True, "$ne": ""}}
+    if author_id:
+        try:
+            query["_id"] = {"$ne": ObjectId(author_id)}
+        except Exception:
+            pass
+
+    candidates = list(db.users.find(query))
+    notified_emails = []
+
+    for u in candidates:
+        # Priority rule: verify with last login location of users; if null, check user home location
+        u_coords = None
+        last_loc = u.get("last_login_location")
+        if last_loc and isinstance(last_loc, dict):
+            c = last_loc.get("coordinates")
+            if c and len(c) == 2:
+                u_coords = c
+
+        if not u_coords:
+            home_loc = u.get("home_location")
+            if home_loc and isinstance(home_loc, dict):
+                c = home_loc.get("coordinates")
+                if c and len(c) == 2:
+                    u_coords = c
+
+        if not u_coords:
+            continue
+
+        try:
+            u_lon, u_lat = float(u_coords[0]), float(u_coords[1])
+            dist_km = haversine_distance_km(inc_lon, inc_lat, u_lon, u_lat)
+        except Exception:
+            continue
+
+        # Proximity threshold: within 1 km radius
+        if dist_km <= 1.0:
+            user_email = u.get("email")
+            if not user_email:
+                continue
+
+            dist_m = int(round(dist_km * 1000))
+            dist_text = f"{dist_m}m" if dist_m < 1000 else f"{dist_km:.2f}km"
+            user_name = u.get("name", "Resident")
+
+            subject = f"🚨 [LIFE HAZARD ALERT] Critical Emergency {dist_text} from your location"
+
+            html_body = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #fef2f2; color: #1e293b; margin: 0; padding: 20px; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 2px solid #ef4444; overflow: hidden; }}
+                    .header {{ background: #dc2626; color: #ffffff; padding: 22px; text-align: center; }}
+                    .badge {{ background: #991b1b; color: #fee2e2; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }}
+                    .content {{ padding: 24px; }}
+                    .dist-badge {{ background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 10px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; margin-bottom: 16px; }}
+                    .meta-table {{ width: 100%; border-collapse: collapse; margin: 16px 0; }}
+                    .meta-table td {{ padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }}
+                    .meta-table td.label {{ color: #64748b; font-weight: 600; width: 35%; }}
+                    .action-btn {{ display: inline-block; background: #dc2626; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 14px; }}
+                    .footer {{ background: #f8fafc; padding: 16px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <span class="badge">Immediate Neighborhood Safety Alert</span>
+                        <h1 style="margin: 10px 0 0 0; font-size: 20px; font-weight: 800;">🚨 LIFE HAZARD REPORTED NEARBY</h1>
+                    </div>
+                    <div class="content">
+                        <div class="dist-badge">
+                            📍 Incident Distance: Approx. {dist_text} from your location
+                        </div>
+                        <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-top: 0;">
+                            Hello {user_name}, an urgent life-safety hazard has just been reported within 1 km of your location on the Garuda Civic Emergency Network. Please exercise caution.
+                        </p>
+
+                        <table class="meta-table">
+                            <tr>
+                                <td class="label">Incident Ref:</td>
+                                <td style="font-family: monospace; font-weight: bold;">#{rep_id[-6:]}</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Category:</td>
+                                <td style="color: #dc2626; font-weight: bold;">Life Hazard</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Hazard Details:</td>
+                                <td>{description}</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Coordinates:</td>
+                                <td style="font-family: monospace;">{inc_lat:.5f}, {inc_lon:.5f}</td>
+                            </tr>
+                        </table>
+
+                        <div style="text-align: center; margin: 24px 0;">
+                            <a href="{report_url}" class="action-btn" target="_blank">View Incident on Garuda Website &rarr;</a>
+                        </div>
+
+                        <p style="font-size: 12px; color: #64748b; text-align: center;">
+                            Direct Link: <a href="{report_url}" style="color: #dc2626; word-break: break-all;">{report_url}</a><br/>
+                            View on <a href="{gmaps_url}" target="_blank" style="color: #64748b; text-decoration: underline;">Google Maps</a>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        Garuda Civic Proximity Alert • Sent to residents within 1 km radius • For life-threatening emergencies, dial 112 directly.
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            text_body = f"""🚨 URGENT LIFE HAZARD NEARBY
+Hello {user_name},
+An urgent life-safety hazard has been reported approx. {dist_text} from your location.
+
+Hazard Details: {description}
+Coordinates: {inc_lat:.5f}, {inc_lon:.5f}
+
+Direct Report Link: {report_url}
+Google Maps: {gmaps_url}
+
+Stay safe and exercise extreme caution near this location.
+Garuda Civic Emergency Network
+"""
+            send_email(user_email, subject, html_body, text_body=text_body, background=True)
+            notified_emails.append(user_email)
+
+    logger.info(f"Life hazard {rep_id}: Dispatched proximity alerts to {len(notified_emails)} nearby users within 1km: {notified_emails}")
+    return notified_emails

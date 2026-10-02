@@ -2,7 +2,7 @@ from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import current_user
-from app.reports.services import haversine_distance_km, CATEGORIES
+from app.reports.services import haversine_distance_km, CATEGORIES, get_report_url
 from app.services.email import send_email
 from app.db import get_db
 
@@ -12,6 +12,9 @@ jobs_bp = Blueprint("jobs", __name__, url_prefix="/jobs")
 def dispatch_digest(db=None, lookback_hours: int = 24) -> dict:
     """
     Core business logic to identify unverified reports within resident radii and dispatch digest emails.
+    Embeds direct report links so recipients can directly visit and verify incidents on the website.
+    Location precedence: verify with last_login_location of users; if null, check home_location.
+    Default radius: 5.0 km.
     """
     if db is None:
         db = get_db()
@@ -50,17 +53,26 @@ def dispatch_digest(db=None, lookback_hours: int = 24) -> dict:
 
     for u in users:
         u_id_str = str(u["_id"])
+        # Verify with last login location of users; if null, check user home location
         u_coords = None
-        if u.get("home_location"):
-            u_coords = u["home_location"].get("coordinates")
-        elif u.get("last_login_location"):
-            u_coords = u["last_login_location"].get("coordinates")
+        last_loc = u.get("last_login_location")
+        if last_loc and isinstance(last_loc, dict):
+            c = last_loc.get("coordinates")
+            if c and len(c) == 2:
+                u_coords = c
+
+        if not u_coords:
+            home_loc = u.get("home_location")
+            if home_loc and isinstance(home_loc, dict):
+                c = home_loc.get("coordinates")
+                if c and len(c) == 2:
+                    u_coords = c
 
         if not u_coords or len(u_coords) != 2:
             continue
 
-        u_lon, u_lat = u_coords[0], u_coords[1]
-        radius_km = float(u.get("digest_radius_km", 5.0))
+        u_lon, u_lat = float(u_coords[0]), float(u_coords[1])
+        radius_km = float(u.get("digest_radius_km") or 5.0)
         past_sent = digest_history.get(u_id_str, set())
 
         # Find user's existing upvotes to exclude
@@ -104,26 +116,36 @@ def dispatch_digest(db=None, lookback_hours: int = 24) -> dict:
 
         for item in items:
             report_ids_sent.append(item["_id"])
+            report_url = get_report_url(item["_id"])
             items_html += f"""
-            <li style="margin-bottom: 12px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                <strong>{item['cat_label']}</strong> ({item['dist_km']} km away)<br/>
-                <span>{item['description'][:120]}...</span><br/>
-                <span style="color: #666; font-size: 0.85em;">Current verifications: {item['upvote_count']} / 10 required</span>
+            <li style="margin-bottom: 14px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; border-left: 4px solid #0d9488;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                    <strong style="color: #0f172a; font-size: 14px;">{item['cat_label']}</strong>
+                    <span style="color: #64748b; font-size: 12px;">{item['dist_km']} km away</span>
+                </div>
+                <p style="margin: 4px 0 8px 0; color: #334155; font-size: 13px; line-height: 1.5;">{item['description'][:140]}...</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #64748b; font-size: 12px;">Community verifications: <strong>{item['upvote_count']} / 10</strong></span>
+                    <a href="{report_url}" style="display: inline-block; background-color: #0d9488; color: #ffffff !important; text-decoration: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: bold;" target="_blank">View &amp; Verify Report &rarr;</a>
+                </div>
             </li>
             """
-            items_text += f"- [{item['cat_label']} - {item['dist_km']}km away] {item['description'][:100]}\n"
+            items_text += f"- [{item['cat_label']} - {item['dist_km']}km away] {item['description'][:100]}\n  View on Garuda: {report_url}\n\n"
 
         html_body = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-            <h2 style="color: #0d9488;">Garuda Civic Verification Digest</h2>
-            <p>Hello {u.get('name', 'Resident')},</p>
-            <p>New civic issues were recently reported within your <strong>{u.get('digest_radius_km', 5)} km</strong> neighborhood radius. Take a minute to verify them:</p>
-            <ul style="list-style-type: none; padding-left: 0;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
+            <div style="border-bottom: 2px solid #0d9488; padding-bottom: 12px; margin-bottom: 16px;">
+                <h2 style="color: #0d9488; margin: 0; font-size: 20px;">Garuda Civic Verification Digest</h2>
+                <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Community-powered civic action for your neighborhood</p>
+            </div>
+            <p style="font-size: 14px; color: #334155;">Hello <strong>{u.get('name', 'Resident')}</strong>,</p>
+            <p style="font-size: 14px; color: #334155;">New civic issues were recently reported within your <strong>{u.get('digest_radius_km') or 5.0} km</strong> neighborhood radius. Take a minute to review evidence and upvote:</p>
+            <ul style="list-style-type: none; padding-left: 0; margin: 16px 0;">
                 {items_html}
             </ul>
-            <p style="font-size: 0.85em; color: #777;">
+            <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; text-align: center;">
                 To adjust your neighborhood radius or unsubscribe, update your profile settings in Garuda.
-            </p>
+            </div>
         </div>
         """
 

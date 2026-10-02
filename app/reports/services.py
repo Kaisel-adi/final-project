@@ -36,6 +36,24 @@ def haversine_distance_km(lon1: float, lat1: float, lon2: float, lat2: float) ->
     return r * c
 
 
+def get_report_url(report_id: str | ObjectId) -> str:
+    """
+    Returns the absolute web URL for directly viewing a civic report.
+    Embeds host from active request context or falls back to APP_URL configuration.
+    """
+    from flask import has_request_context, url_for, current_app, has_app_context
+    rep_str = str(report_id)
+    if has_request_context():
+        try:
+            return url_for("reports.view", report_id=rep_str, _external=True)
+        except Exception:
+            pass
+    base_url = "http://localhost:5000"
+    if has_app_context():
+        base_url = current_app.config.get("APP_URL", "http://localhost:5000").rstrip("/")
+    return f"{base_url}/reports/{rep_str}"
+
+
 def create_report(author_id: str, category: str, description: str,
                   photo_url: str, coordinates: list[float], db=None,
                   dispatch_to_authority: bool = False,
@@ -157,6 +175,14 @@ def create_report(author_id: str, category: str, description: str,
                 )
                 report_doc["duplicate_of"] = dup_match["_id"]
         except Exception:
+            pass
+
+    # Proximity alerts: dispatch email alert to users within 1km radius of life hazard
+    if category == "life_hazard":
+        try:
+            from app.services.emergency import notify_nearby_users_of_life_hazard
+            notify_nearby_users_of_life_hazard(report_doc, db=db)
+        except Exception as e:
             pass
 
     # Direct routing: Dispatch email to concerned authority only if checkbox is ON
