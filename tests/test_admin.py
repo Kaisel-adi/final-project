@@ -146,5 +146,5 @@ def test_admin_ajax_actions(client, mock_db):
     assert data_rm["success"] is True
     assert data_rm["status"] == "Removed"
     db_rep = mock_db.reports.find_one({"_id": rep["_id"]})
-    assert db_rep["status"] == "Removed"
+    assert db_rep is None
 

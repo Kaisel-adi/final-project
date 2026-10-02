@@ -93,8 +93,8 @@ def view(report_id):
         return redirect(url_for("feed.feed_view"))
 
     report = db.reports.find_one({"_id": rep_oid})
-    if not report:
-        flash("Report not found.", "warning")
+    if not report or report.get("status") == "Removed":
+        flash("This report has been removed and is no longer available.", "warning")
         return redirect(url_for("feed.feed_view"))
 
     author = db.users.find_one({"_id": report["author_id"]})
@@ -193,8 +193,12 @@ def rate(report_id):
     try:
         rep_oid = ObjectId(report_id)
         report = db.reports.find_one({"_id": rep_oid})
-        if not report:
-            return jsonify({"success": False, "error": "Report not found"}), 404
+        if not report or report.get("status") == "Removed":
+            err_msg = "This report has been removed and is no longer available."
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+                return jsonify({"success": False, "error": err_msg, "not_found": True, "redirect_url": url_for("feed.feed_view")}), 404
+            flash(err_msg, "warning")
+            return redirect(url_for("feed.feed_view"))
 
         if report.get("status") != "Resolved":
             return jsonify({"success": False, "error": "Ratings are only available once an issue is Resolved"}), 400
@@ -242,6 +246,14 @@ def add_comment(report_id):
     is_ajax = (request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json or request.accept_mimetypes.accept_json)
     try:
         rep_oid = ObjectId(report_id)
+        report = db.reports.find_one({"_id": rep_oid})
+        if not report or report.get("status") == "Removed":
+            err_msg = "This report has been removed and is no longer available."
+            if is_ajax:
+                return jsonify({"success": False, "error": err_msg, "not_found": True, "redirect_url": url_for("feed.feed_view")}), 404
+            flash(err_msg, "warning")
+            return redirect(url_for("feed.feed_view"))
+
         json_data = request.get_json(silent=True) if request.is_json else None
         comment_text = (json_data.get("comment") if json_data else request.form.get("comment", "")).strip()
         if not comment_text or len(comment_text) < 2:
@@ -312,9 +324,19 @@ def upvote(report_id):
         
         flash("Upvote recorded! Thank you for verifying this issue.", "success")
     except ValueError as e:
+        is_not_found = (str(e) == "Report not found.")
+        err_msg = "This report has been removed and is no longer available." if is_not_found else str(e)
         if is_ajax:
-            return jsonify({"success": False, "error": str(e)}), 400
-        flash(str(e), "warning")
+            return jsonify({
+                "success": False,
+                "error": err_msg,
+                "not_found": is_not_found,
+                "redirect_url": url_for("feed.feed_view") if is_not_found else None
+            }), 404 if is_not_found else 400
+        flash(err_msg, "warning")
+        if is_not_found:
+            return redirect(url_for("feed.feed_view"))
+        return redirect(url_for("reports.view", report_id=report_id))
     except Exception as e:
         if is_ajax:
             return jsonify({"success": False, "error": str(e)}), 500
@@ -327,14 +349,27 @@ def upvote(report_id):
 @login_required
 def flag(report_id):
     db = get_db()
+    is_ajax = (request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json or request.accept_mimetypes.accept_json)
     reason = request.form.get("reason", "Inappropriate or sensitive content")
     try:
         rep_oid = ObjectId(report_id)
+        report = db.reports.find_one({"_id": rep_oid})
+        if not report or report.get("status") == "Removed":
+            err_msg = "This report has been removed and is no longer available."
+            if is_ajax:
+                return jsonify({"success": False, "error": err_msg, "not_found": True, "redirect_url": url_for("feed.feed_view")}), 404
+            flash(err_msg, "warning")
+            return redirect(url_for("feed.feed_view"))
+
         db.reports.update_one(
             {"_id": rep_oid},
             {"$set": {"is_flagged": True, "flag_reason": reason}}
         )
+        if is_ajax:
+            return jsonify({"success": True, "message": "Thank you. This report has been flagged for moderation review."})
         flash("Thank you. This report has been flagged for moderation review.", "info")
     except Exception as e:
+        if is_ajax:
+            return jsonify({"success": False, "error": "Failed to flag report."}), 500
         flash("Failed to flag report.", "danger")
     return redirect(url_for("reports.view", report_id=report_id))

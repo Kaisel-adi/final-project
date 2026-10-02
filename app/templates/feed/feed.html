@@ -551,6 +551,17 @@
                         }
                         showFeedToast('✓ Upvoted! Thank you for verifying.', true);
                     } else {
+                        if (data.not_found) {
+                            showFeedToast(data.error || 'This report has been removed.', false);
+                            const card = likeBtn.closest('.civic-card') || document.querySelector(`[data-report-id="${reportId}"]`);
+                            if (card) {
+                                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                                card.style.opacity = '0';
+                                card.style.transform = 'scale(0.95)';
+                                setTimeout(() => card.remove(), 300);
+                            }
+                            return;
+                        }
                         // If already upvoted on server, keep the liked state intact
                         if (data.error && data.error.toLowerCase().includes('already')) {
                             likeBtn.dataset.hasUpvoted = 'true';

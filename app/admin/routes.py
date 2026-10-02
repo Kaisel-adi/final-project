@@ -155,33 +155,24 @@ def verify_report_instantly(report_id):
 @login_required
 @admin_or_moderator_required
 def remove_report(report_id):
-    """Admin privilege: Removes any civic report from the public feed."""
+    """Admin privilege: Removes any civic report from the database and public feed."""
     db = get_db()
     rep_oid = ObjectId(report_id)
-    now = datetime.now(timezone.utc)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")
 
-    db.reports.update_one(
-        {"_id": rep_oid},
-        {
-            "$set": {"status": "Removed", "is_flagged": False},
-            "$push": {
-                "status_log": {
-                    "status": "Removed",
-                    "timestamp": now,
-                    "note": f"Removed from feed by administrator {current_user.name}"
-                }
-            }
-        }
-    )
+    db.reports.delete_one({"_id": rep_oid})
+    db.upvotes.delete_many({"report_id": rep_oid})
+    db.comments.delete_many({"report_id": rep_oid})
+    db.ratings.delete_many({"report_id": rep_oid})
+
     if is_ajax:
         return jsonify({
             "success": True,
-            "message": "Report has been removed from the public feed.",
+            "message": "Report has been removed from database and public feed.",
             "status": "Removed",
             "report_id": report_id
         })
-    flash("Report has been removed from the public feed.", "info")
+    flash("Report has been removed from database.", "info")
     return redirect(request.referrer or url_for("admin.dashboard"))
 
 
@@ -205,23 +196,13 @@ def moderate_report(report_id):
             return jsonify({"success": True, "message": msg, "action": "approve", "report_id": report_id})
         flash(msg, "success")
     elif action == "remove":
-        now = datetime.now(timezone.utc)
-        db.reports.update_one(
-            {"_id": rep_oid},
-            {
-                "$set": {"status": "Removed", "is_flagged": False},
-                "$push": {
-                    "status_log": {
-                        "status": "Removed",
-                        "timestamp": now,
-                        "note": f"Removed by moderator {current_user.name}"
-                    }
-                }
-            }
-        )
-        msg = "Report has been removed from public feed."
+        db.reports.delete_one({"_id": rep_oid})
+        db.upvotes.delete_many({"report_id": rep_oid})
+        db.comments.delete_many({"report_id": rep_oid})
+        db.ratings.delete_many({"report_id": rep_oid})
+        msg = "Report has been removed from database and public feed."
         if is_ajax:
-            return jsonify({"success": True, "message": msg, "action": "remove", "report_id": report_id})
+            return jsonify({"success": True, "message": msg, "action": "remove", "report_id": report_id, "status": "Removed"})
         flash(msg, "info")
 
     return redirect(url_for("admin.dashboard", tab="flagged"))

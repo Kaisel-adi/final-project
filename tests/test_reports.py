@@ -157,3 +157,53 @@ def test_feed_and_view_liked_state_distinction(client, mock_db):
     view2_html = res_view2.get_data(as_text=True)
     assert "Upvote & Verify Incident" in view2_html
 
+
+def test_removed_report_behavior(client, mock_db):
+    author = User.create(name="Author", email="rep_author@civic.test", password="pwd", db=mock_db)
+    viewer = User.create(name="Viewer", email="rep_viewer@civic.test", password="pwd", db=mock_db)
+
+    rep = create_report(
+        author_id=author.id,
+        category="pothole",
+        description="Hazardous pothole on bridge",
+        photo_url="https://example.com/pothole.jpg",
+        coordinates=[77.20, 28.60],
+        db=mock_db
+    )
+    rep_id = str(rep["_id"])
+
+    # Simulate admin permanently removing report
+    mock_db.reports.delete_one({"_id": rep["_id"]})
+
+    # 1. Visiting details page of removed report redirects to feed
+    res_view = client.get(f"/reports/{rep_id}")
+    assert res_view.status_code == 302
+    assert "/feed" in res_view.headers["Location"]
+
+    # Login as viewer
+    with client.session_transaction() as sess:
+        sess["_user_id"] = viewer.id
+
+    ajax_headers = {"X-Requested-With": "XMLHttpRequest"}
+
+    # 2. Trying to upvote removed report returns 404 with not_found=True
+    res_upvote = client.post(f"/reports/{rep_id}/upvote", headers=ajax_headers)
+    assert res_upvote.status_code == 404
+    data_upvote = res_upvote.get_json()
+    assert data_upvote["not_found"] is True
+    assert "/feed" in data_upvote["redirect_url"]
+
+    # 3. Trying to comment on removed report returns 404 with not_found=True
+    res_comment = client.post(f"/reports/{rep_id}/comments", data={"comment": "Still an issue!"}, headers=ajax_headers)
+    assert res_comment.status_code == 404
+    data_comment = res_comment.get_json()
+    assert data_comment["not_found"] is True
+    assert "/feed" in data_comment["redirect_url"]
+
+    # 4. Trying to flag removed report redirects to feed
+    res_flag = client.post(f"/reports/{rep_id}/flag", data={"reason": "Spam"}, headers=ajax_headers)
+    assert res_flag.status_code == 404
+    data_flag = res_flag.get_json()
+    assert data_flag["not_found"] is True
+
+

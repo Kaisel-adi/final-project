@@ -476,6 +476,11 @@
                                 btn.disabled = false;
                                 btn.classList.remove('opacity-75', 'scale-95');
                             }
+                            if (data.not_found) {
+                                alert(data.error || 'This report has been removed.');
+                                window.location.href = data.redirect_url || '{{ url_for("feed.feed_view") }}';
+                                return;
+                            }
                             alert(data.error || 'Could not record verification.');
                         }
                     })
@@ -580,6 +585,11 @@
                         streamContainer.insertBefore(commentCard, streamContainer.firstChild);
                         commentCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     } else {
+                        if (data.not_found) {
+                            alert(data.error || 'This report has been removed.');
+                            window.location.href = data.redirect_url || '{{ url_for("feed.feed_view") }}';
+                            return;
+                        }
                         alert(data.error || 'Could not post comment.');
                     }
                 })
